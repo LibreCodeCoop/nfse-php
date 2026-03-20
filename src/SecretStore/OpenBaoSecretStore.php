@@ -7,11 +7,14 @@ declare(strict_types=1);
 
 namespace LibreCodeCoop\NfsePHP\SecretStore;
 
+use GuzzleHttp\Client as HttpClient;
+use GuzzleHttp\Psr7\HttpFactory;
+use GuzzleHttp\Psr7\Uri;
 use LibreCodeCoop\NfsePHP\Contracts\SecretStoreInterface;
 use LibreCodeCoop\NfsePHP\Exception\SecretStoreException;
-use Vault\Client;
 use Vault\AuthenticationStrategies\AppRoleAuthenticationStrategy;
 use Vault\AuthenticationStrategies\TokenAuthenticationStrategy;
+use Vault\Client;
 
 /**
  * OpenBao / HashiCorp Vault KV v2 secret store.
@@ -88,7 +91,12 @@ class OpenBaoSecretStore implements SecretStoreInterface
 
     private function buildClient(): Client
     {
-        $client = new Client($this->addr);
+        $client = new Client(
+            new Uri($this->addr),
+            new HttpClient(),
+            new HttpFactory(),
+            new HttpFactory(),
+        );
 
         if ($this->namespace !== null) {
             $client->setNamespace($this->namespace);
@@ -97,8 +105,15 @@ class OpenBaoSecretStore implements SecretStoreInterface
         if ($this->token !== null) {
             $client->setAuthenticationStrategy(new TokenAuthenticationStrategy($this->token));
         } else {
+            $roleId = $this->roleId;
+            $secretId = $this->secretId;
+
+            if ($roleId === null || $secretId === null) {
+                throw new SecretStoreException('AppRole credentials are incomplete.');
+            }
+
             $client->setAuthenticationStrategy(
-                new AppRoleAuthenticationStrategy($this->roleId, $this->secretId)
+                new AppRoleAuthenticationStrategy($roleId, $secretId)
             );
         }
 
