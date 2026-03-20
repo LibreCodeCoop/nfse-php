@@ -25,13 +25,6 @@
         </include>
     </source>
 
-    <coverage>
-        <report>
-            <clover outputFile="build/logs/clover.xml"/>
-            <html outputDirectory="build/logs/html"/>
-        </report>
-    </coverage>
-
     <php>
         <env name="NFS_TEST_CNPJ" value="11222333000181"/>
         <env name="NFS_SANDBOX" value="true"/>
