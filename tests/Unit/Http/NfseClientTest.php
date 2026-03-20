@@ -40,7 +40,7 @@ class NfseClientTest extends TestCase
     {
         parent::setUp();
 
-        $this->signer = new class() implements XmlSignerInterface {
+        $this->signer = new class () implements XmlSignerInterface {
             public function sign(string $xml, string $cnpj): string
             {
                 return $xml;
