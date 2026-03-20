@@ -1,0 +1,119 @@
+# SPDX-FileCopyrightText: 2026 LibreCode coop and contributors
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+name-template: 'v$RESOLVED_VERSION'
+tag-template: 'v$RESOLVED_VERSION'
+filter-by-commitish: true
+pull-request-limit: 100
+history-limit: 50
+sort-by: merged_at
+sort-direction: ascending
+exclude-contributors:
+  - 'dependabot[bot]'
+  - 'renovate[bot]'
+exclude-labels:
+  - 'skip-changelog'
+
+category-template: '### $TITLE'
+
+categories:
+  - title: 'Added'
+    labels:
+      - 'feature'
+      - 'feat'
+      - 'enhancement'
+      - 'minor'
+
+  - title: 'Changed'
+    collapse-after: 4
+    labels:
+      - 'chore'
+      - 'refactor'
+      - 'improvement'
+
+  - title: 'Fixed'
+    labels:
+      - 'fix'
+      - 'bugfix'
+      - 'bug'
+      - 'patch'
+
+  - title: 'Removed'
+    labels:
+      - 'removed'
+      - 'deprecated'
+
+  - title: 'Security'
+    labels:
+      - 'security'
+
+  - title: 'Tests'
+    collapse-after: 3
+    labels:
+      - 'test'
+
+  - title: 'Dependencies'
+    collapse-after: 2
+    labels:
+      - 'dependencies'
+
+  - title: 'Other'
+    labels: []
+
+change-template: '- $TITLE [#$NUMBER]($URL)'
+change-title-escapes: '#@'
+
+autolabeler:
+  - label: 'skip-changelog'
+    title:
+      - '/^hotfix:\s+v\d+\.\d+\.\d+.*$/i'
+      - '/^fix:\s+pr\s+\d+\s+backport$/i'
+  - label: 'minor'
+    title:
+      - '/^feat:/i'
+  - label: 'patch'
+    title:
+      - '/^fix:/i'
+  - label: 'fix'
+    title:
+      - '/^fix/i'
+  - label: 'feature'
+    title:
+      - '/^feat/i'
+  - label: 'chore'
+    title:
+      - '/^chore/i'
+  - label: 'docs'
+    title:
+      - '/^docs/i'
+  - label: 'refactor'
+    title:
+      - '/^refactor/i'
+  - label: 'test'
+    title:
+      - '/^test/i'
+  - label: 'dependencies'
+    title:
+      - '/deps/i'
+      - '/^chore:\s+bump\s+(js|php)\s+dependencies$/i'
+
+version-resolver:
+  major:
+    labels:
+      - 'major'
+  minor:
+    labels:
+      - 'minor'
+      - 'feature'
+  patch:
+    labels:
+      - 'patch'
+      - 'fix'
+  default: patch
+
+template: |
+  ## What's Changed
+
+  $CHANGES
+
+  **Full Changelog:** https://github.com/LibreCodeCoop/nfse-php/compare/$PREVIOUS_TAG...$TAG
