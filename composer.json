@@ -30,7 +30,8 @@
         "phpunit/phpunit": "^11.0",
         "donatj/mock-webserver": "^2.7",
         "friendsofphp/php-cs-fixer": "^3.0",
-        "vimeo/psalm": "^5.0"
+        "php-coveralls/php-coveralls": "^2.9",
+        "vimeo/psalm": "^6.0"
     },
     "autoload": {
         "psr-4": {
@@ -53,6 +54,11 @@
     },
     "minimum-stability": "stable",
     "prefer-stable": true,
+    "extra": {
+        "branch-alias": {
+            "dev-main": "1.0.x-dev"
+        }
+    },
     "config": {
         "sort-packages": true,
         "allow-plugins": {

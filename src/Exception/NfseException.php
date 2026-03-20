@@ -9,4 +9,6 @@ namespace LibreCodeCoop\NfsePHP\Exception;
 
 use RuntimeException;
 
-class NfseException extends RuntimeException {}
+class NfseException extends RuntimeException
+{
+}

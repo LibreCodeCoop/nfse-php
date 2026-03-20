@@ -44,5 +44,6 @@ final readonly class DpsData
 
         /** Whether ISS is retained at source. */
         public bool $issRetido = false,
-    ) {}
+    ) {
+    }
 }

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-FileCopyrightText: 2026 LibreCode coop and contributors -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<files psalm-version="6.16.1@f1f5de594dc76faf8784e02d3dc4716c91c6f6ac">
+  <file src="src/Http/NfseClient.php">
+    <MissingOverrideAttribute>
+      <code><![CDATA[public function cancel(string $chaveAcesso, string $motivo): bool]]></code>
+      <code><![CDATA[public function emit(DpsData $dps): ReceiptData]]></code>
+      <code><![CDATA[public function query(string $chaveAcesso): ReceiptData]]></code>
+    </MissingOverrideAttribute>
+  </file>
+  <file src="src/SecretStore/NoOpSecretStore.php">
+    <MissingOverrideAttribute>
+      <code><![CDATA[public function delete(string $path): void]]></code>
+      <code><![CDATA[public function get(string $path): array]]></code>
+      <code><![CDATA[public function put(string $path, array $data): void]]></code>
+    </MissingOverrideAttribute>
+  </file>
+  <file src="src/SecretStore/OpenBaoSecretStore.php">
+    <MissingOverrideAttribute>
+      <code><![CDATA[public function delete(string $path): void]]></code>
+      <code><![CDATA[public function get(string $path): array]]></code>
+      <code><![CDATA[public function put(string $path, array $data): void]]></code>
+    </MissingOverrideAttribute>
+  </file>
+  <file src="src/Xml/DpsSigner.php">
+    <MissingOverrideAttribute>
+      <code><![CDATA[public function sign(string $xml, string $cnpj): string]]></code>
+    </MissingOverrideAttribute>
+  </file>
+</files>

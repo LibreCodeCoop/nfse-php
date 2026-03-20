@@ -1,0 +1,21 @@
+# SPDX-FileCopyrightText: 2026 LibreCode coop and contributors
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+version = 1
+SPDX-PackageName = "nfse-php"
+SPDX-PackageSupplier = "LibreCode Coop <dev@librecodecoop.org.br>"
+SPDX-PackageDownloadLocation = "https://github.com/LibreCodeCoop/nfse-php"
+
+default-license = "AGPL-3.0-or-later"
+default-copyright = "2026 LibreCode coop and contributors"
+
+[[annotations]]
+path = [
+    ".gitignore",
+    "composer.json",
+    "tests/Integration/.gitkeep"
+]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 LibreCode coop and contributors"
+SPDX-License-Identifier = "AGPL-3.0-or-later"

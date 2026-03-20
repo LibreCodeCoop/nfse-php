@@ -18,4 +18,4 @@ jobs:
           persist-credentials: false
 
       - name: REUSE Compliance Check
-        uses: fsfe/reuse-action@bb774aa972c2a89ff34781233d275498eed5f9d4 # v5.0.0
+        uses: fsfe/reuse-action@v6

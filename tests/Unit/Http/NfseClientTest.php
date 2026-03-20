@@ -9,6 +9,7 @@ namespace LibreCodeCoop\NfsePHP\Tests\Unit\Http;
 
 use donatj\MockWebServer\MockWebServer;
 use donatj\MockWebServer\Response;
+use LibreCodeCoop\NfsePHP\Contracts\XmlSignerInterface;
 use LibreCodeCoop\NfsePHP\Dto\DpsData;
 use LibreCodeCoop\NfsePHP\Http\NfseClient;
 use LibreCodeCoop\NfsePHP\SecretStore\NoOpSecretStore;
@@ -22,6 +23,7 @@ use LibreCodeCoop\NfsePHP\Tests\TestCase;
 class NfseClientTest extends TestCase
 {
     private static MockWebServer $server;
+    private XmlSignerInterface $signer;
 
     public static function setUpBeforeClass(): void
     {
@@ -32,6 +34,18 @@ class NfseClientTest extends TestCase
     public static function tearDownAfterClass(): void
     {
         self::$server->stop();
+    }
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->signer = new class () implements XmlSignerInterface {
+            public function sign(string $xml, string $cnpj): string
+            {
+                return $xml;
+            }
+        };
     }
 
     public function testEmitReturnsReceiptDataOnSuccess(): void
@@ -52,6 +66,7 @@ class NfseClientTest extends TestCase
             secretStore:     $store,
             sandboxMode:     false,
             baseUrlOverride: self::$server->getServerRoot() . '/NFS-e/api/v1',
+            signer:          $this->signer,
         );
 
         $dps     = $this->makeDps();

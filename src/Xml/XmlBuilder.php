@@ -56,7 +56,7 @@ class XmlBuilder
         // Values
         $valores = $doc->createElement('valores');
         $valores->appendChild($doc->createElement('vServ', $dps->valorServico));
-        $valores->appendChild($doc->createElement('trib', $this->buildTrib($doc, $dps)));
+        $valores->appendChild($this->buildTrib($doc, $dps));
         $infDps->appendChild($valores);
 
         return $doc->saveXML() ?: '';

@@ -27,5 +27,6 @@ final readonly class ReceiptData
 
         /** Raw XML returned by the gateway (useful for storage / audit). */
         public ?string $rawXml = null,
-    ) {}
+    ) {
+    }
 }

@@ -7,4 +7,6 @@ declare(strict_types=1);
 
 namespace LibreCodeCoop\NfsePHP\Exception;
 
-class SecretStoreException extends NfseException {}
+class SecretStoreException extends NfseException
+{
+}

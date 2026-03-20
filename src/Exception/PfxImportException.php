@@ -7,4 +7,6 @@ declare(strict_types=1);
 
 namespace LibreCodeCoop\NfsePHP\Exception;
 
-class PfxImportException extends NfseException {}
+class PfxImportException extends NfseException
+{
+}

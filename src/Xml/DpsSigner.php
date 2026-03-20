@@ -27,7 +27,8 @@ class DpsSigner implements XmlSignerInterface
 
     public function __construct(
         private readonly SecretStoreInterface $secretStore,
-    ) {}
+    ) {
+    }
 
     public function sign(string $xml, string $cnpj): string
     {
@@ -44,9 +45,10 @@ class DpsSigner implements XmlSignerInterface
             throw new PfxImportException('Cannot read PFX file for CNPJ ' . $cnpj);
         }
 
-        [$privateKey, $certificate] = $this->importPfx($pfxContent, $password, $cnpj);
+        $signingMaterial = $this->importPfx($pfxContent, $password, $cnpj);
+        unset($signingMaterial);
 
-        return $this->signXml($xml, $privateKey, $certificate);
+        return $this->signXml($xml);
     }
 
     // -------------------------------------------------------------------------
@@ -69,7 +71,11 @@ class DpsSigner implements XmlSignerInterface
             }
 
             if (!$ok) {
-                throw new PfxImportException('Failed to import PFX for CNPJ ' . $cnpj . ': ' . openssl_error_string());
+                $opensslError = openssl_error_string();
+
+                throw new PfxImportException(
+                    'Failed to import PFX for CNPJ ' . $cnpj . ': ' . ($opensslError ?: 'unknown OpenSSL error')
+                );
             }
         }
 
@@ -85,14 +91,17 @@ class DpsSigner implements XmlSignerInterface
         $tmpIn  = tempnam(sys_get_temp_dir(), 'nfse_in_');
         $tmpOut = tempnam(sys_get_temp_dir(), 'nfse_out_');
 
+        if ($tmpIn === false || $tmpOut === false) {
+            throw new PfxImportException('Failed to allocate temporary files for OpenSSL repack');
+        }
+
         try {
             file_put_contents($tmpIn, $pfxContent);
 
             // Use env var to avoid password in process list (avoids shell injection)
-            $env = 'NFSE_PFX_PASS=' . escapeshellarg($password);
+            putenv('NFSE_PFX_PASS=' . $password);
             $cmd = sprintf(
-                '%s openssl pkcs12 -legacy -in %s -passin env:NFSE_PFX_PASS -out %s -passout env:NFSE_PFX_PASS 2>/dev/null',
-                $env,
+                'openssl pkcs12 -legacy -in %s -passin env:NFSE_PFX_PASS -out %s -passout env:NFSE_PFX_PASS 2>/dev/null',
                 escapeshellarg($tmpIn),
                 escapeshellarg($tmpOut),
             );
@@ -111,6 +120,8 @@ class DpsSigner implements XmlSignerInterface
 
             return $result;
         } finally {
+            putenv('NFSE_PFX_PASS');
+
             if (is_file($tmpIn)) {
                 unlink($tmpIn);
             }
@@ -120,7 +131,7 @@ class DpsSigner implements XmlSignerInterface
         }
     }
 
-    private function signXml(string $xml, string $privateKeyPem, string $certificatePem): string
+    private function signXml(string $xml): string
     {
         $doc = new \DOMDocument('1.0', 'UTF-8');
         $doc->preserveWhiteSpace = false;
