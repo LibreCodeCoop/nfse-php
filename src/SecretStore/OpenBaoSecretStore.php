@@ -25,7 +25,6 @@ use Vault\AuthenticationStrategies\TokenAuthenticationStrategy;
 class OpenBaoSecretStore implements SecretStoreInterface
 {
     private readonly Client $vault;
-    private readonly string $mount;
 
     public function __construct(
         private readonly string $addr,
