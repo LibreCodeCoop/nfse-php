@@ -55,7 +55,7 @@ use LibreCodeCoop\NfsePHP\Http\NfseClient;
 use LibreCodeCoop\NfsePHP\SecretStore\OpenBaoSecretStore;
 use LibreCodeCoop\NfsePHP\Dto\DpsData;
 
-$store  = new OpenBaoSecretStore(addr: 'http://localhost:8200', token: getenv('BAO_TOKEN'));
+$store  = new OpenBaoSecretStore(addr: 'http://localhost:8200', token: getenv('VAULT_TOKEN'));
 $client = new NfseClient(secretStore: $store, sandboxMode: true);
 
 $dps = new DpsData(
@@ -80,9 +80,9 @@ The CNPJ values below are **fictitious examples**. Configure your own values thr
 use LibreCodeCoop\NfsePHP\SecretStore\OpenBaoSecretStore;
 
 $store = new OpenBaoSecretStore(
-    addr:      getenv('BAO_ADDR'),   // e.g. http://openbao:8200
-    roleId:    getenv('BAO_ROLE_ID'),
-    secretId:  getenv('BAO_SECRET_ID'),
+    addr:      getenv('VAULT_ADDR'),   // e.g. http://openbao:8200
+    roleId:    getenv('VAULT_ROLE_ID'),
+    secretId:  getenv('VAULT_SECRET_ID'),
     mount:     'nfse',               // KV v2 mount
 );
 
