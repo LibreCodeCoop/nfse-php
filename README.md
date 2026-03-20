@@ -59,7 +59,7 @@ $store  = new OpenBaoSecretStore(addr: 'http://localhost:8200', token: getenv('B
 $client = new NfseClient(secretStore: $store, sandboxMode: true);
 
 $dps = new DpsData(
-    cnpjPrestador: '11222333000181',
+    cnpjPrestador: '11222333000181', // Example only: configure with your provider CNPJ
     municipioIbge: '3303302',
     // ... other fields
 );
@@ -73,6 +73,8 @@ echo $receipt->nfseNumber; // NFS-e number returned by the SEFIN gateway
 ## Secret Storage with OpenBao
 
 PFX passwords are **never** persisted in application databases. They are stored in OpenBao (or Vault) KV v2 under a path like `nfse/pfx/{cnpj}`.
+
+The CNPJ values below are **fictitious examples**. Configure your own values through your application settings/environment.
 
 ```php
 use LibreCodeCoop\NfsePHP\SecretStore\OpenBaoSecretStore;
