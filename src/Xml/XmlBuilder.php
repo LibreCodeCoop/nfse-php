@@ -53,11 +53,21 @@ class XmlBuilder
         $serv->appendChild($doc->createElement('xDescServ', htmlspecialchars($dps->discriminacao, ENT_XML1)));
         $infDps->appendChild($serv);
 
+        // Tomador (optional — absent for foreign buyers with no document)
+        if ($dps->documentoTomador !== '') {
+            $infDps->appendChild($this->buildToma($doc, $dps));
+        }
+
         // Values
         $valores = $doc->createElement('valores');
         $valores->appendChild($doc->createElement('vServ', $dps->valorServico));
         $valores->appendChild($this->buildTrib($doc, $dps));
         $infDps->appendChild($valores);
+
+        // Regime especial de tributação (optional)
+        if ($dps->regimeEspecialTributacao !== null) {
+            $infDps->appendChild($doc->createElement('regEspTrib', (string) $dps->regimeEspecialTributacao));
+        }
 
         return $doc->saveXML() ?: '';
     }
@@ -69,5 +79,24 @@ class XmlBuilder
         $trib->appendChild($doc->createElement('pAliq', $dps->aliquota));
 
         return $trib;
+    }
+
+    private function buildToma(\DOMDocument $doc, DpsData $dps): \DOMElement
+    {
+        $toma = $doc->createElement('toma');
+
+        $docLen = strlen($dps->documentoTomador);
+
+        if ($docLen === 14) {
+            $toma->appendChild($doc->createElement('CNPJ', $dps->documentoTomador));
+        } elseif ($docLen === 11) {
+            $toma->appendChild($doc->createElement('CPF', $dps->documentoTomador));
+        }
+
+        if ($dps->nomeTomador !== '') {
+            $toma->appendChild($doc->createElement('xNome', htmlspecialchars($dps->nomeTomador, ENT_XML1)));
+        }
+
+        return $toma;
     }
 }
