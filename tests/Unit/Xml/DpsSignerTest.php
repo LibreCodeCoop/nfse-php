@@ -135,4 +135,39 @@ class DpsSignerTest extends TestCase
 
         self::assertSame(1, $nodes->length, 'Signature must be a direct child of DPS root');
     }
+
+    public function testExtractPemPartsReturnsPrivateKeyAndCertificateFromCliBundle(): void
+    {
+        $privateKey = openssl_pkey_new([
+            'private_key_bits' => 2048,
+            'private_key_type' => OPENSSL_KEYTYPE_RSA,
+        ]);
+        self::assertNotFalse($privateKey);
+
+        $certificateRequest = openssl_csr_new(
+            ['commonName' => $this->testCnpj],
+            $privateKey,
+            ['digest_alg' => 'sha256'],
+        );
+        self::assertNotFalse($certificateRequest);
+
+        $certificate = openssl_csr_sign($certificateRequest, null, $privateKey, 1, ['digest_alg' => 'sha256']);
+        self::assertNotFalse($certificate);
+
+        $privateKeyPem = '';
+        self::assertTrue(openssl_pkey_export($privateKey, $privateKeyPem));
+
+        $certificatePem = '';
+        self::assertTrue(openssl_x509_export($certificate, $certificatePem));
+
+        $pemBundle = "Bag Attributes\nlocalKeyID: 01 02 03\n" . $certificatePem . "\n" . $privateKeyPem;
+
+        $method = new \ReflectionMethod(DpsSigner::class, 'extractPemParts');
+        $method->setAccessible(true);
+
+        $parts = $method->invoke($this->signer, $pemBundle, $this->testCnpj);
+
+        self::assertSame(rtrim($privateKeyPem), $parts[0]);
+        self::assertSame(rtrim($certificatePem), $parts[1]);
+    }
 }
