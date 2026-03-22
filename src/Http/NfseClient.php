@@ -12,7 +12,11 @@ use LibreCodeCoop\NfsePHP\Contracts\SecretStoreInterface;
 use LibreCodeCoop\NfsePHP\Contracts\XmlSignerInterface;
 use LibreCodeCoop\NfsePHP\Dto\DpsData;
 use LibreCodeCoop\NfsePHP\Dto\ReceiptData;
-use LibreCodeCoop\NfsePHP\Exception\NfseException;
+use LibreCodeCoop\NfsePHP\Exception\CancellationException;
+use LibreCodeCoop\NfsePHP\Exception\IssuanceException;
+use LibreCodeCoop\NfsePHP\Exception\NetworkException;
+use LibreCodeCoop\NfsePHP\Exception\NfseErrorCode;
+use LibreCodeCoop\NfsePHP\Exception\QueryException;
 use LibreCodeCoop\NfsePHP\Xml\DpsSigner;
 use LibreCodeCoop\NfsePHP\Xml\XmlBuilder;
 
@@ -48,21 +52,48 @@ class NfseClient implements NfseClientInterface
         $xml    = (new XmlBuilder())->buildDps($dps);
         $signed = $this->signer->sign($xml, $dps->cnpjPrestador);
 
-        $response = $this->post('/dps', $signed);
+        [$httpStatus, $body] = $this->post('/dps', $signed);
 
-        return $this->parseReceiptResponse($response);
+        if ($httpStatus >= 400) {
+            throw new IssuanceException(
+                'SEFIN gateway rejected issuance (HTTP ' . $httpStatus . ')',
+                NfseErrorCode::IssuanceRejected,
+                $httpStatus,
+                $body,
+            );
+        }
+
+        return $this->parseReceiptResponse($body);
     }
 
     public function query(string $chaveAcesso): ReceiptData
     {
-        $response = $this->get('/dps/' . $chaveAcesso);
+        [$httpStatus, $body] = $this->get('/dps/' . $chaveAcesso);
 
-        return $this->parseReceiptResponse($response);
+        if ($httpStatus >= 400) {
+            throw new QueryException(
+                'SEFIN gateway returned error for query (HTTP ' . $httpStatus . ')',
+                NfseErrorCode::QueryFailed,
+                $httpStatus,
+                $body,
+            );
+        }
+
+        return $this->parseReceiptResponse($body);
     }
 
     public function cancel(string $chaveAcesso, string $motivo): bool
     {
-        $this->delete('/dps/' . $chaveAcesso, $motivo);
+        [$httpStatus, $body] = $this->delete('/dps/' . $chaveAcesso, $motivo);
+
+        if ($httpStatus >= 400) {
+            throw new CancellationException(
+                'SEFIN gateway rejected cancellation (HTTP ' . $httpStatus . ')',
+                NfseErrorCode::CancellationRejected,
+                $httpStatus,
+                $body,
+            );
+        }
 
         return true;
     }
@@ -72,24 +103,24 @@ class NfseClient implements NfseClientInterface
     // -------------------------------------------------------------------------
 
     /**
-     * @return array<string, mixed>
+     * @return array{int, array<string, mixed>}
      */
     private function post(string $path, string $xmlPayload): array
     {
         $context = stream_context_create([
             'http' => [
-                'method'  => 'POST',
-                'header'  => "Content-Type: application/xml\r\nAccept: application/json\r\n",
-                'content' => $xmlPayload,
+                'method'        => 'POST',
+                'header'        => "Content-Type: application/xml\r\nAccept: application/json\r\n",
+                'content'       => $xmlPayload,
                 'ignore_errors' => true,
             ],
         ]);
 
-        return $this->request($path, $context);
+        return $this->fetchAndDecode($path, $context);
     }
 
     /**
-     * @return array<string, mixed>
+     * @return array{int, array<string, mixed>}
      */
     private function get(string $path): array
     {
@@ -101,10 +132,13 @@ class NfseClient implements NfseClientInterface
             ],
         ]);
 
-        return $this->request($path, $context);
+        return $this->fetchAndDecode($path, $context);
     }
 
-    private function delete(string $path, string $motivo): void
+    /**
+     * @return array{int, array<string, mixed>}
+     */
+    private function delete(string $path, string $motivo): array
     {
         $payload = json_encode(['motivo' => $motivo], JSON_THROW_ON_ERROR);
         $context = stream_context_create([
@@ -116,28 +150,59 @@ class NfseClient implements NfseClientInterface
             ],
         ]);
 
-        $this->request($path, $context);
+        return $this->fetchAndDecode($path, $context);
     }
 
     /**
-     * @return array<string, mixed>
+     * Perform the raw HTTP request and decode the JSON body.
+     *
+     * PHP sets $http_response_header in the calling scope when file_get_contents
+     * uses an HTTP wrapper. We initialize it to [] so static analysers have a
+     * typed baseline; the HTTP wrapper will overwrite it on a successful
+     * connection, even when the server responds with 4xx/5xx.
+     *
+     * @return array{int, array<string, mixed>}
      */
-    private function request(string $path, mixed $context): array
+    private function fetchAndDecode(string $path, mixed $context): array
     {
-        $url  = $this->baseUrl . $path;
-        $body = file_get_contents($url, false, $context);
+        $url = $this->baseUrl . $path;
+
+        $http_response_header = [];
+        $body                 = file_get_contents($url, false, $context);
+        $httpStatus           = $this->parseHttpStatus($http_response_header);
 
         if ($body === false) {
-            throw new NfseException('Failed to connect to SEFIN gateway at ' . $url);
+            throw new NetworkException('Failed to connect to SEFIN gateway at ' . $url);
         }
 
         $decoded = json_decode($body, true, 512, JSON_THROW_ON_ERROR);
 
         if (!is_array($decoded)) {
-            throw new NfseException('Unexpected response format from SEFIN gateway');
+            throw new NetworkException(
+                'Unexpected response format from SEFIN gateway',
+                NfseErrorCode::InvalidResponse,
+            );
         }
 
-        return $decoded;
+        return [$httpStatus, $decoded];
+    }
+
+    /**
+     * Extract the HTTP status code from the first response header line.
+     *
+     * @param list<string> $headers
+     */
+    private function parseHttpStatus(array $headers): int
+    {
+        if (!isset($headers[0])) {
+            return 0;
+        }
+
+        if (preg_match('/HTTP\/[\d.]+ (\d{3})/', $headers[0], $m)) {
+            return (int) $m[1];
+        }
+
+        return 0;
     }
 
     /**

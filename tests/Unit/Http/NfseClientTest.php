@@ -11,6 +11,10 @@ use donatj\MockWebServer\MockWebServer;
 use donatj\MockWebServer\Response;
 use LibreCodeCoop\NfsePHP\Contracts\XmlSignerInterface;
 use LibreCodeCoop\NfsePHP\Dto\DpsData;
+use LibreCodeCoop\NfsePHP\Exception\CancellationException;
+use LibreCodeCoop\NfsePHP\Exception\IssuanceException;
+use LibreCodeCoop\NfsePHP\Exception\NfseErrorCode;
+use LibreCodeCoop\NfsePHP\Exception\QueryException;
 use LibreCodeCoop\NfsePHP\Http\NfseClient;
 use LibreCodeCoop\NfsePHP\SecretStore\NoOpSecretStore;
 use LibreCodeCoop\NfsePHP\Tests\TestCase;
@@ -115,6 +119,128 @@ class NfseClientTest extends TestCase
         );
 
         self::assertTrue($client->cancel('abc-123', 'Cancelamento a pedido do tomador'));
+    }
+
+    // -------------------------------------------------------------------------
+    // Typed exception tests
+    // -------------------------------------------------------------------------
+
+    public function testEmitThrowsIssuanceExceptionWhenGatewayRejects(): void
+    {
+        $payload = json_encode(['codigo' => 'E422', 'mensagem' => 'CNPJ inválido'], JSON_THROW_ON_ERROR);
+
+        self::$server->setResponseOfPath(
+            '/NFS-e/api/v1/dps',
+            new Response($payload, ['Content-Type' => 'application/json'], 422),
+        );
+
+        $client = new NfseClient(
+            secretStore:     new NoOpSecretStore(),
+            baseUrlOverride: self::$server->getServerRoot() . '/NFS-e/api/v1',
+            signer:          $this->signer,
+        );
+
+        $this->expectException(IssuanceException::class);
+        $client->emit($this->makeDps());
+    }
+
+    public function testIssuanceExceptionCarriesErrorCodeHttpStatusAndUpstreamPayload(): void
+    {
+        $errorData = ['codigo' => 'E422', 'mensagem' => 'CNPJ inválido'];
+
+        self::$server->setResponseOfPath(
+            '/NFS-e/api/v1/dps',
+            new Response(json_encode($errorData, JSON_THROW_ON_ERROR), ['Content-Type' => 'application/json'], 422),
+        );
+
+        $client = new NfseClient(
+            secretStore:     new NoOpSecretStore(),
+            baseUrlOverride: self::$server->getServerRoot() . '/NFS-e/api/v1',
+            signer:          $this->signer,
+        );
+
+        try {
+            $client->emit($this->makeDps());
+            self::fail('Expected IssuanceException');
+        } catch (IssuanceException $e) {
+            self::assertSame(NfseErrorCode::IssuanceRejected, $e->errorCode);
+            self::assertSame(422, $e->httpStatus);
+            self::assertSame($errorData, $e->upstreamPayload);
+        }
+    }
+
+    public function testQueryThrowsQueryExceptionWhenGatewayReturnsError(): void
+    {
+        self::$server->setResponseOfPath(
+            '/NFS-e/api/v1/dps/missing-key',
+            new Response('{"error":"not found"}', ['Content-Type' => 'application/json'], 404),
+        );
+
+        $client = new NfseClient(
+            secretStore:     new NoOpSecretStore(),
+            baseUrlOverride: self::$server->getServerRoot() . '/NFS-e/api/v1',
+        );
+
+        $this->expectException(QueryException::class);
+        $client->query('missing-key');
+    }
+
+    public function testQueryExceptionCarriesErrorCodeAndHttpStatus(): void
+    {
+        self::$server->setResponseOfPath(
+            '/NFS-e/api/v1/dps/missing-key',
+            new Response('{"error":"not found"}', ['Content-Type' => 'application/json'], 404),
+        );
+
+        $client = new NfseClient(
+            secretStore:     new NoOpSecretStore(),
+            baseUrlOverride: self::$server->getServerRoot() . '/NFS-e/api/v1',
+        );
+
+        try {
+            $client->query('missing-key');
+            self::fail('Expected QueryException');
+        } catch (QueryException $e) {
+            self::assertSame(NfseErrorCode::QueryFailed, $e->errorCode);
+            self::assertSame(404, $e->httpStatus);
+        }
+    }
+
+    public function testCancelThrowsCancellationExceptionWhenGatewayReturnsError(): void
+    {
+        self::$server->setResponseOfPath(
+            '/NFS-e/api/v1/dps/blocked-key',
+            new Response('{"error":"cannot cancel"}', ['Content-Type' => 'application/json'], 409),
+        );
+
+        $client = new NfseClient(
+            secretStore:     new NoOpSecretStore(),
+            baseUrlOverride: self::$server->getServerRoot() . '/NFS-e/api/v1',
+        );
+
+        $this->expectException(CancellationException::class);
+        $client->cancel('blocked-key', 'a pedido do tomador');
+    }
+
+    public function testCancellationExceptionCarriesErrorCodeAndHttpStatus(): void
+    {
+        self::$server->setResponseOfPath(
+            '/NFS-e/api/v1/dps/blocked-key',
+            new Response('{"error":"cannot cancel"}', ['Content-Type' => 'application/json'], 409),
+        );
+
+        $client = new NfseClient(
+            secretStore:     new NoOpSecretStore(),
+            baseUrlOverride: self::$server->getServerRoot() . '/NFS-e/api/v1',
+        );
+
+        try {
+            $client->cancel('blocked-key', 'a pedido do tomador');
+            self::fail('Expected CancellationException');
+        } catch (CancellationException $e) {
+            self::assertSame(NfseErrorCode::CancellationRejected, $e->errorCode);
+            self::assertSame(409, $e->httpStatus);
+        }
     }
 
     // -------------------------------------------------------------------------
