@@ -45,10 +45,9 @@ class DpsSigner implements XmlSignerInterface
             throw new PfxImportException('Cannot read PFX file for CNPJ ' . $cnpj);
         }
 
-        $signingMaterial = $this->importPfx($pfxContent, $password, $cnpj);
-        unset($signingMaterial);
+        [$privateKeyPem, $certificatePem] = $this->importPfx($pfxContent, $password, $cnpj);
 
-        return $this->signXml($xml);
+        return $this->signXml($xml, $privateKeyPem, $certificatePem);
     }
 
     // -------------------------------------------------------------------------
@@ -131,31 +130,112 @@ class DpsSigner implements XmlSignerInterface
         }
     }
 
-    private function signXml(string $xml): string
+    /**
+     * Signs an XML document per ABRASF 2.04 / XML-DSig (RSA-SHA1, enveloped signature).
+     *
+     * Steps:
+     *  1. Locate the element with @Id (infDPS).
+     *  2. Compute SHA-1 digest of its canonical (C14N) form.
+     *  3. Build the Signature/SignedInfo structure in the ds: namespace.
+     *  4. Compute C14N of SignedInfo and RSA-SHA1 sign it.
+     *  5. Append SignatureValue and KeyInfo (X509Certificate) to complete Signature.
+     */
+    private function signXml(string $xml, string $privateKeyPem, string $certificatePem): string
     {
+        $dsNs     = 'http://www.w3.org/2000/09/xmldsig#';
+        $c14nAlgo = 'http://www.w3.org/TR/2001/REC-xml-c14n-20010315';
+        $sigAlgo  = 'http://www.w3.org/2000/09/xmldsig#rsa-sha1';
+        $sha1Algo = 'http://www.w3.org/2000/09/xmldsig#sha1';
+        $envAlgo  = 'http://www.w3.org/2000/09/xmldsig#enveloped-signature';
+
         $doc = new \DOMDocument('1.0', 'UTF-8');
         $doc->preserveWhiteSpace = false;
-        $doc->formatOutput       = false;
 
         if (!$doc->loadXML($xml)) {
             throw new PfxImportException('Cannot parse XML for signing');
         }
 
-        $xpath = new \DOMXPath($doc);
-        // Find the element to sign — the root DPS element
-        $infDps = $xpath->query('//*[@Id]')->item(0);
+        $xpath  = new \DOMXPath($doc);
+        $idNode = $xpath->query('//*[@Id]')->item(0);
 
-        if ($infDps === null) {
+        if (!$idNode instanceof \DOMElement) {
             throw new PfxImportException('No element with @Id attribute found in DPS XML');
         }
 
-        $signedXml = new \DOMDocument('1.0', 'UTF-8');
-        $signedXml->preserveWhiteSpace = false;
+        $refId = $idNode->getAttribute('Id');
 
-        // Use PHP's built-in xmldsig extension when available; otherwise fall back
-        // to manual C14N + RSA-SHA1 computation.
-        // TODO: Implement full XML-DSig per ABRASF 2.04 spec in Phase 2.
-        // For now return the unsigned XML so the test scaffold builds green.
+        // 1. Digest the reference element (Signature not yet in the document — enveloped transform is a no-op here)
+        $refCanonical = $idNode->C14N();
+        $digestValue  = base64_encode(hash('sha1', $refCanonical, binary: true));
+
+        // 2. Build Signature element
+        $sig = $doc->createElementNS($dsNs, 'Signature');
+        $doc->documentElement->appendChild($sig);
+
+        // 2a. SignedInfo
+        $signedInfo = $doc->createElementNS($dsNs, 'SignedInfo');
+        $sig->appendChild($signedInfo);
+
+        $c14nMethod = $doc->createElementNS($dsNs, 'CanonicalizationMethod');
+        $c14nMethod->setAttribute('Algorithm', $c14nAlgo);
+        $signedInfo->appendChild($c14nMethod);
+
+        $sigMethod = $doc->createElementNS($dsNs, 'SignatureMethod');
+        $sigMethod->setAttribute('Algorithm', $sigAlgo);
+        $signedInfo->appendChild($sigMethod);
+
+        $reference = $doc->createElementNS($dsNs, 'Reference');
+        $reference->setAttribute('URI', '#' . $refId);
+        $signedInfo->appendChild($reference);
+
+        $transforms = $doc->createElementNS($dsNs, 'Transforms');
+        $reference->appendChild($transforms);
+
+        $t1 = $doc->createElementNS($dsNs, 'Transform');
+        $t1->setAttribute('Algorithm', $envAlgo);
+        $transforms->appendChild($t1);
+
+        $t2 = $doc->createElementNS($dsNs, 'Transform');
+        $t2->setAttribute('Algorithm', $c14nAlgo);
+        $transforms->appendChild($t2);
+
+        $digestMethod = $doc->createElementNS($dsNs, 'DigestMethod');
+        $digestMethod->setAttribute('Algorithm', $sha1Algo);
+        $reference->appendChild($digestMethod);
+
+        $digestValueEl             = $doc->createElementNS($dsNs, 'DigestValue');
+        $digestValueEl->textContent = $digestValue;
+        $reference->appendChild($digestValueEl);
+
+        // 3. Canonicalise SignedInfo and sign it
+        $signedInfoC14n = $signedInfo->C14N();
+
+        $privKey = openssl_pkey_get_private($privateKeyPem);
+        if ($privKey === false) {
+            throw new PfxImportException('Cannot load private key for XML signing');
+        }
+
+        $rawSignature = '';
+        if (!openssl_sign($signedInfoC14n, $rawSignature, $privKey, OPENSSL_ALGO_SHA1)) {
+            throw new PfxImportException('openssl_sign failed: ' . (openssl_error_string() ?: 'unknown error'));
+        }
+
+        // 4. SignatureValue
+        $sigValueEl             = $doc->createElementNS($dsNs, 'SignatureValue');
+        $sigValueEl->textContent = base64_encode($rawSignature);
+        $sig->appendChild($sigValueEl);
+
+        // 5. KeyInfo / X509Certificate
+        $certB64 = preg_replace('/-----[A-Z ]+-----|[\r\n]/', '', $certificatePem) ?? '';
+
+        $keyInfo  = $doc->createElementNS($dsNs, 'KeyInfo');
+        $x509Data = $doc->createElementNS($dsNs, 'X509Data');
+        $x509Cert = $doc->createElementNS($dsNs, 'X509Certificate');
+        $x509Cert->textContent = $certB64;
+        $x509Data->appendChild($x509Cert);
+        $keyInfo->appendChild($x509Data);
+        $sig->appendChild($keyInfo);
+
         return $doc->saveXML() ?: $xml;
     }
 }
