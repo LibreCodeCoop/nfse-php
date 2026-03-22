@@ -23,8 +23,6 @@ use LibreCodeCoop\NfsePHP\Exception\PfxImportException;
  */
 class DpsSigner implements XmlSignerInterface
 {
-    private const LEGACY_OPENSSL_ERROR = 'error:0308010C';
-
     public function __construct(
         private readonly SecretStoreInterface $secretStore,
     ) {
@@ -61,20 +59,35 @@ class DpsSigner implements XmlSignerInterface
         $ok    = openssl_pkcs12_read($pfxContent, $certs, $password);
 
         if (!$ok) {
-            $lastError = openssl_error_string() ?: '';
+            $nativeErrors = $this->drainOpenSslErrors();
 
-            if (str_contains($lastError, self::LEGACY_OPENSSL_ERROR)) {
+            try {
                 return $this->extractLegacyPemMaterial($pfxContent, $password, $cnpj);
+            } catch (PfxImportException $cliException) {
+                $nativeError = $nativeErrors !== [] ? implode(' | ', $nativeErrors) : 'unknown OpenSSL error';
+
+                throw new PfxImportException(
+                    'Failed to import PFX for CNPJ ' . $cnpj . ': ' . $nativeError . ' (CLI fallback failed: ' . $cliException->getMessage() . ')',
+                    previous: $cliException,
+                );
             }
-
-            $opensslError = openssl_error_string();
-
-            throw new PfxImportException(
-                'Failed to import PFX for CNPJ ' . $cnpj . ': ' . ($opensslError ?: 'unknown OpenSSL error')
-            );
         }
 
         return [$certs['pkey'], $certs['cert']];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function drainOpenSslErrors(): array
+    {
+        $errors = [];
+
+        while (($error = openssl_error_string()) !== false) {
+            $errors[] = $error;
+        }
+
+        return $errors;
     }
 
     /**
