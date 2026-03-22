@@ -67,13 +67,11 @@ class DpsSigner implements XmlSignerInterface
                 return $this->extractLegacyPemMaterial($pfxContent, $password, $cnpj);
             }
 
-            if (!$ok) {
-                $opensslError = openssl_error_string();
+            $opensslError = openssl_error_string();
 
-                throw new PfxImportException(
-                    'Failed to import PFX for CNPJ ' . $cnpj . ': ' . ($opensslError ?: 'unknown OpenSSL error')
-                );
-            }
+            throw new PfxImportException(
+                'Failed to import PFX for CNPJ ' . $cnpj . ': ' . ($opensslError ?: 'unknown OpenSSL error')
+            );
         }
 
         return [$certs['pkey'], $certs['cert']];
