@@ -1,0 +1,56 @@
+<?php
+
+// SPDX-FileCopyrightText: 2026 LibreCode coop and contributors
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+declare(strict_types=1);
+
+namespace LibreCodeCoop\NfsePHP\Tests\Unit\Config;
+
+use LibreCodeCoop\NfsePHP\Config\EnvironmentConfig;
+use LibreCodeCoop\NfsePHP\Tests\TestCase;
+
+/**
+ * @covers \LibreCodeCoop\NfsePHP\Config\EnvironmentConfig
+ */
+class EnvironmentConfigTest extends TestCase
+{
+    public function testDefaultsToProductionUrl(): void
+    {
+        $config = new EnvironmentConfig();
+
+        self::assertFalse($config->sandboxMode);
+        self::assertSame(
+            'https://nfse.fazenda.gov.br/NFS-e/api/v1',
+            $config->baseUrl,
+        );
+    }
+
+    public function testSandboxModeSelectsSandboxUrl(): void
+    {
+        $config = new EnvironmentConfig(sandboxMode: true);
+
+        self::assertTrue($config->sandboxMode);
+        self::assertSame(
+            'https://hml.nfse.fazenda.gov.br/NFS-e/api/v1',
+            $config->baseUrl,
+        );
+    }
+
+    public function testCustomBaseUrlOverridesMode(): void
+    {
+        $custom = 'http://localhost:8080/NFS-e/api/v1';
+        $config = new EnvironmentConfig(sandboxMode: false, baseUrl: $custom);
+
+        self::assertFalse($config->sandboxMode);
+        self::assertSame($custom, $config->baseUrl);
+    }
+
+    public function testCustomBaseUrlOverridesSandboxUrl(): void
+    {
+        $custom = 'http://mock-server/NFS-e/api/v1';
+        $config = new EnvironmentConfig(sandboxMode: true, baseUrl: $custom);
+
+        self::assertSame($custom, $config->baseUrl);
+    }
+}

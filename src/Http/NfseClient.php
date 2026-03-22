@@ -7,6 +7,8 @@ declare(strict_types=1);
 
 namespace LibreCodeCoop\NfsePHP\Http;
 
+use LibreCodeCoop\NfsePHP\Config\CertConfig;
+use LibreCodeCoop\NfsePHP\Config\EnvironmentConfig;
 use LibreCodeCoop\NfsePHP\Contracts\NfseClientInterface;
 use LibreCodeCoop\NfsePHP\Contracts\SecretStoreInterface;
 use LibreCodeCoop\NfsePHP\Contracts\XmlSignerInterface;
@@ -25,25 +27,19 @@ use LibreCodeCoop\NfsePHP\Xml\XmlBuilder;
  *
  * Communicates with the SEFIN gateway to issue, query, and cancel NFS-e.
  * All requests carry a signed DPS XML payload.
- *
- * Gateway sandbox base URL: https://hml.nfse.fazenda.gov.br/NFS-e/api/v1
- * Gateway production base URL: https://nfse.fazenda.gov.br/NFS-e/api/v1
  */
 class NfseClient implements NfseClientInterface
 {
-    private const BASE_URL_PROD    = 'https://nfse.fazenda.gov.br/NFS-e/api/v1';
-    private const BASE_URL_SANDBOX = 'https://hml.nfse.fazenda.gov.br/NFS-e/api/v1';
-
     private readonly string $baseUrl;
     private readonly XmlSignerInterface $signer;
 
     public function __construct(
+        private readonly EnvironmentConfig $environment,
+        private readonly CertConfig $cert,
         private readonly SecretStoreInterface $secretStore,
-        private readonly bool $sandboxMode = false,
-        ?string $baseUrlOverride = null,
         ?XmlSignerInterface $signer = null,
     ) {
-        $this->baseUrl = $baseUrlOverride ?? ($sandboxMode ? self::BASE_URL_SANDBOX : self::BASE_URL_PROD);
+        $this->baseUrl = $environment->baseUrl;
         $this->signer  = $signer ?? new DpsSigner($secretStore);
     }
 
