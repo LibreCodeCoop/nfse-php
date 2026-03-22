@@ -9,6 +9,8 @@ namespace LibreCodeCoop\NfsePHP\Tests\Unit\Http;
 
 use donatj\MockWebServer\MockWebServer;
 use donatj\MockWebServer\Response;
+use LibreCodeCoop\NfsePHP\Config\CertConfig;
+use LibreCodeCoop\NfsePHP\Config\EnvironmentConfig;
 use LibreCodeCoop\NfsePHP\Contracts\XmlSignerInterface;
 use LibreCodeCoop\NfsePHP\Dto\DpsData;
 use LibreCodeCoop\NfsePHP\Exception\CancellationException;
@@ -65,13 +67,7 @@ class NfseClientTest extends TestCase
             new Response($payload, ['Content-Type' => 'application/json'], 200)
         );
 
-        $store  = new NoOpSecretStore();
-        $client = new NfseClient(
-            secretStore:     $store,
-            sandboxMode:     false,
-            baseUrlOverride: self::$server->getServerRoot() . '/NFS-e/api/v1',
-            signer:          $this->signer,
-        );
+        $client = $this->makeClient($this->signer);
 
         $dps     = $this->makeDps();
         $receipt = $client->emit($dps);
@@ -94,11 +90,7 @@ class NfseClientTest extends TestCase
             new Response($payload, ['Content-Type' => 'application/json'], 200)
         );
 
-        $store  = new NoOpSecretStore();
-        $client = new NfseClient(
-            secretStore:     $store,
-            baseUrlOverride: self::$server->getServerRoot() . '/NFS-e/api/v1',
-        );
+        $client = $this->makeClient();
 
         $receipt = $client->query('xyz-456');
 
@@ -112,11 +104,7 @@ class NfseClientTest extends TestCase
             new Response('{}', ['Content-Type' => 'application/json'], 200)
         );
 
-        $store  = new NoOpSecretStore();
-        $client = new NfseClient(
-            secretStore:     $store,
-            baseUrlOverride: self::$server->getServerRoot() . '/NFS-e/api/v1',
-        );
+        $client = $this->makeClient();
 
         self::assertTrue($client->cancel('abc-123', 'Cancelamento a pedido do tomador'));
     }
@@ -134,11 +122,7 @@ class NfseClientTest extends TestCase
             new Response($payload, ['Content-Type' => 'application/json'], 422),
         );
 
-        $client = new NfseClient(
-            secretStore:     new NoOpSecretStore(),
-            baseUrlOverride: self::$server->getServerRoot() . '/NFS-e/api/v1',
-            signer:          $this->signer,
-        );
+        $client = $this->makeClient($this->signer);
 
         $this->expectException(IssuanceException::class);
         $client->emit($this->makeDps());
@@ -153,11 +137,7 @@ class NfseClientTest extends TestCase
             new Response(json_encode($errorData, JSON_THROW_ON_ERROR), ['Content-Type' => 'application/json'], 422),
         );
 
-        $client = new NfseClient(
-            secretStore:     new NoOpSecretStore(),
-            baseUrlOverride: self::$server->getServerRoot() . '/NFS-e/api/v1',
-            signer:          $this->signer,
-        );
+        $client = $this->makeClient($this->signer);
 
         try {
             $client->emit($this->makeDps());
@@ -176,10 +156,7 @@ class NfseClientTest extends TestCase
             new Response('{"error":"not found"}', ['Content-Type' => 'application/json'], 404),
         );
 
-        $client = new NfseClient(
-            secretStore:     new NoOpSecretStore(),
-            baseUrlOverride: self::$server->getServerRoot() . '/NFS-e/api/v1',
-        );
+        $client = $this->makeClient();
 
         $this->expectException(QueryException::class);
         $client->query('missing-key');
@@ -192,10 +169,7 @@ class NfseClientTest extends TestCase
             new Response('{"error":"not found"}', ['Content-Type' => 'application/json'], 404),
         );
 
-        $client = new NfseClient(
-            secretStore:     new NoOpSecretStore(),
-            baseUrlOverride: self::$server->getServerRoot() . '/NFS-e/api/v1',
-        );
+        $client = $this->makeClient();
 
         try {
             $client->query('missing-key');
@@ -213,10 +187,7 @@ class NfseClientTest extends TestCase
             new Response('{"error":"cannot cancel"}', ['Content-Type' => 'application/json'], 409),
         );
 
-        $client = new NfseClient(
-            secretStore:     new NoOpSecretStore(),
-            baseUrlOverride: self::$server->getServerRoot() . '/NFS-e/api/v1',
-        );
+        $client = $this->makeClient();
 
         $this->expectException(CancellationException::class);
         $client->cancel('blocked-key', 'a pedido do tomador');
@@ -229,10 +200,7 @@ class NfseClientTest extends TestCase
             new Response('{"error":"cannot cancel"}', ['Content-Type' => 'application/json'], 409),
         );
 
-        $client = new NfseClient(
-            secretStore:     new NoOpSecretStore(),
-            baseUrlOverride: self::$server->getServerRoot() . '/NFS-e/api/v1',
-        );
+        $client = $this->makeClient();
 
         try {
             $client->cancel('blocked-key', 'a pedido do tomador');
@@ -244,6 +212,22 @@ class NfseClientTest extends TestCase
     }
 
     // -------------------------------------------------------------------------
+
+    private function makeClient(?XmlSignerInterface $signer = null): NfseClient
+    {
+        return new NfseClient(
+            environment: new EnvironmentConfig(
+                baseUrl: self::$server->getServerRoot() . '/NFS-e/api/v1',
+            ),
+            cert:        new CertConfig(
+                cnpj:      '29842527000145',
+                pfxPath:   '/dev/null',
+                vaultPath: 'secret/nfse/29842527000145',
+            ),
+            secretStore: new NoOpSecretStore(),
+            signer:      $signer,
+        );
+    }
 
     private function makeDps(): DpsData
     {
