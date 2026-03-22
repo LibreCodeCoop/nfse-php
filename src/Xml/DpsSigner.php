@@ -64,28 +64,26 @@ class DpsSigner implements XmlSignerInterface
             $lastError = openssl_error_string() ?: '';
 
             if (str_contains($lastError, self::LEGACY_OPENSSL_ERROR)) {
-                // Legacy PFX — re-pack via CLI and retry
-                $pfxContent = $this->repackLegacyPfx($pfxContent, $password);
-                $ok         = openssl_pkcs12_read($pfxContent, $certs, $password);
+                return $this->extractLegacyPemMaterial($pfxContent, $password, $cnpj);
             }
 
-            if (!$ok) {
-                $opensslError = openssl_error_string();
+            $opensslError = openssl_error_string();
 
-                throw new PfxImportException(
-                    'Failed to import PFX for CNPJ ' . $cnpj . ': ' . ($opensslError ?: 'unknown OpenSSL error')
-                );
-            }
+            throw new PfxImportException(
+                'Failed to import PFX for CNPJ ' . $cnpj . ': ' . ($opensslError ?: 'unknown OpenSSL error')
+            );
         }
 
         return [$certs['pkey'], $certs['cert']];
     }
 
     /**
-     * Re-pack a legacy PFX into a modern one using the OpenSSL CLI.
+     * Extract private key and leaf certificate from a legacy PFX via OpenSSL CLI.
      * The password is passed via environment variable to avoid shell injection.
+     *
+     * @return array{string, string} [privateKeyPem, certificatePem]
      */
-    private function repackLegacyPfx(string $pfxContent, string $password): string
+    private function extractLegacyPemMaterial(string $pfxContent, string $password, string $cnpj): array
     {
         $tmpIn  = tempnam(sys_get_temp_dir(), 'nfse_in_');
         $tmpOut = tempnam(sys_get_temp_dir(), 'nfse_out_');
@@ -100,7 +98,7 @@ class DpsSigner implements XmlSignerInterface
             // Use env var to avoid password in process list (avoids shell injection)
             putenv('NFSE_PFX_PASS=' . $password);
             $cmd = sprintf(
-                'openssl pkcs12 -legacy -in %s -passin env:NFSE_PFX_PASS -out %s -passout env:NFSE_PFX_PASS 2>/dev/null',
+                'openssl pkcs12 -legacy -in %s -passin env:NFSE_PFX_PASS -nodes -out %s 2>/dev/null',
                 escapeshellarg($tmpIn),
                 escapeshellarg($tmpOut),
             );
@@ -117,7 +115,7 @@ class DpsSigner implements XmlSignerInterface
                 throw new PfxImportException('openssl CLI repack produced empty output');
             }
 
-            return $result;
+            return $this->extractPemParts($result, $cnpj);
         } finally {
             putenv('NFSE_PFX_PASS');
 
@@ -128,6 +126,30 @@ class DpsSigner implements XmlSignerInterface
                 unlink($tmpOut);
             }
         }
+    }
+
+    /**
+     * @return array{string, string} [privateKeyPem, certificatePem]
+     */
+    private function extractPemParts(string $pemBundle, string $cnpj): array
+    {
+        $privateKeyMatched = preg_match(
+            '/-----BEGIN(?: ENCRYPTED)? PRIVATE KEY-----.*?-----END(?: ENCRYPTED)? PRIVATE KEY-----/s',
+            $pemBundle,
+            $privateKeyMatches,
+        ) === 1;
+
+        $certificateMatched = preg_match(
+            '/-----BEGIN CERTIFICATE-----.*?-----END CERTIFICATE-----/s',
+            $pemBundle,
+            $certificateMatches,
+        ) === 1;
+
+        if (!$privateKeyMatched || !$certificateMatched) {
+            throw new PfxImportException('Failed to extract PEM material from legacy PFX for CNPJ ' . $cnpj);
+        }
+
+        return [$privateKeyMatches[0], $certificateMatches[0]];
     }
 
     /**
