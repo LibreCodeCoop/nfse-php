@@ -170,4 +170,27 @@ class DpsSignerTest extends TestCase
         self::assertSame(rtrim($privateKeyPem), $parts[0]);
         self::assertSame(rtrim($certificatePem), $parts[1]);
     }
+
+    public function testExtractLegacyPemMaterialViaCLIReturnsPrivateKeyAndCertificate(): void
+    {
+        $method = new \ReflectionMethod(DpsSigner::class, 'extractLegacyPemMaterial');
+        $method->setAccessible(true);
+
+        $key = openssl_pkey_new(['private_key_bits' => 2048, 'private_key_type' => OPENSSL_KEYTYPE_RSA]);
+        self::assertNotFalse($key);
+        $csr = openssl_csr_new(['commonName' => $this->testCnpj], $key, ['digest_alg' => 'sha256']);
+        self::assertNotFalse($csr);
+        $cert = openssl_csr_sign($csr, null, $key, 1, ['digest_alg' => 'sha256']);
+        self::assertNotFalse($cert);
+        $pfxData = '';
+        $ok = openssl_pkcs12_export($cert, $pfxData, $key, 'legacypass');
+        self::assertTrue($ok, 'openssl_pkcs12_export must succeed');
+
+        [$privateKeyPem, $certificatePem] = $method->invoke($this->signer, $pfxData, 'legacypass', $this->testCnpj);
+
+        self::assertStringContainsString('-----BEGIN PRIVATE KEY-----', $privateKeyPem);
+        self::assertStringContainsString('-----END PRIVATE KEY-----', $privateKeyPem);
+        self::assertStringContainsString('-----BEGIN CERTIFICATE-----', $certificatePem);
+        self::assertStringContainsString('-----END CERTIFICATE-----', $certificatePem);
+    }
 }
