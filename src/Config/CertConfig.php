@@ -25,6 +25,12 @@ final readonly class CertConfig
 
         /** OpenBao KV path for the PFX password (e.g. "secret/nfse/29842527000145"). */
         public string $vaultPath,
+
+        /** Optional PEM certificate path used for mTLS transport. */
+        public ?string $transportCertificatePath = null,
+
+        /** Optional PEM private key path used for mTLS transport. */
+        public ?string $transportPrivateKeyPath = null,
     ) {
     }
 }
