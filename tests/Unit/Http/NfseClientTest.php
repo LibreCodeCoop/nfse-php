@@ -57,14 +57,15 @@ class NfseClientTest extends TestCase
     public function testEmitReturnsReceiptDataOnSuccess(): void
     {
         $payload = json_encode([
-            'nNFSe'       => '42',
-            'chaveAcesso' => 'abc-123',
-            'dhEmi'       => '2026-01-01T12:00:00',
+            'nNFSe'          => '42',
+            'chaveAcesso'    => 'abc-123',
+            'dataHoraProcessamento' => '2026-01-01T12:00:00',
+            'nfseXmlGZipB64' => base64_encode(gzencode('<NFS-e>ok</NFS-e>')),
         ], JSON_THROW_ON_ERROR);
 
         self::$server->setResponseOfPath(
-            '/NFS-e/api/v1/dps',
-            new Response($payload, ['Content-Type' => 'application/json'], 200)
+            '/SefinNacional/nfse',
+            new Response($payload, ['Content-Type' => 'application/json'], 201)
         );
 
         $client = $this->makeClient($this->signer);
@@ -75,6 +76,7 @@ class NfseClientTest extends TestCase
         self::assertSame('42', $receipt->nfseNumber);
         self::assertSame('abc-123', $receipt->chaveAcesso);
         self::assertSame('2026-01-01T12:00:00', $receipt->dataEmissao);
+        self::assertSame('<NFS-e>ok</NFS-e>', $receipt->rawXml);
     }
 
     public function testQueryReturnsReceiptDataOnSuccess(): void
@@ -86,7 +88,7 @@ class NfseClientTest extends TestCase
         ], JSON_THROW_ON_ERROR);
 
         self::$server->setResponseOfPath(
-            '/NFS-e/api/v1/dps/xyz-456',
+            '/SefinNacional/nfse/xyz-456',
             new Response($payload, ['Content-Type' => 'application/json'], 200)
         );
 
@@ -100,7 +102,7 @@ class NfseClientTest extends TestCase
     public function testCancelReturnsTrueOnSuccess(): void
     {
         self::$server->setResponseOfPath(
-            '/NFS-e/api/v1/dps/abc-123',
+            '/SefinNacional/dps/abc-123',
             new Response('{}', ['Content-Type' => 'application/json'], 200)
         );
 
@@ -118,7 +120,7 @@ class NfseClientTest extends TestCase
         $payload = json_encode(['codigo' => 'E422', 'mensagem' => 'CNPJ inválido'], JSON_THROW_ON_ERROR);
 
         self::$server->setResponseOfPath(
-            '/NFS-e/api/v1/dps',
+            '/SefinNacional/nfse',
             new Response($payload, ['Content-Type' => 'application/json'], 422),
         );
 
@@ -133,7 +135,7 @@ class NfseClientTest extends TestCase
         $errorData = ['codigo' => 'E422', 'mensagem' => 'CNPJ inválido'];
 
         self::$server->setResponseOfPath(
-            '/NFS-e/api/v1/dps',
+            '/SefinNacional/nfse',
             new Response(json_encode($errorData, JSON_THROW_ON_ERROR), ['Content-Type' => 'application/json'], 422),
         );
 
@@ -152,7 +154,7 @@ class NfseClientTest extends TestCase
     public function testQueryThrowsQueryExceptionWhenGatewayReturnsError(): void
     {
         self::$server->setResponseOfPath(
-            '/NFS-e/api/v1/dps/missing-key',
+            '/SefinNacional/nfse/missing-key',
             new Response('{"error":"not found"}', ['Content-Type' => 'application/json'], 404),
         );
 
@@ -165,7 +167,7 @@ class NfseClientTest extends TestCase
     public function testQueryExceptionCarriesErrorCodeAndHttpStatus(): void
     {
         self::$server->setResponseOfPath(
-            '/NFS-e/api/v1/dps/missing-key',
+            '/SefinNacional/nfse/missing-key',
             new Response('{"error":"not found"}', ['Content-Type' => 'application/json'], 404),
         );
 
@@ -183,7 +185,7 @@ class NfseClientTest extends TestCase
     public function testCancelThrowsCancellationExceptionWhenGatewayReturnsError(): void
     {
         self::$server->setResponseOfPath(
-            '/NFS-e/api/v1/dps/blocked-key',
+            '/SefinNacional/dps/blocked-key',
             new Response('{"error":"cannot cancel"}', ['Content-Type' => 'application/json'], 409),
         );
 
@@ -196,7 +198,7 @@ class NfseClientTest extends TestCase
     public function testCancellationExceptionCarriesErrorCodeAndHttpStatus(): void
     {
         self::$server->setResponseOfPath(
-            '/NFS-e/api/v1/dps/blocked-key',
+            '/SefinNacional/dps/blocked-key',
             new Response('{"error":"cannot cancel"}', ['Content-Type' => 'application/json'], 409),
         );
 
@@ -217,12 +219,14 @@ class NfseClientTest extends TestCase
     {
         return new NfseClient(
             environment: new EnvironmentConfig(
-                baseUrl: self::$server->getServerRoot() . '/NFS-e/api/v1',
+                baseUrl: self::$server->getServerRoot() . '/SefinNacional',
             ),
             cert:        new CertConfig(
                 cnpj:      '29842527000145',
                 pfxPath:   '/dev/null',
                 vaultPath: 'secret/nfse/29842527000145',
+                transportCertificatePath: '/tmp/client.crt.pem',
+                transportPrivateKeyPath: '/tmp/client.key.pem',
             ),
             secretStore: new NoOpSecretStore(),
             signer:      $signer,

@@ -48,7 +48,7 @@ class NfseClient implements NfseClientInterface
         $xml    = (new XmlBuilder())->buildDps($dps);
         $signed = $this->signer->sign($xml, $dps->cnpjPrestador);
 
-        [$httpStatus, $body] = $this->post('/dps', $signed);
+        [$httpStatus, $body] = $this->post('/nfse', $signed);
 
         if ($httpStatus >= 400) {
             throw new IssuanceException(
@@ -64,7 +64,7 @@ class NfseClient implements NfseClientInterface
 
     public function query(string $chaveAcesso): ReceiptData
     {
-        [$httpStatus, $body] = $this->get('/dps/' . $chaveAcesso);
+        [$httpStatus, $body] = $this->get('/nfse/' . $chaveAcesso);
 
         if ($httpStatus >= 400) {
             throw new QueryException(
@@ -103,13 +103,24 @@ class NfseClient implements NfseClientInterface
      */
     private function post(string $path, string $xmlPayload): array
     {
+        $compressedPayload = gzencode($xmlPayload);
+
+        if ($compressedPayload === false) {
+            throw new NetworkException('Failed to compress DPS XML payload before transmission.');
+        }
+
+        $payload = json_encode([
+            'dpsXmlGZipB64' => base64_encode($compressedPayload),
+        ], JSON_THROW_ON_ERROR);
+
         $context = stream_context_create([
             'http' => [
                 'method'        => 'POST',
-                'header'        => "Content-Type: application/xml\r\nAccept: application/json\r\n",
-                'content'       => $xmlPayload,
+                'header'        => "Content-Type: application/json\r\nAccept: application/json\r\n",
+                'content'       => $payload,
                 'ignore_errors' => true,
             ],
+            'ssl' => $this->sslContextOptions(),
         ]);
 
         return $this->fetchAndDecode($path, $context);
@@ -126,6 +137,7 @@ class NfseClient implements NfseClientInterface
                 'header'        => "Accept: application/json\r\n",
                 'ignore_errors' => true,
             ],
+            'ssl' => $this->sslContextOptions(),
         ]);
 
         return $this->fetchAndDecode($path, $context);
@@ -144,9 +156,28 @@ class NfseClient implements NfseClientInterface
                 'content'       => $payload,
                 'ignore_errors' => true,
             ],
+            'ssl' => $this->sslContextOptions(),
         ]);
 
         return $this->fetchAndDecode($path, $context);
+    }
+
+    /**
+     * @return array<string, bool|string>
+     */
+    private function sslContextOptions(): array
+    {
+        $options = [
+            'verify_peer' => true,
+            'verify_peer_name' => true,
+        ];
+
+        if ($this->cert->transportCertificatePath !== null && $this->cert->transportPrivateKeyPath !== null) {
+            $options['local_cert'] = $this->cert->transportCertificatePath;
+            $options['local_pk'] = $this->cert->transportPrivateKeyPath;
+        }
+
+        return $options;
     }
 
     /**
@@ -206,12 +237,26 @@ class NfseClient implements NfseClientInterface
      */
     private function parseReceiptResponse(array $response): ReceiptData
     {
+        $rawXml = null;
+
+        if (isset($response['nfseXmlGZipB64']) && is_string($response['nfseXmlGZipB64'])) {
+            $decodedXml = base64_decode($response['nfseXmlGZipB64'], true);
+
+            if ($decodedXml !== false) {
+                $inflatedXml = gzdecode($decodedXml);
+
+                if ($inflatedXml !== false) {
+                    $rawXml = $inflatedXml;
+                }
+            }
+        }
+
         return new ReceiptData(
             nfseNumber:        (string) ($response['nNFSe'] ?? $response['numero'] ?? ''),
-            chaveAcesso:       (string) ($response['chaveAcesso'] ?? $response['id'] ?? ''),
-            dataEmissao:       (string) ($response['dhEmi'] ?? $response['dataEmissao'] ?? ''),
+            chaveAcesso:       (string) ($response['chaveAcesso'] ?? ''),
+            dataEmissao:       (string) ($response['dhEmi'] ?? $response['dataHoraProcessamento'] ?? $response['dataEmissao'] ?? ''),
             codigoVerificacao: isset($response['codigoVerificacao']) ? (string) $response['codigoVerificacao'] : null,
-            rawXml:            null,
+            rawXml:            $rawXml,
         );
     }
 }

@@ -21,11 +21,15 @@ class CertConfigTest extends TestCase
             cnpj:      '29842527000145',
             pfxPath:   '/etc/nfse/certs/company.pfx',
             vaultPath: 'secret/nfse/29842527000145',
+            transportCertificatePath: '/etc/nfse/certs/client.crt.pem',
+            transportPrivateKeyPath: '/etc/nfse/certs/client.key.pem',
         );
 
         self::assertSame('29842527000145', $config->cnpj);
         self::assertSame('/etc/nfse/certs/company.pfx', $config->pfxPath);
         self::assertSame('secret/nfse/29842527000145', $config->vaultPath);
+        self::assertSame('/etc/nfse/certs/client.crt.pem', $config->transportCertificatePath);
+        self::assertSame('/etc/nfse/certs/client.key.pem', $config->transportPrivateKeyPath);
     }
 
     public function testCnpjIsReadonly(): void
@@ -65,5 +69,33 @@ class CertConfigTest extends TestCase
         $this->expectException(\Error::class);
         /** @phpstan-ignore-next-line */
         $config->vaultPath = 'other';
+    }
+
+    public function testTransportCertificatePathIsReadonly(): void
+    {
+        $config = new CertConfig(
+            cnpj:      '29842527000145',
+            pfxPath:   '/etc/nfse/certs/company.pfx',
+            vaultPath: 'secret/nfse/29842527000145',
+            transportCertificatePath: '/etc/nfse/certs/client.crt.pem',
+        );
+
+        $this->expectException(\Error::class);
+        /** @phpstan-ignore-next-line */
+        $config->transportCertificatePath = 'other';
+    }
+
+    public function testTransportPrivateKeyPathIsReadonly(): void
+    {
+        $config = new CertConfig(
+            cnpj:      '29842527000145',
+            pfxPath:   '/etc/nfse/certs/company.pfx',
+            vaultPath: 'secret/nfse/29842527000145',
+            transportPrivateKeyPath: '/etc/nfse/certs/client.key.pem',
+        );
+
+        $this->expectException(\Error::class);
+        /** @phpstan-ignore-next-line */
+        $config->transportPrivateKeyPath = 'other';
     }
 }
