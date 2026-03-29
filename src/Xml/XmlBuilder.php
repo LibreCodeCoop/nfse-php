@@ -47,7 +47,7 @@ class XmlBuilder
         $serv = $doc->createElement('serv');
 
         $itemListaServico = $doc->createElement('cServ');
-        $itemListaServico->appendChild($doc->createElement('cTribNac', $dps->itemListaServico));
+        $itemListaServico->appendChild($doc->createElement('cTribNac', $dps->codigoTributacaoNacional));
         $serv->appendChild($itemListaServico);
 
         $serv->appendChild($doc->createElement('xDescServ', htmlspecialchars($dps->discriminacao, ENT_XML1)));
@@ -61,7 +61,7 @@ class XmlBuilder
         // Values
         $valores = $doc->createElement('valores');
         $valores->appendChild($doc->createElement('vServ', $dps->valorServico));
-        $valores->appendChild($this->buildTrib($doc, $dps));
+        $valores->appendChild($this->buildTotTrib($doc, $dps));
         $infDps->appendChild($valores);
 
         // Regime especial de tributação (optional)
@@ -72,13 +72,25 @@ class XmlBuilder
         return $doc->saveXML() ?: '';
     }
 
-    private function buildTrib(\DOMDocument $doc, DpsData $dps): \DOMElement
+    private function buildTotTrib(\DOMDocument $doc, DpsData $dps): \DOMElement
     {
-        $trib = $doc->createElement('tribMun');
-        $trib->appendChild($doc->createElement('tribISSQN', $dps->issRetido ? '2' : '1'));
-        $trib->appendChild($doc->createElement('pAliq', $dps->aliquota));
+        $totTrib = $doc->createElement('totTrib');
 
-        return $trib;
+        // tribMun contains ISS and conditional pAliq
+        $tribMun = $doc->createElement('tribMun');
+        $tribMun->appendChild($doc->createElement('tribISSQN', $dps->issRetido ? '2' : '1'));
+
+        // E0617: For não optante (opSimpNac=1), pAliq must NOT be present
+        if ($dps->opcaoSimplesNacional !== 1) {
+            $tribMun->appendChild($doc->createElement('pAliq', $dps->aliquota));
+        }
+
+        $totTrib->appendChild($tribMun);
+
+        // E0715: indTotTrib is ALWAYS included to avoid schema validation errors
+        $totTrib->appendChild($doc->createElement('indTotTrib', (string) $dps->indicadorTributacao));
+
+        return $totTrib;
     }
 
     private function buildToma(\DOMDocument $doc, DpsData $dps): \DOMElement
