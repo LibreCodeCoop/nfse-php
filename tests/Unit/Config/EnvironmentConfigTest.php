@@ -21,7 +21,7 @@ class EnvironmentConfigTest extends TestCase
 
         self::assertFalse($config->sandboxMode);
         self::assertSame(
-            'https://nfse.fazenda.gov.br/NFS-e/api/v1',
+            'https://sefin.nfse.gov.br/SefinNacional',
             $config->baseUrl,
         );
     }
@@ -32,14 +32,14 @@ class EnvironmentConfigTest extends TestCase
 
         self::assertTrue($config->sandboxMode);
         self::assertSame(
-            'https://hml.nfse.fazenda.gov.br/NFS-e/api/v1',
+            'https://sefin.producaorestrita.nfse.gov.br/SefinNacional',
             $config->baseUrl,
         );
     }
 
     public function testCustomBaseUrlOverridesMode(): void
     {
-        $custom = 'http://localhost:8080/NFS-e/api/v1';
+        $custom = 'http://localhost:8080/SefinNacional';
         $config = new EnvironmentConfig(sandboxMode: false, baseUrl: $custom);
 
         self::assertFalse($config->sandboxMode);
@@ -48,7 +48,7 @@ class EnvironmentConfigTest extends TestCase
 
     public function testCustomBaseUrlOverridesSandboxUrl(): void
     {
-        $custom = 'http://mock-server/NFS-e/api/v1';
+        $custom = 'http://mock-server/SefinNacional';
         $config = new EnvironmentConfig(sandboxMode: true, baseUrl: $custom);
 
         self::assertSame($custom, $config->baseUrl);
