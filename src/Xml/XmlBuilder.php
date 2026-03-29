@@ -17,6 +17,7 @@ class XmlBuilder
 {
     private const XSD_NAMESPACE = 'http://www.sped.fazenda.gov.br/nfse';
     private const XSD_SCHEMA    = 'http://www.sped.fazenda.gov.br/nfse tiDPS_v1.00.xsd';
+    private const DPS_VERSION   = '1.01';
 
     public function buildDps(DpsData $dps): string
     {
@@ -25,22 +26,25 @@ class XmlBuilder
         $doc->formatOutput       = true;
 
         $root = $doc->createElementNS(self::XSD_NAMESPACE, 'DPS');
+        $root->setAttribute('versao', self::DPS_VERSION);
         $root->setAttribute('xsi:schemaLocation', self::XSD_SCHEMA);
         $root->setAttribute('xmlns:xsi', 'http://www.w3.org/2001/XMLSchema-instance');
         $doc->appendChild($root);
 
         $infDps = $doc->createElement('infDPS');
-        $infDps->setAttribute('Id', 'DPS' . $dps->cnpjPrestador . date('YmdHis'));
+        $infDps->setAttribute('Id', $this->buildIdentifier($dps));
         $root->appendChild($infDps);
 
         // Municipality
         $cMun = $doc->createElement('cMun', $dps->municipioIbge);
         $infDps->appendChild($cMun);
+        $infDps->appendChild($doc->createElement('cLocEmi', $dps->municipioIbge));
 
         // Prestador
         $prest = $doc->createElement('prest');
         $cnpj  = $doc->createElement('CNPJ', $dps->cnpjPrestador);
         $prest->appendChild($cnpj);
+        $prest->appendChild($this->buildRegTrib($doc, $dps));
         $infDps->appendChild($prest);
 
         // Service block
@@ -60,16 +64,25 @@ class XmlBuilder
 
         // Values
         $valores = $doc->createElement('valores');
-        $valores->appendChild($doc->createElement('vServ', $dps->valorServico));
+
+        $vServPrest = $doc->createElement('vServPrest');
+        $vServPrest->appendChild($doc->createElement('vServ', $dps->valorServico));
+        $valores->appendChild($vServPrest);
+
         $valores->appendChild($this->buildTotTrib($doc, $dps));
         $infDps->appendChild($valores);
 
-        // Regime especial de tributação (optional)
-        if ($dps->regimeEspecialTributacao !== null) {
-            $infDps->appendChild($doc->createElement('regEspTrib', (string) $dps->regimeEspecialTributacao));
-        }
-
         return $doc->saveXML() ?: '';
+    }
+
+    private function buildIdentifier(DpsData $dps): string
+    {
+        return 'DPS'
+            . $dps->municipioIbge
+            . $dps->tipoAmbiente
+            . $dps->cnpjPrestador
+            . str_pad($dps->serie, 5, '0', STR_PAD_LEFT)
+            . str_pad($dps->numeroDps, 15, '0', STR_PAD_LEFT);
     }
 
     private function buildTotTrib(\DOMDocument $doc, DpsData $dps): \DOMElement
@@ -79,6 +92,7 @@ class XmlBuilder
         // tribMun contains ISS and conditional pAliq
         $tribMun = $doc->createElement('tribMun');
         $tribMun->appendChild($doc->createElement('tribISSQN', $dps->issRetido ? '2' : '1'));
+        $tribMun->appendChild($doc->createElement('tpRetISSQN', (string) $dps->tipoRetencaoIss));
 
         // E0617: For não optante (opSimpNac=1), pAliq must NOT be present
         if ($dps->opcaoSimplesNacional !== 1) {
@@ -91,6 +105,14 @@ class XmlBuilder
         $totTrib->appendChild($doc->createElement('indTotTrib', (string) $dps->indicadorTributacao));
 
         return $totTrib;
+    }
+
+    private function buildRegTrib(\DOMDocument $doc, DpsData $dps): \DOMElement
+    {
+        $regTrib = $doc->createElement('regTrib');
+        $regTrib->appendChild($doc->createElement('regEspTrib', (string) $dps->regimeEspecialTributacao));
+
+        return $regTrib;
     }
 
     private function buildToma(\DOMDocument $doc, DpsData $dps): \DOMElement
