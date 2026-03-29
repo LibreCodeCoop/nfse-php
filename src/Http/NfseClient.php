@@ -103,8 +103,14 @@ class NfseClient implements NfseClientInterface
      */
     private function post(string $path, string $xmlPayload): array
     {
+        $compressedPayload = gzencode($xmlPayload);
+
+        if ($compressedPayload === false) {
+            throw new NetworkException('Failed to compress DPS XML payload before transmission.');
+        }
+
         $payload = json_encode([
-            'dpsXmlGZipB64' => base64_encode(gzencode($xmlPayload)),
+            'dpsXmlGZipB64' => base64_encode($compressedPayload),
         ], JSON_THROW_ON_ERROR);
 
         $context = stream_context_create([
