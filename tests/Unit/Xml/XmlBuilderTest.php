@@ -34,6 +34,29 @@ class XmlBuilderTest extends TestCase
         self::assertTrue($doc->loadXML($xml), 'Generated XML must be valid XML');
     }
 
+    public function testBuildDpsSetsSchemaVersionAttribute(): void
+    {
+        $xml = $this->builder->buildDps($this->makeDps());
+
+        $doc = new \DOMDocument();
+        $doc->loadXML($xml);
+
+        self::assertSame('1.01', $doc->documentElement?->getAttribute('versao'));
+    }
+
+    public function testBuildDpsUsesOfficialIdentifierShape(): void
+    {
+        $xml = $this->builder->buildDps($this->makeDps(cnpjPrestador: '11222333000181', municipioIbge: '3303302', serie: '12', numeroDps: '345'));
+
+        $doc = new \DOMDocument();
+        $doc->loadXML($xml);
+
+        self::assertSame(
+            'DPS330330221122233300018100012000000000000345',
+            $doc->getElementsByTagName('infDPS')->item(0)?->attributes?->getNamedItem('Id')?->nodeValue,
+        );
+    }
+
     public function testBuildDpsContainsCnpjPrestador(): void
     {
         $dps = $this->makeDps(cnpjPrestador: '11222333000181');
@@ -48,6 +71,15 @@ class XmlBuilderTest extends TestCase
         $xml = $this->builder->buildDps($dps);
 
         self::assertStringContainsString('3303302', $xml);
+        self::assertStringContainsString('<cLocEmi>3303302</cLocEmi>', $xml);
+    }
+
+    public function testBuildDpsUsesNationalTaxCodeInCtribnac(): void
+    {
+        $dps = $this->makeDps(itemListaServico: '0107', codigoTributacaoNacional: '101011');
+        $xml = $this->builder->buildDps($dps);
+
+        self::assertStringContainsString('<cServ><cTribNac>101011</cTribNac></cServ>', str_replace(["\n", '  '], '', $xml));
     }
 
     public function testBuildDpsContainsValorServico(): void
@@ -56,6 +88,7 @@ class XmlBuilderTest extends TestCase
         $xml = $this->builder->buildDps($dps);
 
         self::assertStringContainsString('1500.00', $xml);
+        self::assertStringContainsString('<vServPrest><vServ>1500.00</vServ></vServPrest>', str_replace(["\n", '  '], '', $xml));
     }
 
     public function testDiscriminacaoIsXmlEscaped(): void
@@ -70,14 +103,16 @@ class XmlBuilderTest extends TestCase
 
     public function testIssRetidoSetsTribCode(): void
     {
-        $dpsRetido  = $this->makeDps(issRetido: true);
-        $dpsProprio = $this->makeDps(issRetido: false);
+        $dpsRetido  = $this->makeDps(issRetido: true, tipoRetencaoIss: 2);
+        $dpsProprio = $this->makeDps(issRetido: false, tipoRetencaoIss: 1);
 
         $xmlRetido  = $this->builder->buildDps($dpsRetido);
         $xmlProprio = $this->builder->buildDps($dpsProprio);
 
         self::assertStringContainsString('<tribISSQN>2</tribISSQN>', $xmlRetido);
         self::assertStringContainsString('<tribISSQN>1</tribISSQN>', $xmlProprio);
+        self::assertStringContainsString('<tpRetISSQN>2</tpRetISSQN>', $xmlRetido);
+        self::assertStringContainsString('<tpRetISSQN>1</tpRetISSQN>', $xmlProprio);
     }
 
     // -------------------------------------------------------------------------
@@ -140,14 +175,14 @@ class XmlBuilderTest extends TestCase
         $xpath = new \DOMXPath($doc);
         $xpath->registerNamespace('n', 'http://www.sped.fazenda.gov.br/nfse');
 
-        $nodes = $xpath->query('//n:regEspTrib');
-        self::assertSame(1, $nodes->length, '<regEspTrib> expected when regimeEspecialTributacao is set');
+        $nodes = $xpath->query('//n:prest/n:regTrib/n:regEspTrib');
+        self::assertSame(1, $nodes->length, '<prest><regTrib><regEspTrib> expected when regimeEspecialTributacao is set');
         self::assertSame('1', $nodes->item(0)->textContent);
     }
 
-    public function testRegimeEspecialTributacaoIsAbsentWhenNull(): void
+    public function testBuildDpsAlwaysIncludesProviderTaxRegime(): void
     {
-        $dps = $this->makeDps(regimeEspecialTributacao: null);
+        $dps = $this->makeDps(regimeEspecialTributacao: 0);
         $xml = $this->builder->buildDps($dps);
 
         $doc   = new \DOMDocument();
@@ -155,8 +190,56 @@ class XmlBuilderTest extends TestCase
         $xpath = new \DOMXPath($doc);
         $xpath->registerNamespace('n', 'http://www.sped.fazenda.gov.br/nfse');
 
-        $nodes = $xpath->query('//n:regEspTrib');
-        self::assertSame(0, $nodes->length, '<regEspTrib> must be absent when null');
+        $nodes = $xpath->query('//n:prest/n:regTrib/n:regEspTrib');
+        self::assertSame(1, $nodes->length, '<prest><regTrib><regEspTrib> must always be present');
+        self::assertSame('0', $nodes->item(0)->textContent);
+    }
+
+    // -------------------------------------------------------------------------
+
+    public function testNonSimplesnacionalMustNotIncludeIndtottribAndPaliq(): void
+    {
+        // opSimpNac=1 = "não optante" (per SEFIN error messages)
+        $dpsNaoOptante = $this->makeDps(
+            cnpjPrestador: '11222333000181',
+            municipioIbge: '3303302',
+            itemListaServico: '0107',
+            valorServico: '1000.00',
+            aliquota: '5.00',
+            opcaoSimplesNacional: 1, // não optante
+        );
+        $xml = $this->builder->buildDps($dpsNaoOptante);
+
+        // For "não optante" (opSimpNac = 1), pAliq must NOT be present
+        // but indTotTrib is now ALWAYS included (even if 0) to avoid schema validation errors
+        self::assertStringNotContainsString('<pAliq>', $xml);
+        self::assertStringContainsString('<indTotTrib>', $xml);
+
+        // totTrib container must exist with content
+        self::assertStringContainsString('<totTrib', $xml);
+
+        // tribMun and tribISSQN must still exist
+        self::assertStringContainsString('<tribMun>', $xml);
+        self::assertStringContainsString('<tribISSQN>', $xml);
+    }
+
+    public function testOptiontSimplesnacionalIncludesIndtottribAndPaliq(): void
+    {
+        // opSimpNac=2 = optante de Simples Nacional (inverse naming)
+        $dpsOptante = $this->makeDps(
+            cnpjPrestador: '11222333000181',
+            municipioIbge: '3303302',
+            itemListaServico: '0107',
+            valorServico: '1000.00',
+            aliquota: '5.00',
+            opcaoSimplesNacional: 2, // optante
+            indicadorTributacao: 1,
+        );
+        $xml = $this->builder->buildDps($dpsOptante);
+
+        // For "optante" (opSimpNac = 2), indTotTrib and pAliq MUST be present
+        self::assertStringContainsString('<indTotTrib>', $xml);
+        self::assertStringContainsString('<pAliq>', $xml);
     }
 
     // -------------------------------------------------------------------------
@@ -165,13 +248,19 @@ class XmlBuilderTest extends TestCase
         string $cnpjPrestador = '11222333000181',
         string $municipioIbge = '3303302',
         string $itemListaServico = '0107',
+        string $codigoTributacaoNacional = '000000',
         string $valorServico = '1000.00',
         string $aliquota = '5.00',
         string $discriminacao = 'Consultoria em TI',
+        string $serie = '00001',
+        string $numeroDps = '1',
         bool $issRetido = false,
         string $documentoTomador = '',
         string $nomeTomador = '',
-        ?int $regimeEspecialTributacao = null,
+        int $regimeEspecialTributacao = 0,
+        int $tipoRetencaoIss = 1,
+        int $opcaoSimplesNacional = 1,
+        int $indicadorTributacao = 0,
     ): DpsData {
         return new DpsData(
             cnpjPrestador:            $cnpjPrestador,
@@ -180,10 +269,16 @@ class XmlBuilderTest extends TestCase
             valorServico:             $valorServico,
             aliquota:                 $aliquota,
             discriminacao:            $discriminacao,
+            serie:                    $serie,
+            numeroDps:                $numeroDps,
+            codigoTributacaoNacional: $codigoTributacaoNacional,
             documentoTomador:         $documentoTomador,
             nomeTomador:              $nomeTomador,
             regimeEspecialTributacao: $regimeEspecialTributacao,
+            tipoRetencaoIss:          $tipoRetencaoIss,
             issRetido:                $issRetido,
+            opcaoSimplesNacional:     $opcaoSimplesNacional,
+            indicadorTributacao:      $indicadorTributacao,
         );
     }
 }
