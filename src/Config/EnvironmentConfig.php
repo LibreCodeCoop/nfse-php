@@ -13,13 +13,13 @@ namespace LibreCodeCoop\NfsePHP\Config;
  * When no custom base URL is supplied the appropriate official endpoint is
  * selected automatically from the sandboxMode flag:
  *
- *   - Production:  https://nfse.fazenda.gov.br/NFS-e/api/v1
- *   - Sandbox:     https://hml.nfse.fazenda.gov.br/NFS-e/api/v1
+ *   - Production:  https://sefin.nfse.gov.br/SefinNacional
+ *   - Sandbox:     https://sefin.producaorestrita.nfse.gov.br/SefinNacional
  */
 final readonly class EnvironmentConfig
 {
-    private const BASE_URL_PROD    = 'https://nfse.fazenda.gov.br/NFS-e/api/v1';
-    private const BASE_URL_SANDBOX = 'https://hml.nfse.fazenda.gov.br/NFS-e/api/v1';
+    private const BASE_URL_PROD    = 'https://sefin.nfse.gov.br/SefinNacional';
+    private const BASE_URL_SANDBOX = 'https://sefin.producaorestrita.nfse.gov.br/SefinNacional';
 
     public string $baseUrl;
 
