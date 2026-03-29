@@ -33,14 +33,44 @@ final readonly class DpsData
         /** Descrição do serviço prestado. */
         public string $discriminacao,
 
+        /** Tipo de ambiente (1-Produção | 2-Homologação). */
+        public int $tipoAmbiente = 2,
+
+        /** Application version string written into the DPS. */
+        public string $versaoAplicativo = 'akaunting-nfse',
+
+        /** Série do DPS (1-5 digits). */
+        public string $serie = '00001',
+
+        /** Número sequencial do DPS. */
+        public string $numeroDps = '1',
+
+        /** Competence date in YYYY-MM-DD format. Defaults to emission date when null. */
+        public ?string $dataCompetencia = null,
+
+        /** Tipo de emissão do DPS. */
+        public int $tipoEmissao = 1,
+
+        /** Código de tributação nacional do serviço (6 digits). */
+        public string $codigoTributacaoNacional = '000000',
+
         /** CNPJ ou CPF do tomador (only digits, 11 or 14 chars). Empty string for foreign. */
         public string $documentoTomador = '',
 
         /** Nome / Razão Social do tomador. */
         public string $nomeTomador = '',
 
-        /** Regime especial de tributação (optional). */
-        public ?int $regimeEspecialTributacao = null,
+        /** Whether the provider opts into Simples Nacional. */
+        public int $opcaoSimplesNacional = 1,
+
+        /** Regime especial de tributação. */
+        public int $regimeEspecialTributacao = 0,
+
+        /** Tipo de retenção do ISSQN. */
+        public int $tipoRetencaoIss = 1,
+
+        /** Indicador de tributação total. */
+        public int $indicadorTributacao = 0,
 
         /** Whether ISS is retained at source. */
         public bool $issRetido = false,
