@@ -74,6 +74,36 @@ final readonly class DpsData
 
         /** Whether ISS is retained at source. */
         public bool $issRetido = false,
+
+        /** Situação Tributária do PIS/COFINS (CST). */
+        public string $federalPiscofinsSituacaoTributaria = '',
+
+        /** Tipo de retenção do PIS/COFINS/CSLL. */
+        public string $federalPiscofinsTipoRetencao = '',
+
+        /** Base de cálculo do PIS/COFINS. */
+        public string $federalPiscofinsBaseCalculo = '',
+
+        /** Alíquota do PIS. */
+        public string $federalPiscofinsAliquotaPis = '',
+
+        /** Valor do PIS. */
+        public string $federalPiscofinsValorPis = '',
+
+        /** Alíquota do COFINS. */
+        public string $federalPiscofinsAliquotaCofins = '',
+
+        /** Valor do COFINS. */
+        public string $federalPiscofinsValorCofins = '',
+
+        /** Valor do IRRF. */
+        public string $federalValorIrrf = '',
+
+        /** Valor das contribuições sociais retidas (CSLL). */
+        public string $federalValorCsll = '',
+
+        /** Valor da contribuição previdenciária retida. */
+        public string $federalValorCp = '',
     ) {
     }
 }
