@@ -195,6 +195,36 @@ class XmlBuilderTest extends TestCase
         self::assertSame('0', $nodes->item(0)->textContent);
     }
 
+    public function testBuildDpsIncludesFederalTaxationBlockWhenConfigured(): void
+    {
+        $dps = $this->makeDps(
+            federalPiscofinsSituacaoTributaria: '1',
+            federalPiscofinsTipoRetencao: '3',
+            federalPiscofinsBaseCalculo: '1000.00',
+            federalPiscofinsAliquotaPis: '1.65',
+            federalPiscofinsValorPis: '16.50',
+            federalPiscofinsAliquotaCofins: '7.60',
+            federalPiscofinsValorCofins: '76.00',
+            federalValorIrrf: '15.00',
+            federalValorCsll: '10.00',
+            federalValorCp: '5.00',
+        );
+
+        $xml = $this->builder->buildDps($dps);
+
+        self::assertStringContainsString('<tribFed>', $xml);
+        self::assertStringContainsString('<sitTribPISCOFINS>1</sitTribPISCOFINS>', $xml);
+        self::assertStringContainsString('<tpRetPISCOFINSCSLL>3</tpRetPISCOFINSCSLL>', $xml);
+        self::assertStringContainsString('<vBCPISCOFINS>1000.00</vBCPISCOFINS>', $xml);
+        self::assertStringContainsString('<pAliqPIS>1.65</pAliqPIS>', $xml);
+        self::assertStringContainsString('<vPIS>16.50</vPIS>', $xml);
+        self::assertStringContainsString('<pAliqCOFINS>7.60</pAliqCOFINS>', $xml);
+        self::assertStringContainsString('<vCOFINS>76.00</vCOFINS>', $xml);
+        self::assertStringContainsString('<vIRRF>15.00</vIRRF>', $xml);
+        self::assertStringContainsString('<vCSLL>10.00</vCSLL>', $xml);
+        self::assertStringContainsString('<vCP>5.00</vCP>', $xml);
+    }
+
     // -------------------------------------------------------------------------
 
     public function testNonSimplesnacionalMustNotIncludeIndtottribAndPaliq(): void
@@ -261,6 +291,16 @@ class XmlBuilderTest extends TestCase
         int $tipoRetencaoIss = 1,
         int $opcaoSimplesNacional = 1,
         int $indicadorTributacao = 0,
+        string $federalPiscofinsSituacaoTributaria = '',
+        string $federalPiscofinsTipoRetencao = '',
+        string $federalPiscofinsBaseCalculo = '',
+        string $federalPiscofinsAliquotaPis = '',
+        string $federalPiscofinsValorPis = '',
+        string $federalPiscofinsAliquotaCofins = '',
+        string $federalPiscofinsValorCofins = '',
+        string $federalValorIrrf = '',
+        string $federalValorCsll = '',
+        string $federalValorCp = '',
     ): DpsData {
         return new DpsData(
             cnpjPrestador:            $cnpjPrestador,
@@ -279,6 +319,16 @@ class XmlBuilderTest extends TestCase
             issRetido:                $issRetido,
             opcaoSimplesNacional:     $opcaoSimplesNacional,
             indicadorTributacao:      $indicadorTributacao,
+            federalPiscofinsSituacaoTributaria: $federalPiscofinsSituacaoTributaria,
+            federalPiscofinsTipoRetencao: $federalPiscofinsTipoRetencao,
+            federalPiscofinsBaseCalculo: $federalPiscofinsBaseCalculo,
+            federalPiscofinsAliquotaPis: $federalPiscofinsAliquotaPis,
+            federalPiscofinsValorPis: $federalPiscofinsValorPis,
+            federalPiscofinsAliquotaCofins: $federalPiscofinsAliquotaCofins,
+            federalPiscofinsValorCofins: $federalPiscofinsValorCofins,
+            federalValorIrrf: $federalValorIrrf,
+            federalValorCsll: $federalValorCsll,
+            federalValorCp: $federalValorCp,
         );
     }
 }
