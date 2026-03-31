@@ -101,6 +101,10 @@ class XmlBuilder
 
         $totTrib->appendChild($tribMun);
 
+        if ($this->hasFederalTaxationData($dps)) {
+            $totTrib->appendChild($this->buildTribFederal($doc, $dps));
+        }
+
         // E0715: indTotTrib is ALWAYS included to avoid schema validation errors
         $totTrib->appendChild($doc->createElement('indTotTrib', (string) $dps->indicadorTributacao));
 
@@ -132,5 +136,49 @@ class XmlBuilder
         }
 
         return $toma;
+    }
+
+    private function buildTribFederal(\DOMDocument $doc, DpsData $dps): \DOMElement
+    {
+        $tribFed = $doc->createElement('tribFed');
+
+        if ($dps->federalPiscofinsSituacaoTributaria !== '') {
+            $tribFed->appendChild($doc->createElement('sitTribPISCOFINS', $dps->federalPiscofinsSituacaoTributaria));
+        }
+
+        if ($dps->federalPiscofinsTipoRetencao !== '') {
+            $tribFed->appendChild($doc->createElement('tpRetPISCOFINSCSLL', $dps->federalPiscofinsTipoRetencao));
+        }
+
+        foreach ([
+            'vBCPISCOFINS' => $dps->federalPiscofinsBaseCalculo,
+            'pAliqPIS' => $dps->federalPiscofinsAliquotaPis,
+            'vPIS' => $dps->federalPiscofinsValorPis,
+            'pAliqCOFINS' => $dps->federalPiscofinsAliquotaCofins,
+            'vCOFINS' => $dps->federalPiscofinsValorCofins,
+            'vIRRF' => $dps->federalValorIrrf,
+            'vCSLL' => $dps->federalValorCsll,
+            'vCP' => $dps->federalValorCp,
+        ] as $tag => $value) {
+            if ($value !== '') {
+                $tribFed->appendChild($doc->createElement($tag, $value));
+            }
+        }
+
+        return $tribFed;
+    }
+
+    private function hasFederalTaxationData(DpsData $dps): bool
+    {
+        return $dps->federalPiscofinsSituacaoTributaria !== ''
+            || $dps->federalPiscofinsTipoRetencao !== ''
+            || $dps->federalPiscofinsBaseCalculo !== ''
+            || $dps->federalPiscofinsAliquotaPis !== ''
+            || $dps->federalPiscofinsValorPis !== ''
+            || $dps->federalPiscofinsAliquotaCofins !== ''
+            || $dps->federalPiscofinsValorCofins !== ''
+            || $dps->federalValorIrrf !== ''
+            || $dps->federalValorCsll !== ''
+            || $dps->federalValorCp !== '';
     }
 }
