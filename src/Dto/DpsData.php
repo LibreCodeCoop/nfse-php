@@ -72,6 +72,15 @@ final readonly class DpsData
         /** Indicador de tributação total. */
         public int $indicadorTributacao = 0,
 
+        /** Percentual total estimado de tributos federais. */
+        public string $totalTributosPercentualFederal = '',
+
+        /** Percentual total estimado de tributos estaduais. */
+        public string $totalTributosPercentualEstadual = '',
+
+        /** Percentual total estimado de tributos municipais. */
+        public string $totalTributosPercentualMunicipal = '',
+
         /** Whether ISS is retained at source. */
         public bool $issRetido = false,
 

@@ -25,6 +25,9 @@ class XmlBuilder
         $doc->preserveWhiteSpace = false;
         $doc->formatOutput       = true;
 
+        $emissionDateTime = $this->formattedEmissionDateTime();
+        $competenceDate = $dps->dataCompetencia ?: substr($emissionDateTime, 0, 10);
+
         $root = $doc->createElementNS(self::XSD_NAMESPACE, 'DPS');
         $root->setAttribute('versao', self::DPS_VERSION);
         $root->setAttribute('xsi:schemaLocation', self::XSD_SCHEMA);
@@ -35,42 +38,27 @@ class XmlBuilder
         $infDps->setAttribute('Id', $this->buildIdentifier($dps));
         $root->appendChild($infDps);
 
-        // Municipality
-        $cMun = $doc->createElement('cMun', $dps->municipioIbge);
-        $infDps->appendChild($cMun);
+        $infDps->appendChild($doc->createElement('tpAmb', (string) $dps->tipoAmbiente));
+        $infDps->appendChild($doc->createElement('dhEmi', $emissionDateTime));
+        $infDps->appendChild($doc->createElement('verAplic', $dps->versaoAplicativo));
+        $infDps->appendChild($doc->createElement('serie', str_pad($dps->serie, 5, '0', STR_PAD_LEFT)));
+        $infDps->appendChild($doc->createElement('nDPS', $dps->numeroDps));
+        $infDps->appendChild($doc->createElement('dCompet', $competenceDate));
+        $infDps->appendChild($doc->createElement('tpEmit', (string) $dps->tipoEmissao));
         $infDps->appendChild($doc->createElement('cLocEmi', $dps->municipioIbge));
 
-        // Prestador
         $prest = $doc->createElement('prest');
         $cnpj  = $doc->createElement('CNPJ', $dps->cnpjPrestador);
         $prest->appendChild($cnpj);
         $prest->appendChild($this->buildRegTrib($doc, $dps));
         $infDps->appendChild($prest);
 
-        // Service block
-        $serv = $doc->createElement('serv');
-
-        $itemListaServico = $doc->createElement('cServ');
-        $itemListaServico->appendChild($doc->createElement('cTribNac', $dps->codigoTributacaoNacional));
-        $serv->appendChild($itemListaServico);
-
-        $serv->appendChild($doc->createElement('xDescServ', htmlspecialchars($dps->discriminacao, ENT_XML1)));
-        $infDps->appendChild($serv);
-
-        // Tomador (optional — absent for foreign buyers with no document)
         if ($dps->documentoTomador !== '') {
             $infDps->appendChild($this->buildToma($doc, $dps));
         }
 
-        // Values
-        $valores = $doc->createElement('valores');
-
-        $vServPrest = $doc->createElement('vServPrest');
-        $vServPrest->appendChild($doc->createElement('vServ', $dps->valorServico));
-        $valores->appendChild($vServPrest);
-
-        $valores->appendChild($this->buildTotTrib($doc, $dps));
-        $infDps->appendChild($valores);
+        $infDps->appendChild($this->buildServico($doc, $dps));
+        $infDps->appendChild($this->buildValores($doc, $dps));
 
         return $doc->saveXML() ?: '';
     }
@@ -85,35 +73,90 @@ class XmlBuilder
             . str_pad($dps->numeroDps, 15, '0', STR_PAD_LEFT);
     }
 
-    private function buildTotTrib(\DOMDocument $doc, DpsData $dps): \DOMElement
+    private function buildValores(\DOMDocument $doc, DpsData $dps): \DOMElement
     {
-        $totTrib = $doc->createElement('totTrib');
+        $valores = $doc->createElement('valores');
 
-        // tribMun contains ISS and conditional pAliq
+        $vServPrest = $doc->createElement('vServPrest');
+        $vServPrest->appendChild($doc->createElement('vServ', $dps->valorServico));
+        $valores->appendChild($vServPrest);
+
+        $trib = $doc->createElement('trib');
+        $trib->appendChild($this->buildTribMun($doc, $dps));
+
+        if ($this->hasFederalTaxationData($dps)) {
+            $trib->appendChild($this->buildTribFederal($doc, $dps));
+        }
+
+        if ($this->hasTotalTributosPercentuais($dps)) {
+            $trib->appendChild($this->buildTotTrib($doc, $dps));
+        }
+
+        $valores->appendChild($trib);
+
+        return $valores;
+    }
+
+    private function buildTribMun(\DOMDocument $doc, DpsData $dps): \DOMElement
+    {
         $tribMun = $doc->createElement('tribMun');
         $tribMun->appendChild($doc->createElement('tribISSQN', $dps->issRetido ? '2' : '1'));
         $tribMun->appendChild($doc->createElement('tpRetISSQN', (string) $dps->tipoRetencaoIss));
 
-        // E0617: For não optante (opSimpNac=1), pAliq must NOT be present
         if ($dps->opcaoSimplesNacional !== 1) {
             $tribMun->appendChild($doc->createElement('pAliq', $dps->aliquota));
         }
 
-        $totTrib->appendChild($tribMun);
+        return $tribMun;
+    }
 
-        if ($this->hasFederalTaxationData($dps)) {
-            $totTrib->appendChild($this->buildTribFederal($doc, $dps));
+    private function buildTotTrib(\DOMDocument $doc, DpsData $dps): \DOMElement
+    {
+        $totTrib = $doc->createElement('totTrib');
+        $percentuais = $doc->createElement('pTotTrib');
+
+        if ($dps->totalTributosPercentualFederal !== '') {
+            $percentuais->appendChild($doc->createElement('pTotTribFed', $dps->totalTributosPercentualFederal));
         }
 
-        // E0715: indTotTrib is ALWAYS included to avoid schema validation errors
-        $totTrib->appendChild($doc->createElement('indTotTrib', (string) $dps->indicadorTributacao));
+        if ($dps->totalTributosPercentualEstadual !== '') {
+            $percentuais->appendChild($doc->createElement('pTotTribEst', $dps->totalTributosPercentualEstadual));
+        }
+
+        if ($dps->totalTributosPercentualMunicipal !== '') {
+            $percentuais->appendChild($doc->createElement('pTotTribMun', $dps->totalTributosPercentualMunicipal));
+        }
+
+        $totTrib->appendChild($percentuais);
 
         return $totTrib;
+    }
+
+    private function buildServico(\DOMDocument $doc, DpsData $dps): \DOMElement
+    {
+        $serv = $doc->createElement('serv');
+
+        $locPrest = $doc->createElement('locPrest');
+        $locPrest->appendChild($doc->createElement('cLocPrestacao', $dps->municipioIbge));
+        $serv->appendChild($locPrest);
+
+        $cServ = $doc->createElement('cServ');
+        $cServ->appendChild($doc->createElement('cTribNac', $dps->codigoTributacaoNacional));
+
+        if ($dps->itemListaServico !== '') {
+            $cServ->appendChild($doc->createElement('cTribMun', $dps->itemListaServico));
+        }
+
+        $cServ->appendChild($doc->createElement('xDescServ', htmlspecialchars($dps->discriminacao, ENT_XML1)));
+        $serv->appendChild($cServ);
+
+        return $serv;
     }
 
     private function buildRegTrib(\DOMDocument $doc, DpsData $dps): \DOMElement
     {
         $regTrib = $doc->createElement('regTrib');
+        $regTrib->appendChild($doc->createElement('opSimpNac', (string) $dps->opcaoSimplesNacional));
         $regTrib->appendChild($doc->createElement('regEspTrib', (string) $dps->regimeEspecialTributacao));
 
         return $regTrib;
@@ -141,31 +184,55 @@ class XmlBuilder
     private function buildTribFederal(\DOMDocument $doc, DpsData $dps): \DOMElement
     {
         $tribFed = $doc->createElement('tribFed');
+        $piscofins = $doc->createElement('piscofins');
 
         if ($dps->federalPiscofinsSituacaoTributaria !== '') {
-            $tribFed->appendChild($doc->createElement('sitTribPISCOFINS', $dps->federalPiscofinsSituacaoTributaria));
-        }
-
-        if ($dps->federalPiscofinsTipoRetencao !== '') {
-            $tribFed->appendChild($doc->createElement('tpRetPISCOFINSCSLL', $dps->federalPiscofinsTipoRetencao));
+            $piscofins->appendChild($doc->createElement('CST', str_pad($dps->federalPiscofinsSituacaoTributaria, 2, '0', STR_PAD_LEFT)));
         }
 
         foreach ([
-            'vBCPISCOFINS' => $dps->federalPiscofinsBaseCalculo,
-            'pAliqPIS' => $dps->federalPiscofinsAliquotaPis,
-            'vPIS' => $dps->federalPiscofinsValorPis,
-            'pAliqCOFINS' => $dps->federalPiscofinsAliquotaCofins,
-            'vCOFINS' => $dps->federalPiscofinsValorCofins,
-            'vIRRF' => $dps->federalValorIrrf,
-            'vCSLL' => $dps->federalValorCsll,
-            'vCP' => $dps->federalValorCp,
+            'vBCPisCofins' => $dps->federalPiscofinsBaseCalculo,
+            'pAliqPis' => $dps->federalPiscofinsAliquotaPis,
+            'pAliqCofins' => $dps->federalPiscofinsAliquotaCofins,
+            'vPis' => $dps->federalPiscofinsValorPis,
+            'vCofins' => $dps->federalPiscofinsValorCofins,
         ] as $tag => $value) {
             if ($value !== '') {
+                $piscofins->appendChild($doc->createElement($tag, $value));
+            }
+        }
+
+        if ($dps->federalPiscofinsTipoRetencao !== '') {
+            $piscofins->appendChild($doc->createElement('tpRetPisCofins', $dps->federalPiscofinsTipoRetencao));
+        }
+
+        if ($piscofins->hasChildNodes()) {
+            $tribFed->appendChild($piscofins);
+        }
+
+        foreach ([
+            'vRetIRRF' => $dps->federalValorIrrf,
+            'vRetCSLL' => $dps->federalValorCsll,
+            'vRetCP' => $dps->federalValorCp,
+        ] as $tag => $value) {
+            if ($this->hasNonZeroDecimalValue($value)) {
                 $tribFed->appendChild($doc->createElement($tag, $value));
             }
         }
 
         return $tribFed;
+    }
+
+    private function formattedEmissionDateTime(): string
+    {
+        return (new \DateTimeImmutable())->format('Y-m-d\\TH:i:sP');
+    }
+
+    private function hasTotalTributosPercentuais(DpsData $dps): bool
+    {
+        return $dps->totalTributosPercentualFederal !== ''
+            || $dps->totalTributosPercentualEstadual !== ''
+            || $dps->totalTributosPercentualMunicipal !== '';
     }
 
     private function hasFederalTaxationData(DpsData $dps): bool
@@ -177,8 +244,13 @@ class XmlBuilder
             || $dps->federalPiscofinsValorPis !== ''
             || $dps->federalPiscofinsAliquotaCofins !== ''
             || $dps->federalPiscofinsValorCofins !== ''
-            || $dps->federalValorIrrf !== ''
-            || $dps->federalValorCsll !== ''
-            || $dps->federalValorCp !== '';
+            || $this->hasNonZeroDecimalValue($dps->federalValorIrrf)
+            || $this->hasNonZeroDecimalValue($dps->federalValorCsll)
+            || $this->hasNonZeroDecimalValue($dps->federalValorCp);
+    }
+
+    private function hasNonZeroDecimalValue(string $value): bool
+    {
+        return $value !== '' && (float) $value !== 0.0;
     }
 }
