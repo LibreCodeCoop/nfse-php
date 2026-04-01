@@ -80,7 +80,19 @@ class NfseClient implements NfseClientInterface
 
     public function cancel(string $chaveAcesso, string $motivo): bool
     {
-        [$httpStatus, $body] = $this->delete('/dps/' . $chaveAcesso, $motivo);
+        $eventoXml = $this->buildCancelEventXml($chaveAcesso, $motivo);
+        $signedEventoXml = $this->signer->sign($eventoXml, $this->cert->cnpj);
+
+        $compressedEventoXml = gzencode($signedEventoXml);
+
+        if ($compressedEventoXml === false) {
+            throw new NetworkException('Failed to compress cancellation event XML payload before transmission.');
+        }
+
+        [$httpStatus, $body] = $this->postEvento(
+            '/nfse/' . $chaveAcesso . '/eventos',
+            base64_encode($compressedEventoXml),
+        );
 
         if ($httpStatus >= 400) {
             throw new CancellationException(
@@ -146,12 +158,15 @@ class NfseClient implements NfseClientInterface
     /**
      * @return array{int, array<string, mixed>}
      */
-    private function delete(string $path, string $motivo): array
+    private function postEvento(string $path, string $eventoXmlGZipB64): array
     {
-        $payload = json_encode(['motivo' => $motivo], JSON_THROW_ON_ERROR);
+        $payload = json_encode([
+            'pedidoRegistroEventoXmlGZipB64' => $eventoXmlGZipB64,
+        ], JSON_THROW_ON_ERROR);
+
         $context = stream_context_create([
             'http' => [
-                'method'        => 'DELETE',
+                'method'        => 'POST',
                 'header'        => "Content-Type: application/json\r\nAccept: application/json\r\n",
                 'content'       => $payload,
                 'ignore_errors' => true,
@@ -160,6 +175,34 @@ class NfseClient implements NfseClientInterface
         ]);
 
         return $this->fetchAndDecode($path, $context);
+    }
+
+    private function buildCancelEventXml(string $chaveAcesso, string $motivo): string
+    {
+        $doc = new \DOMDocument('1.0', 'UTF-8');
+        $doc->formatOutput = false;
+
+        $root = $doc->createElementNS('http://www.sped.fazenda.gov.br/nfse', 'pedRegEvento');
+        $root->setAttribute('versao', '1.01');
+        $doc->appendChild($root);
+
+        $infPedReg = $doc->createElement('infPedReg');
+        $infPedReg->setAttribute('Id', 'PRE' . $chaveAcesso . '101101');
+        $root->appendChild($infPedReg);
+
+        $infPedReg->appendChild($doc->createElement('tpAmb', $this->environment->sandboxMode ? '2' : '1'));
+        $infPedReg->appendChild($doc->createElement('verAplic', 'akaunting-nfse'));
+        $infPedReg->appendChild($doc->createElement('dhEvento', (new \DateTimeImmutable())->format('Y-m-d\\TH:i:sP')));
+        $infPedReg->appendChild($doc->createElement('CNPJAutor', $this->cert->cnpj));
+        $infPedReg->appendChild($doc->createElement('chNFSe', $chaveAcesso));
+
+        $e101101 = $doc->createElement('e101101');
+        $e101101->appendChild($doc->createElement('xDesc', 'Cancelamento de NFS-e'));
+        $e101101->appendChild($doc->createElement('cMotivo', '1'));
+        $e101101->appendChild($doc->createElement('xMotivo', $motivo));
+        $infPedReg->appendChild($e101101);
+
+        return $doc->saveXML($doc->documentElement) ?: '';
     }
 
     /**
