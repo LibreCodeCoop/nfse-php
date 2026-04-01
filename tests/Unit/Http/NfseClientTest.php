@@ -136,7 +136,7 @@ class NfseClientTest extends TestCase
             new Response($payload, ['Content-Type' => 'application/json'], 200)
         );
 
-        $client = $this->makeClient();
+        $client = $this->makeClient($this->signer);
 
         $receipt = $client->query('xyz-456');
 
@@ -146,13 +146,34 @@ class NfseClientTest extends TestCase
     public function testCancelReturnsTrueOnSuccess(): void
     {
         self::$server->setResponseOfPath(
-            '/SefinNacional/dps/abc-123',
+            '/SefinNacional/nfse/abc-123/eventos',
             new Response('{}', ['Content-Type' => 'application/json'], 200)
         );
 
-        $client = $this->makeClient();
+        $client = $this->makeClient($this->signer);
 
         self::assertTrue($client->cancel('abc-123', 'Cancelamento a pedido do tomador'));
+
+        $request = self::$server->getLastRequest();
+        self::assertNotNull($request);
+        self::assertSame('POST', $request->getRequestMethod());
+        self::assertSame('/SefinNacional/nfse/abc-123/eventos', $request->getRequestUri());
+
+        $payload = json_decode($request->getInput(), true, 512, JSON_THROW_ON_ERROR);
+        self::assertIsArray($payload);
+        self::assertArrayHasKey('pedidoRegistroEventoXmlGZipB64', $payload);
+
+        $compressedXml = base64_decode((string) $payload['pedidoRegistroEventoXmlGZipB64'], true);
+        self::assertNotFalse($compressedXml);
+
+        $eventoXml = gzdecode($compressedXml);
+        self::assertNotFalse($eventoXml);
+        self::assertStringContainsString('<pedRegEvento', $eventoXml);
+        self::assertStringContainsString('<chNFSe>abc-123</chNFSe>', $eventoXml);
+        self::assertStringContainsString('<e101101>', $eventoXml);
+        self::assertStringContainsString('<xDesc>Cancelamento de NFS-e</xDesc>', $eventoXml);
+        self::assertStringContainsString('<cMotivo>1</cMotivo>', $eventoXml);
+        self::assertStringContainsString('<xMotivo>Cancelamento a pedido do tomador</xMotivo>', $eventoXml);
     }
 
     // -------------------------------------------------------------------------
@@ -202,7 +223,7 @@ class NfseClientTest extends TestCase
             new Response('{"error":"not found"}', ['Content-Type' => 'application/json'], 404),
         );
 
-        $client = $this->makeClient();
+        $client = $this->makeClient($this->signer);
 
         $this->expectException(QueryException::class);
         $client->query('missing-key');
@@ -215,7 +236,7 @@ class NfseClientTest extends TestCase
             new Response('{"error":"not found"}', ['Content-Type' => 'application/json'], 404),
         );
 
-        $client = $this->makeClient();
+        $client = $this->makeClient($this->signer);
 
         try {
             $client->query('missing-key');
@@ -229,11 +250,11 @@ class NfseClientTest extends TestCase
     public function testCancelThrowsCancellationExceptionWhenGatewayReturnsError(): void
     {
         self::$server->setResponseOfPath(
-            '/SefinNacional/dps/blocked-key',
+            '/SefinNacional/nfse/blocked-key/eventos',
             new Response('{"error":"cannot cancel"}', ['Content-Type' => 'application/json'], 409),
         );
 
-        $client = $this->makeClient();
+        $client = $this->makeClient($this->signer);
 
         $this->expectException(CancellationException::class);
         $client->cancel('blocked-key', 'a pedido do tomador');
@@ -242,11 +263,11 @@ class NfseClientTest extends TestCase
     public function testCancellationExceptionCarriesErrorCodeAndHttpStatus(): void
     {
         self::$server->setResponseOfPath(
-            '/SefinNacional/dps/blocked-key',
+            '/SefinNacional/nfse/blocked-key/eventos',
             new Response('{"error":"cannot cancel"}', ['Content-Type' => 'application/json'], 409),
         );
 
-        $client = $this->makeClient();
+        $client = $this->makeClient($this->signer);
 
         try {
             $client->cancel('blocked-key', 'a pedido do tomador');
