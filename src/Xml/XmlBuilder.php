@@ -178,7 +178,51 @@ class XmlBuilder
             $toma->appendChild($doc->createElement('xNome', htmlspecialchars($dps->nomeTomador, ENT_XML1)));
         }
 
+        if ($dps->tomadorInscricaoMunicipal !== '') {
+            $toma->appendChild($doc->createElement('IM', $dps->tomadorInscricaoMunicipal));
+        }
+
+        if ($this->hasTomadorAddress($dps)) {
+            $end = $doc->createElement('end');
+            $endNac = $doc->createElement('endNac');
+            $endNac->appendChild($doc->createElement('cMun', $dps->tomadorCodigoMunicipio));
+            $endNac->appendChild($doc->createElement('CEP', $dps->tomadorCep));
+            $end->appendChild($endNac);
+
+            if ($dps->tomadorLogradouro !== '') {
+                $end->appendChild($doc->createElement('xLgr', htmlspecialchars($dps->tomadorLogradouro, ENT_XML1)));
+            }
+
+            if ($dps->tomadorNumero !== '') {
+                $end->appendChild($doc->createElement('nro', htmlspecialchars($dps->tomadorNumero, ENT_XML1)));
+            }
+
+            if ($dps->tomadorComplemento !== '') {
+                $end->appendChild($doc->createElement('xCpl', htmlspecialchars($dps->tomadorComplemento, ENT_XML1)));
+            }
+
+            if ($dps->tomadorBairro !== '') {
+                $end->appendChild($doc->createElement('xBairro', htmlspecialchars($dps->tomadorBairro, ENT_XML1)));
+            }
+
+            $toma->appendChild($end);
+        }
+
+        if ($dps->tomadorTelefone !== '') {
+            $toma->appendChild($doc->createElement('fone', $dps->tomadorTelefone));
+        }
+
+        if ($dps->tomadorEmail !== '') {
+            $toma->appendChild($doc->createElement('email', htmlspecialchars($dps->tomadorEmail, ENT_XML1)));
+        }
+
         return $toma;
+    }
+
+    private function hasTomadorAddress(DpsData $dps): bool
+    {
+        return $dps->tomadorCodigoMunicipio !== ''
+            && $dps->tomadorCep !== '';
     }
 
     private function buildTribFederal(\DOMDocument $doc, DpsData $dps): \DOMElement
