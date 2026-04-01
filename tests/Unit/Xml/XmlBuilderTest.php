@@ -183,6 +183,26 @@ class XmlBuilderTest extends TestCase
         self::assertSame('12345678901', $nodes->item(0)->textContent);
     }
 
+    public function testTomadorAddressPhoneAndEmailAreIncludedWhenProvided(): void
+    {
+        $dps = $this->makeDps(
+            documentoTomador: '12345678000195',
+            nomeTomador: 'Empresa Tomadora S.A.',
+            tomadorCodigoMunicipio: '3303302',
+            tomadorCep: '24020077',
+            tomadorLogradouro: 'Avenida Rio Branco',
+            tomadorTelefone: '21988887777',
+            tomadorEmail: 'financeiro@example.test',
+        );
+
+        $xml = $this->builder->buildDps($dps);
+
+        self::assertStringContainsString('<toma>', $xml);
+        self::assertStringContainsString('<end><endNac><cMun>3303302</cMun><CEP>24020077</CEP></endNac><xLgr>Avenida Rio Branco</xLgr></end>', str_replace(["\n", '  '], '', $xml));
+        self::assertStringContainsString('<fone>21988887777</fone>', $xml);
+        self::assertStringContainsString('<email>financeiro@example.test</email>', $xml);
+    }
+
     public function testTomadorBlockIsAbsentWhenDocumentoTomadorIsEmpty(): void
     {
         $dps = $this->makeDps(documentoTomador: '');
@@ -350,6 +370,15 @@ class XmlBuilderTest extends TestCase
         bool $issRetido = false,
         string $documentoTomador = '',
         string $nomeTomador = '',
+        string $tomadorCodigoMunicipio = '',
+        string $tomadorCep = '',
+        string $tomadorLogradouro = '',
+        string $tomadorNumero = '',
+        string $tomadorComplemento = '',
+        string $tomadorBairro = '',
+        string $tomadorInscricaoMunicipal = '',
+        string $tomadorTelefone = '',
+        string $tomadorEmail = '',
         int $regimeEspecialTributacao = 0,
         int $tipoRetencaoIss = 1,
         int $opcaoSimplesNacional = 1,
@@ -380,6 +409,15 @@ class XmlBuilderTest extends TestCase
             codigoTributacaoNacional: $codigoTributacaoNacional,
             documentoTomador:         $documentoTomador,
             nomeTomador:              $nomeTomador,
+            tomadorCodigoMunicipio:   $tomadorCodigoMunicipio,
+            tomadorCep:               $tomadorCep,
+            tomadorLogradouro:        $tomadorLogradouro,
+            tomadorNumero:            $tomadorNumero,
+            tomadorComplemento:       $tomadorComplemento,
+            tomadorBairro:            $tomadorBairro,
+            tomadorInscricaoMunicipal: $tomadorInscricaoMunicipal,
+            tomadorTelefone:          $tomadorTelefone,
+            tomadorEmail:             $tomadorEmail,
             regimeEspecialTributacao: $regimeEspecialTributacao,
             tipoRetencaoIss:          $tipoRetencaoIss,
             issRetido:                $issRetido,

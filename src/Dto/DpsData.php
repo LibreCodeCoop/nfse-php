@@ -60,6 +60,33 @@ final readonly class DpsData
         /** Nome / Razão Social do tomador. */
         public string $nomeTomador = '',
 
+        /** Código IBGE do município do tomador (7 digits). */
+        public string $tomadorCodigoMunicipio = '',
+
+        /** CEP do tomador (8 digits). */
+        public string $tomadorCep = '',
+
+        /** Logradouro do tomador. */
+        public string $tomadorLogradouro = '',
+
+        /** Número do tomador. */
+        public string $tomadorNumero = '',
+
+        /** Complemento do endereço do tomador. */
+        public string $tomadorComplemento = '',
+
+        /** Bairro do tomador. */
+        public string $tomadorBairro = '',
+
+        /** Inscrição municipal do tomador. */
+        public string $tomadorInscricaoMunicipal = '',
+
+        /** Telefone do tomador. */
+        public string $tomadorTelefone = '',
+
+        /** E-mail do tomador. */
+        public string $tomadorEmail = '',
+
         /** Whether the provider opts into Simples Nacional. */
         public int $opcaoSimplesNacional = 1,
 
