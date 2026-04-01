@@ -79,6 +79,50 @@ class NfseClientTest extends TestCase
         self::assertSame('<NFS-e>ok</NFS-e>', $receipt->rawXml);
     }
 
+    public function testEmitBuildsXmlWithTpAmbBeforeMunicipalityFields(): void
+    {
+        $payload = json_encode([
+            'nNFSe' => '100',
+            'chaveAcesso' => 'tpamb-order-ok',
+            'dataHoraProcessamento' => '2026-01-02T10:00:00',
+        ], JSON_THROW_ON_ERROR);
+
+        self::$server->setResponseOfPath(
+            '/SefinNacional/nfse',
+            new Response($payload, ['Content-Type' => 'application/json'], 201)
+        );
+
+        $holder = new class () {
+            public string $capturedXml = '';
+        };
+
+        $capturingSigner = new class ($holder) implements XmlSignerInterface {
+            public function __construct(private object $holder)
+            {
+            }
+
+            public function sign(string $xml, string $cnpj): string
+            {
+                $this->holder->capturedXml = $xml;
+
+                return $xml;
+            }
+        };
+
+        $client = $this->makeClient($capturingSigner);
+        $client->emit($this->makeDps());
+
+        self::assertNotSame('', $holder->capturedXml);
+
+        $normalizedXml = str_replace(["\n", '  '], '', $holder->capturedXml);
+        $tpAmbIndex    = strpos($normalizedXml, '<tpAmb>2</tpAmb>');
+        $cLocEmiIndex  = strpos($normalizedXml, '<cLocEmi>3303302</cLocEmi>');
+
+        self::assertNotFalse($tpAmbIndex);
+        self::assertNotFalse($cLocEmiIndex);
+        self::assertLessThan($cLocEmiIndex, $tpAmbIndex);
+    }
+
     public function testQueryReturnsReceiptDataOnSuccess(): void
     {
         $payload = json_encode([
