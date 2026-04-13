@@ -26,4 +26,11 @@ interface NfseClientInterface
      * Cancel an existing NFS-e.
      */
     public function cancel(string $chaveAcesso, string $motivo): bool;
+
+    /**
+     * Retrieve the DANFSE (PDF rendering document) for an NFS-e from ADN.
+     *
+     * Returns the raw PDF bytes as a string.
+     */
+    public function getDanfse(string $chaveAcesso): string;
 }
