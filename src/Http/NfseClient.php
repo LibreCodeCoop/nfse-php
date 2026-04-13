@@ -14,6 +14,7 @@ use LibreCodeCoop\NfsePHP\Contracts\SecretStoreInterface;
 use LibreCodeCoop\NfsePHP\Contracts\XmlSignerInterface;
 use LibreCodeCoop\NfsePHP\Dto\DpsData;
 use LibreCodeCoop\NfsePHP\Dto\ReceiptData;
+use LibreCodeCoop\NfsePHP\Exception\ArtifactException;
 use LibreCodeCoop\NfsePHP\Exception\CancellationException;
 use LibreCodeCoop\NfsePHP\Exception\IssuanceException;
 use LibreCodeCoop\NfsePHP\Exception\NetworkException;
@@ -80,7 +81,7 @@ class NfseClient implements NfseClientInterface
 
     public function cancel(string $chaveAcesso, string $motivo): bool
     {
-        $eventoXml = $this->buildCancelEventXml($chaveAcesso, $motivo);
+        $eventoXml       = $this->buildCancelEventXml($chaveAcesso, $motivo);
         $signedEventoXml = $this->signer->sign($eventoXml, $this->cert->cnpj);
 
         $compressedEventoXml = gzencode($signedEventoXml);
@@ -104,6 +105,34 @@ class NfseClient implements NfseClientInterface
         }
 
         return true;
+    }
+
+    #[\Override]
+    public function getDanfse(string $chaveAcesso): string
+    {
+        $url = $this->environment->danfseBaseUrl . '/' . $chaveAcesso;
+
+        [$httpStatus, $body] = $this->getRawBytes($url);
+
+        if ($httpStatus >= 400) {
+            throw new ArtifactException(
+                'ADN gateway returned error for DANFSE retrieval (HTTP ' . $httpStatus . ')',
+                NfseErrorCode::ArtifactRetrievalFailed,
+                $httpStatus,
+                [],
+            );
+        }
+
+        if ($body === '') {
+            throw new ArtifactException(
+                'ADN gateway returned empty body for DANFSE retrieval',
+                NfseErrorCode::ArtifactRetrievalFailed,
+                $httpStatus,
+                [],
+            );
+        }
+
+        return $body;
     }
 
     // -------------------------------------------------------------------------
@@ -211,13 +240,13 @@ class NfseClient implements NfseClientInterface
     private function sslContextOptions(): array
     {
         $options = [
-            'verify_peer' => true,
+            'verify_peer'      => true,
             'verify_peer_name' => true,
         ];
 
         if ($this->cert->transportCertificatePath !== null && $this->cert->transportPrivateKeyPath !== null) {
             $options['local_cert'] = $this->cert->transportCertificatePath;
-            $options['local_pk'] = $this->cert->transportPrivateKeyPath;
+            $options['local_pk']   = $this->cert->transportPrivateKeyPath;
         }
 
         return $options;
@@ -255,6 +284,35 @@ class NfseClient implements NfseClientInterface
         }
 
         return [$httpStatus, $decoded];
+    }
+
+    /**
+     * Fetch a URL and return raw response bytes without JSON decoding.
+     *
+     * Used for binary endpoints such as ADN DANFSE (PDF artifact retrieval).
+     * No mTLS is applied — DANFSE is accessible without client certificate.
+     *
+     * @return array{int, string}
+     */
+    private function getRawBytes(string $url): array
+    {
+        $context = stream_context_create([
+            'http' => [
+                'method'        => 'GET',
+                'header'        => "Accept: application/pdf\r\n",
+                'ignore_errors' => true,
+            ],
+        ]);
+
+        $http_response_header = [];
+        $body                 = file_get_contents($url, false, $context);
+        $httpStatus           = $this->parseHttpStatus($http_response_header);
+
+        if ($body === false) {
+            throw new NetworkException('Failed to connect to ADN DANFSE gateway at ' . $url);
+        }
+
+        return [$httpStatus, $body];
     }
 
     /**
