@@ -122,6 +122,13 @@ class DpsSignerTest extends TestCase
         self::assertTrue($doc->loadXML($signed), 'Signed output must be valid XML');
     }
 
+    public function testSignedXmlIncludesExplicitUtf8EncodingDeclaration(): void
+    {
+        $signed = $this->signer->sign($this->testXml, $this->testCnpj);
+
+        self::assertStringStartsWith('<?xml version="1.0" encoding="UTF-8"?>', $signed);
+    }
+
     public function testSignatureElementIsAppendedToDpsRoot(): void
     {
         $signed = $this->signer->sign($this->testXml, $this->testCnpj);
