@@ -271,6 +271,12 @@ class DpsSigner implements XmlSignerInterface
         $keyInfo->appendChild($x509Data);
         $sig->appendChild($keyInfo);
 
-        return $doc->saveXML() ?: $xml;
+        $serializedDocument = $doc->saveXML($doc->documentElement);
+
+        if ($serializedDocument === false || $serializedDocument === '') {
+            return $xml;
+        }
+
+        return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" . $serializedDocument;
     }
 }
