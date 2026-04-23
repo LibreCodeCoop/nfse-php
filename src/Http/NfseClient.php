@@ -290,7 +290,6 @@ class NfseClient implements NfseClientInterface
      * Fetch a URL and return raw response bytes without JSON decoding.
      *
      * Used for binary endpoints such as ADN DANFSE (PDF artifact retrieval).
-     * No mTLS is applied — DANFSE is accessible without client certificate.
      *
      * @return array{int, string}
      */
@@ -302,6 +301,7 @@ class NfseClient implements NfseClientInterface
                 'header'        => "Accept: application/pdf\r\n",
                 'ignore_errors' => true,
             ],
+            'ssl' => $this->sslContextOptions(),
         ]);
 
         $http_response_header = [];
