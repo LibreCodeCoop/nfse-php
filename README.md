@@ -22,15 +22,6 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 - Sign DPS XML with PFX credentials
 - Read secrets from OpenBao/Vault or an in-memory store
 
-## Requirements
-
-| Dependency | Version |
-|---|---|
-| PHP | ^8.2 |
-| ext-openssl | * |
-| ext-dom | * |
-| ext-soap | * |
-
 ## Installation
 
 ```bash
