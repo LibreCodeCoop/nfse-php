@@ -93,7 +93,7 @@ For development/CI without OpenBao, use `NoOpSecretStore` (in-memory only, no se
 
 All commits must use [Conventional Commits](https://www.conventionalcommits.org/) and be signed off (`git commit -s`).
 
-## License
+## Give us a star!
 
-GNU Affero General Public License v3.0 or later — see [LICENSES/AGPL-3.0-or-later.txt](LICENSES/AGPL-3.0-or-later.txt).  
-&copy; 2026 LibreCode Coop and contributors.
+If this library saves you hours of integration pain, please ⭐ the repository.  
+It helps other developers discover the project and motivates the team to keep improving it.
