@@ -274,7 +274,17 @@ class NfseClient implements NfseClientInterface
             throw new NetworkException('Failed to connect to SEFIN gateway at ' . $url);
         }
 
-        $decoded = json_decode($body, true, 512, JSON_THROW_ON_ERROR);
+        try {
+            $decoded = json_decode($body, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException $e) {
+            $responsePreview = trim(substr(strip_tags($body), 0, 180));
+
+            throw new NetworkException(
+                'Unexpected non-JSON response from SEFIN gateway' . ($responsePreview !== '' ? ': ' . $responsePreview : ''),
+                NfseErrorCode::InvalidResponse,
+                $e,
+            );
+        }
 
         if (!is_array($decoded)) {
             throw new NetworkException(
