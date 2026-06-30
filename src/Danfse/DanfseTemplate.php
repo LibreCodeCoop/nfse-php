@@ -27,7 +27,8 @@ use LibreCodeCoop\NfsePHP\Danfse\Enum\TribISSQN;
  */
 final class DanfseTemplate
 {
-    private const QR_BASE_URL = 'https://www.nfse.gov.br/ConsultaPublica/?tpc=1&chave=';
+    private const QR_BASE_URL_PROD = 'https://www.nfse.gov.br/ConsultaPublica/?tpc=1&chave=';
+    private const QR_BASE_URL_SANDBOX = 'https://www.producaorestrita.nfse.gov.br/ConsultaPublica/?tpc=1&chave=';
 
     private readonly Formatter $fmt;
 
@@ -46,7 +47,7 @@ final class DanfseTemplate
         $data         = $this->buildData($nfse);
         $logo         = $config->logoDataUri;
         $municipality = $config->municipality;
-        $qrCode       = $this->generateQrCode($data['chave_acesso']);
+        $qrCode       = $this->generateQrCode((string) $data['chave_acesso'], (int) $data['ambiente']);
 
         array_walk_recursive($data, static function (mixed &$v): void {
             if (is_string($v)) {
@@ -100,7 +101,7 @@ final class DanfseTemplate
 
             'emitente' => [
                 'nome'            => $this->val($emit, 'xNome') ?: '-',
-                'cnpj_cpf'        => $this->fmt->cnpjCpf($this->documento($emit)),
+                'cnpj_cpf'        => $this->formattedDocument($emit),
                 'im'              => '-',
                 'telefone'        => $this->fmt->phone($this->val($emit, 'fone')),
                 'email'           => strtolower($this->val($emit, 'email')),
@@ -113,7 +114,7 @@ final class DanfseTemplate
 
             'tomador' => [
                 'nome'      => $this->val($toma, 'xNome') ?: '-',
-                'cnpj_cpf'  => $this->fmt->cnpjCpf($this->documento($toma)),
+                'cnpj_cpf'  => $this->formattedDocument($toma),
                 'im'        => $this->val($toma, 'IM') ?: '-',
                 'telefone'  => $this->fmt->phone($this->val($toma, 'fone')),
                 'email'     => strtolower($this->val($toma, 'email')),
@@ -124,7 +125,7 @@ final class DanfseTemplate
 
             'intermediario' => $interm === [] ? null : [
                 'nome'      => $this->val($interm, 'xNome') ?: '-',
-                'cnpj_cpf'  => $this->fmt->cnpjCpf($this->documento($interm)),
+                'cnpj_cpf'  => $this->formattedDocument($interm),
                 'im'        => $this->val($interm, 'IMPrestMun') ?: '-',
                 'telefone'  => $this->fmt->phone($this->val($interm, 'fone')),
                 'email'     => strtolower($this->val($interm, 'email')),
@@ -194,35 +195,37 @@ final class DanfseTemplate
     /**
      * Navigate to a nested sub-array, returning [] when any step is missing.
      *
-     * @param array<string, mixed> $arr
+     * @param array<string, mixed> $source
      * @return array<string, mixed>
      */
-    private function node(array $arr, string ...$keys): array
+    private function node(array $source, string ...$keys): array
     {
+        $currentNode = $source;
+
         foreach ($keys as $key) {
-            if (!is_array($arr[$key] ?? null)) {
+            if (!is_array($currentNode[$key] ?? null)) {
                 return [];
             }
-            /** @var array<string, mixed> $arr */
-            $arr = $arr[$key];
+            /** @var array<string, mixed> $currentNode */
+            $currentNode = $currentNode[$key];
         }
 
-        return $arr;
+        return $currentNode;
     }
 
     /**
      * Navigate to a nested scalar value, returning '' when missing or non-scalar.
      *
-     * @param array<string, mixed> $arr
+     * @param array<string, mixed> $source
      */
-    private function val(array $arr, string ...$keys): string
+    private function val(array $source, string ...$keys): string
     {
         $last = array_pop($keys);
         if ($last === null) {
             return '';
         }
 
-        $node  = $this->node($arr, ...$keys);
+        $node  = $this->node($source, ...$keys);
         $value = $node[$last] ?? null;
 
         return is_scalar($value) ? trim((string) $value) : '';
@@ -233,11 +236,19 @@ final class DanfseTemplate
      *
      * @param array<string, mixed> $party
      */
-    private function documento(array $party): string
+    private function formattedDocument(array $party): string
     {
-        return $this->val($party, 'CNPJ')
-            ?: ($this->val($party, 'CPF')
-            ?: $this->val($party, 'NIF'));
+        $cnpj = $this->val($party, 'CNPJ');
+        if ($cnpj !== '') {
+            return $this->fmt->cnpjCpf($cnpj);
+        }
+
+        $cpf = $this->val($party, 'CPF');
+        if ($cpf !== '') {
+            return $this->fmt->cnpjCpf($cpf);
+        }
+
+        return $this->val($party, 'NIF') ?: '-';
     }
 
     /**
@@ -283,14 +294,23 @@ final class DanfseTemplate
         return $hasValue ? $this->fmt->currency((string) $sum) : '-';
     }
 
-    private function generateQrCode(string $chaveAcesso): string
+    private function generateQrCode(string $chaveAcesso, int $ambiente): string
     {
         $renderer = new ImageRenderer(
             new RendererStyle(200),
             new SvgImageBackEnd(),
         );
-        $svg = (new Writer($renderer))->writeString(self::QR_BASE_URL . $chaveAcesso);
+        $svg = (new Writer($renderer))->writeString($this->qrCodeUrl($chaveAcesso, $ambiente));
 
         return 'data:image/svg+xml;base64,' . base64_encode($svg);
+    }
+
+    private function qrCodeUrl(string $chaveAcesso, int $ambiente): string
+    {
+        $baseUrl = $ambiente === 2
+            ? self::QR_BASE_URL_SANDBOX
+            : self::QR_BASE_URL_PROD;
+
+        return $baseUrl . $chaveAcesso;
     }
 }

@@ -77,4 +77,33 @@ class DanfseGeneratorTest extends TestCase
             self::assertSame(NfseErrorCode::ArtifactRetrievalFailed, $e->errorCode);
         }
     }
+
+    public function testWellFormedNonNfseXmlThrowsArtifactException(): void
+    {
+        try {
+            (new DanfseGenerator())->generateHtml('<foo/>');
+            self::fail('Expected ArtifactException');
+        } catch (ArtifactException $e) {
+            self::assertSame(NfseErrorCode::ArtifactRetrievalFailed, $e->errorCode);
+        }
+    }
+
+    public function testDpsOnlyXmlThrowsArtifactException(): void
+    {
+        $xml = <<<XML
+            <?xml version="1.0" encoding="UTF-8"?>
+            <DPS versao="1.01" xmlns="http://www.sped.fazenda.gov.br/nfse">
+                <infDPS Id="DPS330330211222333000181202601000000000000005">
+                    <tpAmb>2</tpAmb>
+                </infDPS>
+            </DPS>
+            XML;
+
+        try {
+            (new DanfseGenerator())->generateHtml($xml);
+            self::fail('Expected ArtifactException');
+        } catch (ArtifactException $e) {
+            self::assertSame(NfseErrorCode::ArtifactRetrievalFailed, $e->errorCode);
+        }
+    }
 }

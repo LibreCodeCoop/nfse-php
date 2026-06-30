@@ -70,6 +70,36 @@ final class DanfseGenerator
             );
         }
 
+        $this->assertAuthorizedNfse($data);
+
         return (new DanfseTemplate())->render($data, $this->config);
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function assertAuthorizedNfse(array $data): void
+    {
+        $infNfse = $data['infNFSe'] ?? null;
+        if (!is_array($infNfse)) {
+            throw $this->invalidNfseXml();
+        }
+
+        $id = $infNfse['Id'] ?? null;
+        if (!is_string($id) || trim($id) === '' || !str_starts_with(trim($id), 'NFS')) {
+            throw $this->invalidNfseXml();
+        }
+
+        if (!is_array($infNfse['DPS']['infDPS'] ?? null)) {
+            throw $this->invalidNfseXml();
+        }
+    }
+
+    private function invalidNfseXml(): ArtifactException
+    {
+        return new ArtifactException(
+            'Failed to generate DANFSe: XML does not contain an authorized NFS-e.',
+            NfseErrorCode::ArtifactRetrievalFailed,
+        );
     }
 }

@@ -20,7 +20,7 @@ class DanfseTemplateTest extends TestCase
     /**
      * @return array<string, mixed>
      */
-    private function fixtureArray(): array
+    private function fixtureNfseData(): array
     {
         $xml = file_get_contents(__DIR__ . '/../../fixtures/nfse_exemplo.xml');
         self::assertNotFalse($xml);
@@ -30,7 +30,7 @@ class DanfseTemplateTest extends TestCase
 
     public function testBuildDataMapsKeyFields(): void
     {
-        $data = (new DanfseTemplate())->buildData($this->fixtureArray());
+        $data = (new DanfseTemplate())->buildData($this->fixtureNfseData());
 
         // Access key (NFS prefix stripped)
         self::assertSame('3303302112233450000195000000000000100000000001', $data['chave_acesso']);
@@ -69,17 +69,28 @@ class DanfseTemplateTest extends TestCase
 
     public function testIntermediarioIsNullWhenAbsent(): void
     {
-        $arr = $this->fixtureArray();
-        unset($arr['infNFSe']['DPS']['infDPS']['interm']);
+        $nfseData = $this->fixtureNfseData();
+        unset($nfseData['infNFSe']['DPS']['infDPS']['interm']);
 
-        $data = (new DanfseTemplate())->buildData($arr);
+        $data = (new DanfseTemplate())->buildData($nfseData);
 
         self::assertNull($data['intermediario']);
     }
 
+    public function testTomadorNifIsPreserved(): void
+    {
+        $nfseData = $this->fixtureNfseData();
+        unset($nfseData['infNFSe']['DPS']['infDPS']['toma']['CNPJ']);
+        $nfseData['infNFSe']['DPS']['infDPS']['toma']['NIF'] = 'AB-123';
+
+        $data = (new DanfseTemplate())->buildData($nfseData);
+
+        self::assertSame('AB-123', $data['tomador']['cnpj_cpf']);
+    }
+
     public function testRenderProducesHtmlWithQrCodeAndAccessKey(): void
     {
-        $html = (new DanfseTemplate())->render($this->fixtureArray(), new DanfseConfig());
+        $html = (new DanfseTemplate())->render($this->fixtureNfseData(), new DanfseConfig());
 
         self::assertStringContainsString('<!DOCTYPE html>', $html);
         self::assertStringContainsString('3303302112233450000195000000000000100000000001', $html);
@@ -90,13 +101,28 @@ class DanfseTemplateTest extends TestCase
 
     public function testHomologacaoEnvironmentShowsWatermark(): void
     {
-        $arr = $this->fixtureArray();
-        $arr['infNFSe']['DPS']['infDPS']['tpAmb'] = '2';
+        $nfseData = $this->fixtureNfseData();
+        $nfseData['infNFSe']['DPS']['infDPS']['tpAmb'] = '2';
 
-        $data = (new DanfseTemplate())->buildData($arr);
+        $data = (new DanfseTemplate())->buildData($nfseData);
         self::assertSame(2, $data['ambiente']);
 
-        $html = (new DanfseTemplate())->render($arr, new DanfseConfig());
+        $html = (new DanfseTemplate())->render($nfseData, new DanfseConfig());
         self::assertStringContainsString('HOMOLOGAÇÃO', $html);
+    }
+
+    public function testQrCodeUrlUsesEnvironmentHost(): void
+    {
+        $method = new \ReflectionMethod(DanfseTemplate::class, 'qrCodeUrl');
+        $template = new DanfseTemplate();
+
+        self::assertSame(
+            'https://www.nfse.gov.br/ConsultaPublica/?tpc=1&chave=abc',
+            $method->invoke($template, 'abc', 1),
+        );
+        self::assertSame(
+            'https://www.producaorestrita.nfse.gov.br/ConsultaPublica/?tpc=1&chave=abc',
+            $method->invoke($template, 'abc', 2),
+        );
     }
 }

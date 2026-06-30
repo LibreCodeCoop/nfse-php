@@ -25,12 +25,12 @@ class XmlToArrayTest extends TestCase
 
     public function testConvertsNestedElementsAndAttributes(): void
     {
-        $arr = (new XmlToArray())->convert($this->fixture());
+        $nfseData = (new XmlToArray())->convert($this->fixture());
 
         // Root attribute is captured
-        self::assertSame('1.01', $arr['versao']);
+        self::assertSame('1.01', $nfseData['versao']);
 
-        $inf = $arr['infNFSe'];
+        $inf = $nfseData['infNFSe'];
         // Id attribute on infNFSe
         self::assertSame('NFS3303302112233450000195000000000000100000000001', $inf['Id']);
         self::assertSame('10', $inf['nNFSe']);
@@ -55,9 +55,9 @@ class XmlToArrayTest extends TestCase
             $this->fixture(),
         );
 
-        $arr = (new XmlToArray())->convert($signed);
+        $nfseData = (new XmlToArray())->convert($signed);
 
-        self::assertArrayNotHasKey('Signature', $arr);
-        self::assertArrayHasKey('infNFSe', $arr);
+        self::assertArrayNotHasKey('Signature', $nfseData);
+        self::assertArrayHasKey('infNFSe', $nfseData);
     }
 }
