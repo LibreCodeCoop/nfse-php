@@ -9,6 +9,8 @@ namespace LibreCodeCoop\NfsePHP\Danfse\Enum;
 
 enum OpSimpNac: int
 {
+    use LabelFromIntValue;
+
     case NAO_OPTANTE = 1;
     case MEI = 2;
     case ME_EPP = 3;
@@ -20,14 +22,5 @@ enum OpSimpNac: int
             self::MEI => 'Optante - Microempreendedor Individual (MEI)',
             self::ME_EPP => 'Optante - Microempresa ou Empresa de Pequeno Porte (ME/EPP)',
         };
-    }
-
-    public static function labelFor(string $value): string
-    {
-        if (!is_numeric($value)) {
-            return '-';
-        }
-
-        return self::tryFrom((int) $value)?->label() ?? '-';
     }
 }

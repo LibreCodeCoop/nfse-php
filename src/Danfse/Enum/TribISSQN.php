@@ -9,6 +9,8 @@ namespace LibreCodeCoop\NfsePHP\Danfse\Enum;
 
 enum TribISSQN: int
 {
+    use LabelFromIntValue;
+
     case TRIBUTAVEL = 1;
     case IMUNIDADE = 2;
     case EXPORTACAO = 3;
@@ -22,14 +24,5 @@ enum TribISSQN: int
             self::EXPORTACAO => 'Exportação de Serviço',
             self::NAO_INCIDENCIA => 'Não Incidência',
         };
-    }
-
-    public static function labelFor(string $value): string
-    {
-        if (!is_numeric($value)) {
-            return '-';
-        }
-
-        return self::tryFrom((int) $value)?->label() ?? '-';
     }
 }

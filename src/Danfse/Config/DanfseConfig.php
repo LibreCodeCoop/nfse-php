@@ -23,7 +23,6 @@ final readonly class DanfseConfig
         ?string $logoPath = null,
         public ?MunicipalityBranding $municipality = null,
     ) {
-        $this->logoDataUri = $logoDataUri
-            ?? ($logoPath !== null ? LogoLoader::pathToDataUri($logoPath) : null);
+        $this->logoDataUri = LogoLoader::resolve($logoDataUri, $logoPath);
     }
 }

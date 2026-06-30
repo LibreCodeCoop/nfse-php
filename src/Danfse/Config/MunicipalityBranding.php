@@ -24,7 +24,6 @@ final readonly class MunicipalityBranding
         ?string $logoDataUri = null,
         ?string $logoPath = null,
     ) {
-        $this->logoDataUri = $logoDataUri
-            ?? ($logoPath !== null ? LogoLoader::pathToDataUri($logoPath) : null);
+        $this->logoDataUri = LogoLoader::resolve($logoDataUri, $logoPath);
     }
 }

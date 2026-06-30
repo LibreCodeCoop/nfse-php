@@ -9,6 +9,8 @@ namespace LibreCodeCoop\NfsePHP\Danfse\Enum;
 
 enum RegEspTrib: int
 {
+    use LabelFromIntValue;
+
     case NENHUM = 0;
     case COOPERATIVA = 1;
     case ESTIMATIVA = 2;
@@ -28,14 +30,5 @@ enum RegEspTrib: int
             self::PROFISSIONAL_AUTONOMO => 'Profissional Autônomo',
             self::SOCIEDADE_PROFISSIONAIS => 'Sociedade de Profissionais',
         };
-    }
-
-    public static function labelFor(string $value): string
-    {
-        if (!is_numeric($value)) {
-            return '-';
-        }
-
-        return self::tryFrom((int) $value)?->label() ?? '-';
     }
 }

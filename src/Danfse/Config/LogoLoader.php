@@ -13,6 +13,15 @@ namespace LibreCodeCoop\NfsePHP\Danfse\Config;
  */
 final class LogoLoader
 {
+    /**
+     * Resolve a logo to a data URI: a ready data URI takes precedence, otherwise
+     * a file path is loaded from disk, otherwise null (no logo).
+     */
+    public static function resolve(?string $dataUri, ?string $path): ?string
+    {
+        return $dataUri ?? ($path !== null ? self::pathToDataUri($path) : null);
+    }
+
     public static function pathToDataUri(string $path): string
     {
         if (!is_readable($path)) {

@@ -9,6 +9,8 @@ namespace LibreCodeCoop\NfsePHP\Danfse\Enum;
 
 enum TpRetISSQN: int
 {
+    use LabelFromIntValue;
+
     case NAO_RETIDO = 1;
     case RETIDO_TOMADOR = 2;
     case RETIDO_INTERMEDIARIO = 3;
@@ -20,14 +22,5 @@ enum TpRetISSQN: int
             self::RETIDO_TOMADOR => 'Retido pelo Tomador',
             self::RETIDO_INTERMEDIARIO => 'Retido pelo Intermediário',
         };
-    }
-
-    public static function labelFor(string $value): string
-    {
-        if (!is_numeric($value)) {
-            return '-';
-        }
-
-        return self::tryFrom((int) $value)?->label() ?? '-';
     }
 }
