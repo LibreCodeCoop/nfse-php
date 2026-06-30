@@ -5,6 +5,7 @@
 /** @var array<string, mixed> $data */
 /** @var ?string $logo */
 /** @var string $qrCode */
+/** @var bool $isHomologacao */
 /** @var ?\LibreCodeCoop\NfsePHP\Danfse\Config\MunicipalityBranding $municipality */
 ?>
 <!DOCTYPE html>
@@ -130,7 +131,7 @@
     </style>
 </head>
 <body>
-    <?php if ($data['ambiente'] == 2): ?>
+    <?php if ($isHomologacao): ?>
     <div class="watermark">HOMOLOGAÇÃO</div>
     <?php endif; ?>
 
@@ -145,7 +146,7 @@
             <td class="title-cell">
                 <div style="font-size: 10pt; font-weight: bold;">DANFSe v1.0</div>
                 <div style="font-size: 8pt; font-weight: bold;">Documento Auxiliar da NFS-e</div>
-                <?php if ($data['ambiente'] == 2): ?>
+                <?php if ($isHomologacao): ?>
                     <div style="color: red; font-weight: bold;">NFS-e SEM VALIDADE JURÍDICA</div>
                 <?php endif; ?>
             </td>

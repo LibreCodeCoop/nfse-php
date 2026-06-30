@@ -9,6 +9,7 @@ namespace LibreCodeCoop\NfsePHP\Tests\Unit\Danfse;
 
 use LibreCodeCoop\NfsePHP\Danfse\Config\DanfseConfig;
 use LibreCodeCoop\NfsePHP\Danfse\DanfseTemplate;
+use LibreCodeCoop\NfsePHP\Danfse\Enum\Ambiente;
 use LibreCodeCoop\NfsePHP\Danfse\XmlToArray;
 use LibreCodeCoop\NfsePHP\Tests\TestCase;
 
@@ -118,11 +119,11 @@ class DanfseTemplateTest extends TestCase
 
         self::assertSame(
             'https://www.nfse.gov.br/ConsultaPublica/?tpc=1&chave=abc',
-            $method->invoke($template, 'abc', 1),
+            $method->invoke($template, 'abc', Ambiente::PRODUCAO),
         );
         self::assertSame(
             'https://www.producaorestrita.nfse.gov.br/ConsultaPublica/?tpc=1&chave=abc',
-            $method->invoke($template, 'abc', 2),
+            $method->invoke($template, 'abc', Ambiente::HOMOLOGACAO),
         );
     }
 }

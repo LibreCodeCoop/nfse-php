@@ -13,6 +13,7 @@ use BaconQrCode\Renderer\RendererStyle\RendererStyle;
 use BaconQrCode\Writer;
 use LibreCodeCoop\NfsePHP\Danfse\Config\DanfseConfig;
 use LibreCodeCoop\NfsePHP\Danfse\Data\Municipios;
+use LibreCodeCoop\NfsePHP\Danfse\Enum\Ambiente;
 use LibreCodeCoop\NfsePHP\Danfse\Enum\OpSimpNac;
 use LibreCodeCoop\NfsePHP\Danfse\Enum\RegApTribSN;
 use LibreCodeCoop\NfsePHP\Danfse\Enum\RegEspTrib;
@@ -44,10 +45,12 @@ final class DanfseTemplate
      */
     public function render(array $nfse, DanfseConfig $config): string
     {
-        $data         = $this->buildData($nfse);
-        $logo         = $config->logoDataUri;
-        $municipality = $config->municipality;
-        $qrCode       = $this->generateQrCode((string) $data['chave_acesso'], (int) $data['ambiente']);
+        $data          = $this->buildData($nfse);
+        $logo          = $config->logoDataUri;
+        $municipality  = $config->municipality;
+        $ambiente      = Ambiente::fromValue((string) $data['ambiente']);
+        $isHomologacao = $ambiente->isHomologacao();
+        $qrCode        = $this->generateQrCode((string) $data['chave_acesso'], $ambiente);
 
         array_walk_recursive($data, static function (mixed &$v): void {
             if (is_string($v)) {
@@ -97,7 +100,7 @@ final class DanfseTemplate
             'numero_dps'   => $this->val($infDps, 'nDPS') ?: '-',
             'serie_dps'    => $this->val($infDps, 'serie') ?: '-',
             'emissao_dps'  => $this->fmt->dateTime($this->val($infDps, 'dhEmi')),
-            'ambiente'     => (int) ($this->val($infDps, 'tpAmb') ?: '1'),
+            'ambiente'     => Ambiente::fromValue($this->val($infDps, 'tpAmb'))->value,
 
             'emitente' => [
                 'nome'            => $this->val($emit, 'xNome') ?: '-',
@@ -150,7 +153,7 @@ final class DanfseTemplate
                 'regime_especial'      => RegEspTrib::labelFor($this->val($regTrib, 'regEspTrib')),
                 'valor_servico'        => $this->fmt->currency($this->val($valores, 'vServPrest', 'vServ')),
                 'bc_issqn'             => $this->currencyOrDash($this->val($tribMun, 'vBC')),
-                'aliquota'             => ($p = $this->val($tribMun, 'pAliq')) !== '' ? $p . '%' : '-',
+                'aliquota'             => $this->percentOrDash($this->val($tribMun, 'pAliq')),
                 'retencao_issqn'       => TpRetISSQN::labelFor($this->val($tribMun, 'tpRetISSQN')),
                 'issqn_apurado'        => $this->currencyOrDash($this->val($tribMun, 'vISSQN')),
             ],
@@ -183,9 +186,9 @@ final class DanfseTemplate
             ],
 
             'totais_tributos' => [
-                'federais'   => ($f = $this->val($totTrib, 'pTotTribFed')) !== '' ? $f . '%' : '-',
-                'estaduais'  => ($e = $this->val($totTrib, 'pTotTribEst')) !== '' ? $e . '%' : '-',
-                'municipais' => ($m = $this->val($totTrib, 'pTotTribMun')) !== '' ? $m . '%' : '-',
+                'federais'   => $this->percentOrDash($this->val($totTrib, 'pTotTribFed')),
+                'estaduais'  => $this->percentOrDash($this->val($totTrib, 'pTotTribEst')),
+                'municipais' => $this->percentOrDash($this->val($totTrib, 'pTotTribMun')),
             ],
 
             'informacoes_complementares' => $this->val($serv, 'infoCompl', 'xInfComp'),
@@ -280,6 +283,11 @@ final class DanfseTemplate
         return $value !== '' ? $this->fmt->currency($value) : '-';
     }
 
+    private function percentOrDash(string $value): string
+    {
+        return $value !== '' ? $value . '%' : '-';
+    }
+
     private function sumCurrency(string ...$values): string
     {
         $sum      = 0.0;
@@ -294,7 +302,7 @@ final class DanfseTemplate
         return $hasValue ? $this->fmt->currency((string) $sum) : '-';
     }
 
-    private function generateQrCode(string $chaveAcesso, int $ambiente): string
+    private function generateQrCode(string $chaveAcesso, Ambiente $ambiente): string
     {
         $renderer = new ImageRenderer(
             new RendererStyle(200),
@@ -305,9 +313,9 @@ final class DanfseTemplate
         return 'data:image/svg+xml;base64,' . base64_encode($svg);
     }
 
-    private function qrCodeUrl(string $chaveAcesso, int $ambiente): string
+    private function qrCodeUrl(string $chaveAcesso, Ambiente $ambiente): string
     {
-        $baseUrl = $ambiente === 2
+        $baseUrl = $ambiente->isHomologacao()
             ? self::QR_BASE_URL_SANDBOX
             : self::QR_BASE_URL_PROD;
 
