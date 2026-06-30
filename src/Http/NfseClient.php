@@ -12,9 +12,9 @@ use LibreCodeCoop\NfsePHP\Config\EnvironmentConfig;
 use LibreCodeCoop\NfsePHP\Contracts\NfseClientInterface;
 use LibreCodeCoop\NfsePHP\Contracts\SecretStoreInterface;
 use LibreCodeCoop\NfsePHP\Contracts\XmlSignerInterface;
+use LibreCodeCoop\NfsePHP\Danfse\DanfseGenerator;
 use LibreCodeCoop\NfsePHP\Dto\DpsData;
 use LibreCodeCoop\NfsePHP\Dto\ReceiptData;
-use LibreCodeCoop\NfsePHP\Exception\ArtifactException;
 use LibreCodeCoop\NfsePHP\Exception\CancellationException;
 use LibreCodeCoop\NfsePHP\Exception\IssuanceException;
 use LibreCodeCoop\NfsePHP\Exception\NetworkException;
@@ -33,15 +33,18 @@ class NfseClient implements NfseClientInterface
 {
     private readonly string $baseUrl;
     private readonly XmlSignerInterface $signer;
+    private readonly DanfseGenerator $danfseGenerator;
 
     public function __construct(
         private readonly EnvironmentConfig $environment,
         private readonly CertConfig $cert,
         private readonly SecretStoreInterface $secretStore,
         ?XmlSignerInterface $signer = null,
+        ?DanfseGenerator $danfseGenerator = null,
     ) {
-        $this->baseUrl = $environment->baseUrl;
-        $this->signer  = $signer ?? new DpsSigner($secretStore);
+        $this->baseUrl         = $environment->baseUrl;
+        $this->signer          = $signer ?? new DpsSigner($secretStore);
+        $this->danfseGenerator = $danfseGenerator ?? new DanfseGenerator();
     }
 
     public function emit(DpsData $dps): ReceiptData
@@ -108,31 +111,9 @@ class NfseClient implements NfseClientInterface
     }
 
     #[\Override]
-    public function getDanfse(string $chaveAcesso): string
+    public function getDanfse(string $nfseXml): string
     {
-        $url = $this->environment->danfseBaseUrl . '/' . $chaveAcesso;
-
-        [$httpStatus, $body] = $this->getRawBytes($url);
-
-        if ($httpStatus >= 400) {
-            throw new ArtifactException(
-                'ADN gateway returned error for DANFSE retrieval (HTTP ' . $httpStatus . ')',
-                NfseErrorCode::ArtifactRetrievalFailed,
-                $httpStatus,
-                [],
-            );
-        }
-
-        if ($body === '') {
-            throw new ArtifactException(
-                'ADN gateway returned empty body for DANFSE retrieval',
-                NfseErrorCode::ArtifactRetrievalFailed,
-                $httpStatus,
-                [],
-            );
-        }
-
-        return $body;
+        return $this->danfseGenerator->generateFromXml($nfseXml);
     }
 
     // -------------------------------------------------------------------------
@@ -294,35 +275,6 @@ class NfseClient implements NfseClientInterface
         }
 
         return [$httpStatus, $decoded];
-    }
-
-    /**
-     * Fetch a URL and return raw response bytes without JSON decoding.
-     *
-     * Used for binary endpoints such as ADN DANFSE (PDF artifact retrieval).
-     *
-     * @return array{int, string}
-     */
-    private function getRawBytes(string $url): array
-    {
-        $context = stream_context_create([
-            'http' => [
-                'method'        => 'GET',
-                'header'        => "Accept: application/pdf\r\n",
-                'ignore_errors' => true,
-            ],
-            'ssl' => $this->sslContextOptions(),
-        ]);
-
-        $http_response_header = [];
-        $body                 = file_get_contents($url, false, $context);
-        $httpStatus           = $this->parseHttpStatus($http_response_header);
-
-        if ($body === false) {
-            throw new NetworkException('Failed to connect to ADN DANFSE gateway at ' . $url);
-        }
-
-        return [$httpStatus, $body];
     }
 
     /**

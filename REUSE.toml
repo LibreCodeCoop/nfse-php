@@ -14,7 +14,8 @@ default-copyright = "2026 LibreCode coop and contributors"
 path = [
     ".gitignore",
     "composer.json",
-    "tests/Integration/.gitkeep"
+    "tests/Integration/.gitkeep",
+    "tests/fixtures/nfse_exemplo.xml"
 ]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "2026 LibreCode coop and contributors"

@@ -283,61 +283,33 @@ class NfseClientTest extends TestCase
     // getDanfse tests
     // -------------------------------------------------------------------------
 
-    public function testGetDanfseReturnsPdfBytesOnSuccess(): void
+    public function testGetDanfseGeneratesPdfLocallyFromXml(): void
     {
-        $fakePdfBytes = '%PDF-1.4 fake pdf content for testing';
+        $xml = file_get_contents(__DIR__ . '/../../fixtures/nfse_exemplo.xml');
+        self::assertNotFalse($xml);
 
-        self::$server->setResponseOfPath(
-            '/danfse/abc-danfse-key-123',
-            new Response($fakePdfBytes, ['Content-Type' => 'application/pdf'], 200)
-        );
+        $client = $this->makeClient($this->signer);
 
-        $client = $this->makeClient($this->signer, danfseBaseUrl: self::$server->getServerRoot() . '/danfse');
+        $pdf = $client->getDanfse($xml);
 
-        $pdf = $client->getDanfse('abc-danfse-key-123');
-
-        self::assertSame($fakePdfBytes, $pdf);
+        self::assertStringStartsWith('%PDF-', $pdf);
     }
 
-    public function testGetDanfseThrowsArtifactExceptionWhenGatewayReturnsError(): void
+    public function testGetDanfseThrowsArtifactExceptionForInvalidXml(): void
     {
-        self::$server->setResponseOfPath(
-            '/danfse/not-found-key',
-            new Response('not found', ['Content-Type' => 'text/plain'], 404)
-        );
-
-        $client = $this->makeClient($this->signer, danfseBaseUrl: self::$server->getServerRoot() . '/danfse');
+        $client = $this->makeClient($this->signer);
 
         $this->expectException(ArtifactException::class);
-        $client->getDanfse('not-found-key');
-    }
-
-    public function testArtifactExceptionCarriesErrorCodeAndHttpStatus(): void
-    {
-        self::$server->setResponseOfPath(
-            '/danfse/server-error-key',
-            new Response('internal error', ['Content-Type' => 'text/plain'], 500)
-        );
-
-        $client = $this->makeClient($this->signer, danfseBaseUrl: self::$server->getServerRoot() . '/danfse');
-
-        try {
-            $client->getDanfse('server-error-key');
-            self::fail('Expected ArtifactException');
-        } catch (ArtifactException $e) {
-            self::assertSame(NfseErrorCode::ArtifactRetrievalFailed, $e->errorCode);
-            self::assertSame(500, $e->httpStatus);
-        }
+        $client->getDanfse('not-valid-xml');
     }
 
     // -------------------------------------------------------------------------
 
-    private function makeClient(?XmlSignerInterface $signer = null, ?string $danfseBaseUrl = null): NfseClient
+    private function makeClient(?XmlSignerInterface $signer = null): NfseClient
     {
         return new NfseClient(
             environment: new EnvironmentConfig(
                 baseUrl: self::$server->getServerRoot() . '/SefinNacional',
-                danfseBaseUrl: $danfseBaseUrl ?? self::$server->getServerRoot() . '/danfse',
             ),
             cert:        new CertConfig(
                 cnpj:      '29842527000145',

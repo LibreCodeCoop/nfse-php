@@ -18,7 +18,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 - Emit NFS-e (`emit`)
 - Query NFS-e (`query`)
 - Cancel NFS-e (`cancel`)
-- Retrieve DANFSE bytes (`getDanfse`)
+- Generate the DANFSe PDF locally from the NFS-e XML (`getDanfse` / `Danfse\DanfseGenerator`)
 - Sign DPS XML with PFX credentials
 - Read secrets from OpenBao/Vault or an in-memory store
 

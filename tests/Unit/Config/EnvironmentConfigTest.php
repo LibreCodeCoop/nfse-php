@@ -53,26 +53,4 @@ class EnvironmentConfigTest extends TestCase
 
         self::assertSame($custom, $config->baseUrl);
     }
-
-    public function testDanfseBaseUrlDefaultsToProductionAdn(): void
-    {
-        $config = new EnvironmentConfig(sandboxMode: false);
-
-        self::assertSame('https://adn.nfse.gov.br/danfse', $config->danfseBaseUrl);
-    }
-
-    public function testDanfseBaseUrlDefaultsToSandboxAdn(): void
-    {
-        $config = new EnvironmentConfig(sandboxMode: true);
-
-        self::assertSame('https://adn.producaorestrita.nfse.gov.br/danfse', $config->danfseBaseUrl);
-    }
-
-    public function testCustomDanfseBaseUrlOverridesDefault(): void
-    {
-        $custom = 'http://localhost:9999/danfse';
-        $config = new EnvironmentConfig(danfseBaseUrl: $custom);
-
-        self::assertSame($custom, $config->danfseBaseUrl);
-    }
 }
