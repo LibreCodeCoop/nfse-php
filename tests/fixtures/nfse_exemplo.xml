@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+SPDX-FileCopyrightText: 2026 LibreCode coop and contributors
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
 <NFSe versao="1.01" xmlns="http://www.sped.fazenda.gov.br/nfse">
     <infNFSe Id="NFS3303302112233450000195000000000000100000000001">
         <xLocEmi>Niterói</xLocEmi>
