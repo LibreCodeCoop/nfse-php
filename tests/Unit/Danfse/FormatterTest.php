@@ -15,7 +15,7 @@ use LibreCodeCoop\NfsePHP\Tests\TestCase;
  */
 class FormatterTest extends TestCase
 {
-    private Formatter $fmt;
+    private Formatter $formatter;
 
     protected function setUp(): void
     {
