@@ -9,23 +9,46 @@ namespace LibreCodeCoop\NfsePHP\Tests\Unit\Danfse;
 
 use LibreCodeCoop\NfsePHP\Danfse\Enum\OptanteSimplesNacional;
 use LibreCodeCoop\NfsePHP\Tests\TestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
  * @covers \LibreCodeCoop\NfsePHP\Danfse\Enum\OptanteSimplesNacional
  */
 class OptanteSimplesNacionalTest extends TestCase
 {
-    public function testKnownLabels(): void
+    #[DataProvider('labelProvider')]
+    public function testLabelFor(string $value, string $expected): void
     {
-        self::assertSame('Não Optante', OptanteSimplesNacional::labelFor('1'));
-        self::assertStringContainsString('MEI', OptanteSimplesNacional::labelFor('2'));
-        self::assertStringContainsString('ME/EPP', OptanteSimplesNacional::labelFor('3'));
+        self::assertSame($expected, OptanteSimplesNacional::labelFor($value));
     }
 
-    public function testUnknownValueReturnsDash(): void
+    /**
+     * @return array<string, array{string, string}>
+     */
+    public static function labelProvider(): array
     {
-        self::assertSame('-', OptanteSimplesNacional::labelFor(''));
-        self::assertSame('-', OptanteSimplesNacional::labelFor('99'));
-        self::assertSame('-', OptanteSimplesNacional::labelFor('x'));
+        return [
+            'não optante' => ['1', 'Não Optante'],
+            'mei' => ['2', 'Optante - Microempreendedor Individual (MEI)'],
+            'me/epp' => ['3', 'Optante - Microempresa ou Empresa de Pequeno Porte (ME/EPP)'],
+        ];
+    }
+
+    #[DataProvider('unknownValueProvider')]
+    public function testUnknownValueReturnsDash(string $value): void
+    {
+        self::assertSame('-', OptanteSimplesNacional::labelFor($value));
+    }
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function unknownValueProvider(): array
+    {
+        return [
+            'empty' => [''],
+            'out of range' => ['99'],
+            'non-numeric' => ['x'],
+        ];
     }
 }

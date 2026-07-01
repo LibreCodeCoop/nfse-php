@@ -9,24 +9,47 @@ namespace LibreCodeCoop\NfsePHP\Tests\Unit\Danfse;
 
 use LibreCodeCoop\NfsePHP\Danfse\Enum\TributacaoISSQN;
 use LibreCodeCoop\NfsePHP\Tests\TestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
  * @covers \LibreCodeCoop\NfsePHP\Danfse\Enum\TributacaoISSQN
  */
 class TributacaoISSQNTest extends TestCase
 {
-    public function testKnownLabels(): void
+    #[DataProvider('labelProvider')]
+    public function testLabelFor(string $value, string $expected): void
     {
-        self::assertSame('Operação Tributável', TributacaoISSQN::labelFor('1'));
-        self::assertSame('Imunidade', TributacaoISSQN::labelFor('2'));
-        self::assertSame('Exportação de Serviço', TributacaoISSQN::labelFor('3'));
-        self::assertSame('Não Incidência', TributacaoISSQN::labelFor('4'));
+        self::assertSame($expected, TributacaoISSQN::labelFor($value));
     }
 
-    public function testUnknownValueReturnsDash(): void
+    /**
+     * @return array<string, array{string, string}>
+     */
+    public static function labelProvider(): array
     {
-        self::assertSame('-', TributacaoISSQN::labelFor(''));
-        self::assertSame('-', TributacaoISSQN::labelFor('99'));
-        self::assertSame('-', TributacaoISSQN::labelFor('x'));
+        return [
+            'operação tributável' => ['1', 'Operação Tributável'],
+            'imunidade' => ['2', 'Imunidade'],
+            'exportação de serviço' => ['3', 'Exportação de Serviço'],
+            'não incidência' => ['4', 'Não Incidência'],
+        ];
+    }
+
+    #[DataProvider('unknownValueProvider')]
+    public function testUnknownValueReturnsDash(string $value): void
+    {
+        self::assertSame('-', TributacaoISSQN::labelFor($value));
+    }
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function unknownValueProvider(): array
+    {
+        return [
+            'empty' => [''],
+            'out of range' => ['99'],
+            'non-numeric' => ['x'],
+        ];
     }
 }

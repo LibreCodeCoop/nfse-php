@@ -13,6 +13,7 @@ use LibreCodeCoop\NfsePHP\Danfse\DanfseGenerator;
 use LibreCodeCoop\NfsePHP\Exception\ArtifactException;
 use LibreCodeCoop\NfsePHP\Exception\NfseErrorCode;
 use LibreCodeCoop\NfsePHP\Tests\TestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
  * @covers \LibreCodeCoop\NfsePHP\Danfse\DanfseGenerator
@@ -68,29 +69,26 @@ class DanfseGeneratorTest extends TestCase
         self::assertStringContainsString('HOMOLOGAÇÃO', $html);
     }
 
-    public function testInvalidXmlThrowsArtifactException(): void
+    /**
+     * @param callable(): mixed $generate
+     */
+    #[DataProvider('invalidXmlProvider')]
+    public function testInvalidXmlThrowsArtifactException(callable $generate): void
     {
         try {
-            (new DanfseGenerator())->generateFromXml('not-valid-xml');
+            $generate();
             self::fail('Expected ArtifactException');
         } catch (ArtifactException $e) {
             self::assertSame(NfseErrorCode::ArtifactRetrievalFailed, $e->errorCode);
         }
     }
 
-    public function testWellFormedNonNfseXmlThrowsArtifactException(): void
+    /**
+     * @return array<string, array{callable(): mixed}>
+     */
+    public static function invalidXmlProvider(): array
     {
-        try {
-            (new DanfseGenerator())->generateHtml('<foo/>');
-            self::fail('Expected ArtifactException');
-        } catch (ArtifactException $e) {
-            self::assertSame(NfseErrorCode::ArtifactRetrievalFailed, $e->errorCode);
-        }
-    }
-
-    public function testDpsOnlyXmlThrowsArtifactException(): void
-    {
-        $xml = <<<XML
+        $dpsOnlyXml = <<<XML
             <?xml version="1.0" encoding="UTF-8"?>
             <DPS versao="1.01" xmlns="http://www.sped.fazenda.gov.br/nfse">
                 <infDPS Id="DPS330330211222333000181202601000000000000005">
@@ -99,11 +97,10 @@ class DanfseGeneratorTest extends TestCase
             </DPS>
             XML;
 
-        try {
-            (new DanfseGenerator())->generateHtml($xml);
-            self::fail('Expected ArtifactException');
-        } catch (ArtifactException $e) {
-            self::assertSame(NfseErrorCode::ArtifactRetrievalFailed, $e->errorCode);
-        }
+        return [
+            'malformed xml' => [static fn () => (new DanfseGenerator())->generateFromXml('not-valid-xml')],
+            'well-formed non-nfse xml' => [static fn () => (new DanfseGenerator())->generateHtml('<foo/>')],
+            'dps-only xml' => [static fn () => (new DanfseGenerator())->generateHtml($dpsOnlyXml)],
+        ];
     }
 }
