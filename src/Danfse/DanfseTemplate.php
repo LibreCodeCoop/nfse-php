@@ -14,11 +14,11 @@ use BaconQrCode\Writer;
 use LibreCodeCoop\NfsePHP\Danfse\Config\DanfseConfig;
 use LibreCodeCoop\NfsePHP\Danfse\Data\Municipios;
 use LibreCodeCoop\NfsePHP\Danfse\Enum\Ambiente;
-use LibreCodeCoop\NfsePHP\Danfse\Enum\OpSimpNac;
-use LibreCodeCoop\NfsePHP\Danfse\Enum\RegApTribSN;
-use LibreCodeCoop\NfsePHP\Danfse\Enum\RegEspTrib;
-use LibreCodeCoop\NfsePHP\Danfse\Enum\TpRetISSQN;
-use LibreCodeCoop\NfsePHP\Danfse\Enum\TribISSQN;
+use LibreCodeCoop\NfsePHP\Danfse\Enum\OptanteSimplesNacional;
+use LibreCodeCoop\NfsePHP\Danfse\Enum\RegimeApuracaoTributariaSN;
+use LibreCodeCoop\NfsePHP\Danfse\Enum\RegimeEspecialTributacao;
+use LibreCodeCoop\NfsePHP\Danfse\Enum\TipoRetencaoISSQN;
+use LibreCodeCoop\NfsePHP\Danfse\Enum\TributacaoISSQN;
 
 /**
  * Builds the flat data array consumed by the HTML template and renders it.
@@ -111,8 +111,8 @@ final class DanfseTemplate
                 'endereco'        => $this->address($enderEmit),
                 'municipio'       => $this->cityWithUf($this->val($inf, 'xLocEmi'), $this->val($enderEmit, 'UF')),
                 'cep'             => $this->fmt->cep($this->val($enderEmit, 'CEP')),
-                'simples_nacional' => OpSimpNac::labelFor($this->val($regTrib, 'opSimpNac')),
-                'regime_sn'       => RegApTribSN::labelFor($this->val($regTrib, 'regApTribSN')),
+                'simples_nacional' => OptanteSimplesNacional::labelFor($this->val($regTrib, 'opSimpNac')),
+                'regime_sn'       => RegimeApuracaoTributariaSN::labelFor($this->val($regTrib, 'regApTribSN')),
             ],
 
             'tomador' => [
@@ -148,13 +148,13 @@ final class DanfseTemplate
             ],
 
             'tributacao_municipal' => [
-                'tributacao_issqn'     => TribISSQN::labelFor($this->val($tribMun, 'tribISSQN')),
+                'tributacao_issqn'     => TributacaoISSQN::labelFor($this->val($tribMun, 'tribISSQN')),
                 'municipio_incidencia' => $this->val($inf, 'xLocIncid') ?: '-',
-                'regime_especial'      => RegEspTrib::labelFor($this->val($regTrib, 'regEspTrib')),
+                'regime_especial'      => RegimeEspecialTributacao::labelFor($this->val($regTrib, 'regEspTrib')),
                 'valor_servico'        => $this->fmt->currency($this->val($valores, 'vServPrest', 'vServ')),
                 'bc_issqn'             => $this->currencyOrDash($this->val($tribMun, 'vBC')),
                 'aliquota'             => $this->percentOrDash($this->val($tribMun, 'pAliq')),
-                'retencao_issqn'       => TpRetISSQN::labelFor($this->val($tribMun, 'tpRetISSQN')),
+                'retencao_issqn'       => TipoRetencaoISSQN::labelFor($this->val($tribMun, 'tpRetISSQN')),
                 'issqn_apurado'        => $this->currencyOrDash($this->val($tribMun, 'vISSQN')),
             ],
 

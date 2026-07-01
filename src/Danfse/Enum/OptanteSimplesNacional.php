@@ -7,7 +7,7 @@ declare(strict_types=1);
 
 namespace LibreCodeCoop\NfsePHP\Danfse\Enum;
 
-enum OpSimpNac: int
+enum OptanteSimplesNacional: int
 {
     use LabelFromIntValue;
 

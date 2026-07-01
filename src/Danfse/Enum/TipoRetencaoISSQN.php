@@ -7,7 +7,7 @@ declare(strict_types=1);
 
 namespace LibreCodeCoop\NfsePHP\Danfse\Enum;
 
-enum TpRetISSQN: int
+enum TipoRetencaoISSQN: int
 {
     use LabelFromIntValue;
 
