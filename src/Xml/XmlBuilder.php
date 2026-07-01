@@ -84,13 +84,8 @@ class XmlBuilder
         $trib = $doc->createElement('trib');
         $trib->appendChild($this->buildTribMun($doc, $dps));
 
-        if ($this->hasFederalTaxationData($dps)) {
-            $trib->appendChild($this->buildTribFederal($doc, $dps));
-        }
-
-        if ($this->hasTotalTributosPercentuais($dps)) {
-            $trib->appendChild($this->buildTotTrib($doc, $dps));
-        }
+        $trib->appendChild($this->buildTribFederal($doc, $dps));
+        $trib->appendChild($this->buildTotTrib($doc, $dps));
 
         $valores->appendChild($trib);
 
@@ -115,21 +110,18 @@ class XmlBuilder
         $totTrib = $doc->createElement('totTrib');
         $percentuais = $doc->createElement('pTotTrib');
 
-        if ($dps->totalTributosPercentualFederal !== '') {
-            $percentuais->appendChild($doc->createElement('pTotTribFed', $dps->totalTributosPercentualFederal));
-        }
-
-        if ($dps->totalTributosPercentualEstadual !== '') {
-            $percentuais->appendChild($doc->createElement('pTotTribEst', $dps->totalTributosPercentualEstadual));
-        }
-
-        if ($dps->totalTributosPercentualMunicipal !== '') {
-            $percentuais->appendChild($doc->createElement('pTotTribMun', $dps->totalTributosPercentualMunicipal));
-        }
+        $percentuais->appendChild($doc->createElement('pTotTribFed', $this->normalizedTributosPercentual($dps->totalTributosPercentualFederal)));
+        $percentuais->appendChild($doc->createElement('pTotTribEst', $this->normalizedTributosPercentual($dps->totalTributosPercentualEstadual)));
+        $percentuais->appendChild($doc->createElement('pTotTribMun', $this->normalizedTributosPercentual($dps->totalTributosPercentualMunicipal)));
 
         $totTrib->appendChild($percentuais);
 
         return $totTrib;
+    }
+
+    private function normalizedTributosPercentual(string $value): string
+    {
+        return $value !== '' ? $value : '0.00';
     }
 
     private function buildServico(\DOMDocument $doc, DpsData $dps): \DOMElement

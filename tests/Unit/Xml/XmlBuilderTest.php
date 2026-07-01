@@ -105,11 +105,11 @@ class XmlBuilderTest extends TestCase
 
     public function testBuildDpsUsesNationalTaxCodeInCtribnac(): void
     {
-        $dps = $this->makeDps(itemListaServico: '0107', codigoTributacaoNacional: '101011');
+        $dps = $this->makeDps(itemListaServico: '007', codigoTributacaoNacional: '101011');
         $xml = $this->builder->buildDps($dps);
 
         self::assertStringContainsString(
-            '<cServ><cTribNac>101011</cTribNac><cTribMun>0107</cTribMun><xDescServ>Consultoria em TI</xDescServ></cServ>',
+            '<cServ><cTribNac>101011</cTribNac><cTribMun>007</cTribMun><xDescServ>Consultoria em TI</xDescServ></cServ>',
             str_replace(["\n", '  '], '', $xml),
         );
     }
@@ -201,6 +201,23 @@ class XmlBuilderTest extends TestCase
         self::assertStringContainsString('<end><endNac><cMun>3303302</cMun><CEP>24020077</CEP></endNac><xLgr>Avenida Rio Branco</xLgr></end>', str_replace(["\n", '  '], '', $xml));
         self::assertStringContainsString('<fone>21988887777</fone>', $xml);
         self::assertStringContainsString('<email>financeiro@example.test</email>', $xml);
+    }
+
+    public function testTomadorOptionalContactFieldsAreOmittedWhenEmpty(): void
+    {
+        $xml = $this->builder->buildDps($this->makeDps(
+            documentoTomador: '12345678000195',
+            nomeTomador: 'Empresa Tomadora S.A.',
+            tomadorCodigoMunicipio: '3303302',
+            tomadorCep: '24020077',
+            tomadorLogradouro: 'Avenida Rio Branco',
+            tomadorTelefone: '',
+            tomadorEmail: '',
+        ));
+
+        self::assertStringContainsString('<toma>', $xml);
+        self::assertStringNotContainsString('<fone>', $xml);
+        self::assertStringNotContainsString('<email>', $xml);
     }
 
     public function testTomadorBlockIsAbsentWhenDocumentoTomadorIsEmpty(): void
@@ -310,7 +327,7 @@ class XmlBuilderTest extends TestCase
         $dpsNaoOptante = $this->makeDps(
             cnpjPrestador: '11222333000181',
             municipioIbge: '3303302',
-            itemListaServico: '0107',
+            itemListaServico: '007',
             valorServico: '1000.00',
             aliquota: '5.00',
             opcaoSimplesNacional: 1, // não optante
@@ -331,7 +348,7 @@ class XmlBuilderTest extends TestCase
         $dpsOptante = $this->makeDps(
             cnpjPrestador: '11222333000181',
             municipioIbge: '3303302',
-            itemListaServico: '0107',
+            itemListaServico: '007',
             valorServico: '1000.00',
             aliquota: '5.00',
             opcaoSimplesNacional: 2, // optante
@@ -360,7 +377,7 @@ class XmlBuilderTest extends TestCase
     private function makeDps(
         string $cnpjPrestador = '11222333000181',
         string $municipioIbge = '3303302',
-        string $itemListaServico = '0107',
+        string $itemListaServico = '007',
         string $codigoTributacaoNacional = '000000',
         string $valorServico = '1000.00',
         string $aliquota = '5.00',

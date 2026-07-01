@@ -20,6 +20,7 @@ use LibreCodeCoop\NfsePHP\Exception\IssuanceException;
 use LibreCodeCoop\NfsePHP\Exception\NetworkException;
 use LibreCodeCoop\NfsePHP\Exception\NfseErrorCode;
 use LibreCodeCoop\NfsePHP\Exception\QueryException;
+use LibreCodeCoop\NfsePHP\Support\TemporaryTlsFilesFactory;
 use LibreCodeCoop\NfsePHP\Xml\DpsSigner;
 use LibreCodeCoop\NfsePHP\Xml\XmlBuilder;
 
@@ -154,17 +155,23 @@ class NfseClient implements NfseClientInterface
             'dpsXmlGZipB64' => base64_encode($compressedPayload),
         ], JSON_THROW_ON_ERROR);
 
-        $context = stream_context_create([
-            'http' => [
-                'method'        => 'POST',
-                'header'        => "Content-Type: application/json\r\nAccept: application/json\r\n",
-                'content'       => $payload,
-                'ignore_errors' => true,
-            ],
-            'ssl' => $this->sslContextOptions(),
-        ]);
+        [$sslOptions, $cleanup] = $this->transportSslContextOptions();
 
-        return $this->fetchAndDecode($path, $context);
+        try {
+            $context = stream_context_create([
+                'http' => [
+                    'method'        => 'POST',
+                    'header'        => "Content-Type: application/json\r\nAccept: application/json\r\n",
+                    'content'       => $payload,
+                    'ignore_errors' => true,
+                ],
+                'ssl' => $sslOptions,
+            ]);
+
+            return $this->fetchAndDecode($path, $context);
+        } finally {
+            $cleanup();
+        }
     }
 
     /**
@@ -172,16 +179,22 @@ class NfseClient implements NfseClientInterface
      */
     private function get(string $path): array
     {
-        $context = stream_context_create([
-            'http' => [
-                'method'        => 'GET',
-                'header'        => "Accept: application/json\r\n",
-                'ignore_errors' => true,
-            ],
-            'ssl' => $this->sslContextOptions(),
-        ]);
+        [$sslOptions, $cleanup] = $this->transportSslContextOptions();
 
-        return $this->fetchAndDecode($path, $context);
+        try {
+            $context = stream_context_create([
+                'http' => [
+                    'method'        => 'GET',
+                    'header'        => "Accept: application/json\r\n",
+                    'ignore_errors' => true,
+                ],
+                'ssl' => $sslOptions,
+            ]);
+
+            return $this->fetchAndDecode($path, $context);
+        } finally {
+            $cleanup();
+        }
     }
 
     /**
@@ -193,17 +206,23 @@ class NfseClient implements NfseClientInterface
             'pedidoRegistroEventoXmlGZipB64' => $eventoXmlGZipB64,
         ], JSON_THROW_ON_ERROR);
 
-        $context = stream_context_create([
-            'http' => [
-                'method'        => 'POST',
-                'header'        => "Content-Type: application/json\r\nAccept: application/json\r\n",
-                'content'       => $payload,
-                'ignore_errors' => true,
-            ],
-            'ssl' => $this->sslContextOptions(),
-        ]);
+        [$sslOptions, $cleanup] = $this->transportSslContextOptions();
 
-        return $this->fetchAndDecode($path, $context);
+        try {
+            $context = stream_context_create([
+                'http' => [
+                    'method'        => 'POST',
+                    'header'        => "Content-Type: application/json\r\nAccept: application/json\r\n",
+                    'content'       => $payload,
+                    'ignore_errors' => true,
+                ],
+                'ssl' => $sslOptions,
+            ]);
+
+            return $this->fetchAndDecode($path, $context);
+        } finally {
+            $cleanup();
+        }
     }
 
     private function buildCancelEventXml(string $chaveAcesso, string $motivo): string
@@ -237,19 +256,14 @@ class NfseClient implements NfseClientInterface
     /**
      * @return array<string, bool|string>
      */
-    private function sslContextOptions(): array
+    private function transportSslContextOptions(): array
     {
         $options = [
             'verify_peer'      => true,
             'verify_peer_name' => true,
         ];
 
-        if ($this->cert->transportCertificatePath !== null && $this->cert->transportPrivateKeyPath !== null) {
-            $options['local_cert'] = $this->cert->transportCertificatePath;
-            $options['local_pk']   = $this->cert->transportPrivateKeyPath;
-        }
-
-        return $options;
+        return (new TemporaryTlsFilesFactory($this->secretStore))->create($this->cert, $options);
     }
 
     /**

@@ -20,6 +20,7 @@ use LibreCodeCoop\NfsePHP\Exception\NfseErrorCode;
 use LibreCodeCoop\NfsePHP\Exception\QueryException;
 use LibreCodeCoop\NfsePHP\Http\NfseClient;
 use LibreCodeCoop\NfsePHP\SecretStore\NoOpSecretStore;
+use LibreCodeCoop\NfsePHP\Support\TemporaryTlsFilesFactory;
 use LibreCodeCoop\NfsePHP\Tests\TestCase;
 
 /**
@@ -31,6 +32,7 @@ class NfseClientTest extends TestCase
 {
     private static MockWebServer $server;
     private XmlSignerInterface $signer;
+    private string $pfxPath = '';
 
     public static function setUpBeforeClass(): void
     {
@@ -53,6 +55,17 @@ class NfseClientTest extends TestCase
                 return $xml;
             }
         };
+
+        $this->setupTestCert();
+    }
+
+    protected function tearDown(): void
+    {
+        if ($this->pfxPath !== '' && is_file($this->pfxPath)) {
+            unlink($this->pfxPath);
+        }
+
+        parent::tearDown();
     }
 
     public function testEmitReturnsReceiptDataOnSuccess(): void
@@ -330,6 +343,34 @@ class NfseClientTest extends TestCase
         }
     }
 
+    public function testTransportTlsFactoryBuildsPemFilesFromConfiguredPfx(): void
+    {
+        $store = new NoOpSecretStore();
+        $store->put('pfx/29842527000145', [
+            'pfx_path' => $this->pfxPath,
+            'password' => 'testpass',
+        ]);
+
+        $factory = new TemporaryTlsFilesFactory($store);
+        [$options, $cleanup] = $factory->create(
+            new CertConfig(
+                cnpj: '29842527000145',
+                pfxPath: '/unused/runtime-path.pfx',
+                vaultPath: 'pfx/29842527000145',
+            ),
+            ['verify_peer' => true],
+        );
+
+        self::assertTrue($options['verify_peer']);
+        self::assertFileExists($options['local_cert']);
+        self::assertFileExists($options['local_pk']);
+
+        $cleanup();
+
+        self::assertFileDoesNotExist($options['local_cert']);
+        self::assertFileDoesNotExist($options['local_pk']);
+    }
+
     // -------------------------------------------------------------------------
 
     private function makeClient(?XmlSignerInterface $signer = null, ?string $danfseBaseUrl = null): NfseClient
@@ -342,7 +383,7 @@ class NfseClientTest extends TestCase
             cert:        new CertConfig(
                 cnpj:      '29842527000145',
                 pfxPath:   '/dev/null',
-                vaultPath: 'secret/nfse/29842527000145',
+                vaultPath: 'pfx/29842527000145',
                 transportCertificatePath: '/tmp/client.crt.pem',
                 transportPrivateKeyPath: '/tmp/client.key.pem',
             ),
@@ -351,12 +392,38 @@ class NfseClientTest extends TestCase
         );
     }
 
+    private function setupTestCert(): void
+    {
+        $privKey = openssl_pkey_new([
+            'private_key_bits' => 2048,
+            'private_key_type' => OPENSSL_KEYTYPE_RSA,
+        ]);
+        self::assertNotFalse($privKey, 'openssl_pkey_new must succeed in this environment');
+
+        $csr = openssl_csr_new(
+            ['commonName' => '29842527000145'],
+            $privKey,
+            ['digest_alg' => 'sha256'],
+        );
+        self::assertNotFalse($csr, 'openssl_csr_new must succeed');
+
+        $cert = openssl_csr_sign($csr, null, $privKey, 1, ['digest_alg' => 'sha256']);
+        self::assertNotFalse($cert, 'openssl_csr_sign must succeed');
+
+        $pfxData = '';
+        $ok = openssl_pkcs12_export($cert, $pfxData, $privKey, 'testpass');
+        self::assertTrue($ok, 'openssl_pkcs12_export must succeed');
+
+        $this->pfxPath = sys_get_temp_dir() . '/nfse_http_client_29842527000145.pfx';
+        file_put_contents($this->pfxPath, $pfxData);
+    }
+
     private function makeDps(): DpsData
     {
         return new DpsData(
             cnpjPrestador:   '11222333000181',
             municipioIbge:   '3303302',
-            itemListaServico: '0107',
+            itemListaServico: '007',
             valorServico:    '1000.00',
             aliquota:        '5.00',
             discriminacao:   'Consultoria em TI',
