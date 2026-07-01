@@ -104,13 +104,13 @@ final class Formatter
         return $digits;
     }
 
-    public function limit(string $value, int $limit, string $end = '...'): string
+    public function limit(string $value, int $limit, string $suffix = '...'): string
     {
         if (mb_strlen($value) <= $limit) {
             return $value;
         }
 
-        return mb_substr($value, 0, $limit) . $end;
+        return mb_substr($value, 0, $limit) . $suffix;
     }
 
     private function reformat(string $value, string $format): string

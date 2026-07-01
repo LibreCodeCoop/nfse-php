@@ -31,11 +31,11 @@ final class DanfseTemplate
     private const QR_BASE_URL_PROD = 'https://www.nfse.gov.br/ConsultaPublica/?tpc=1&chave=';
     private const QR_BASE_URL_SANDBOX = 'https://www.producaorestrita.nfse.gov.br/ConsultaPublica/?tpc=1&chave=';
 
-    private readonly Formatter $fmt;
+    private readonly Formatter $formatter;
 
     public function __construct()
     {
-        $this->fmt = new Formatter();
+        $this->formatter = new Formatter();
     }
 
     /**
@@ -52,9 +52,9 @@ final class DanfseTemplate
         $isHomologacao = $ambiente->isHomologacao();
         $qrCode        = $this->generateQrCode((string) $data['chave_acesso'], $ambiente);
 
-        array_walk_recursive($data, static function (mixed &$v): void {
-            if (is_string($v)) {
-                $v = htmlspecialchars($v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        array_walk_recursive($data, static function (mixed &$value): void {
+            if (is_string($value)) {
+                $value = htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
             }
         });
 
@@ -72,11 +72,11 @@ final class DanfseTemplate
      */
     public function buildData(array $nfse): array
     {
-        $inf    = $this->node($nfse, 'infNFSe');
-        $infDps = $this->node($inf, 'DPS', 'infDPS');
+        $infNfse = $this->node($nfse, 'infNFSe');
+        $infDps  = $this->node($infNfse, 'DPS', 'infDPS');
         $prest  = $this->node($infDps, 'prest');
         $regTrib = $this->node($prest, 'regTrib');
-        $emit    = $this->node($inf, 'emit');
+        $emit    = $this->node($infNfse, 'emit');
         $enderEmit = $this->node($emit, 'enderNac');
         $toma    = $this->node($infDps, 'toma');
         $endToma = $this->node($toma, 'end');
@@ -89,28 +89,28 @@ final class DanfseTemplate
         $tribFed = $this->node($valores, 'trib', 'tribFed');
         $totTrib = $this->node($valores, 'trib', 'totTrib', 'pTotTrib');
 
-        $id          = $this->val($inf, 'Id');
+        $id          = $this->val($infNfse, 'Id');
         $chaveAcesso = str_starts_with($id, 'NFS') ? substr($id, 3) : $id;
 
         return [
             'chave_acesso' => $chaveAcesso,
-            'numero_nfse'  => $this->val($inf, 'nNFSe') ?: '-',
-            'competencia'  => $this->fmt->date($this->val($infDps, 'dCompet')),
-            'emissao_nfse' => $this->fmt->dateTime($this->val($inf, 'dhProc')),
+            'numero_nfse'  => $this->val($infNfse, 'nNFSe') ?: '-',
+            'competencia'  => $this->formatter->date($this->val($infDps, 'dCompet')),
+            'emissao_nfse' => $this->formatter->dateTime($this->val($infNfse, 'dhProc')),
             'numero_dps'   => $this->val($infDps, 'nDPS') ?: '-',
             'serie_dps'    => $this->val($infDps, 'serie') ?: '-',
-            'emissao_dps'  => $this->fmt->dateTime($this->val($infDps, 'dhEmi')),
+            'emissao_dps'  => $this->formatter->dateTime($this->val($infDps, 'dhEmi')),
             'ambiente'     => Ambiente::fromValue($this->val($infDps, 'tpAmb'))->value,
 
             'emitente' => [
                 'nome'            => $this->val($emit, 'xNome') ?: '-',
                 'cnpj_cpf'        => $this->formattedDocument($emit),
                 'im'              => '-',
-                'telefone'        => $this->fmt->phone($this->val($emit, 'fone')),
+                'telefone'        => $this->formatter->phone($this->val($emit, 'fone')),
                 'email'           => strtolower($this->val($emit, 'email')),
                 'endereco'        => $this->address($enderEmit),
-                'municipio'       => $this->cityWithUf($this->val($inf, 'xLocEmi'), $this->val($enderEmit, 'UF')),
-                'cep'             => $this->fmt->cep($this->val($enderEmit, 'CEP')),
+                'municipio'       => $this->cityWithUf($this->val($infNfse, 'xLocEmi'), $this->val($enderEmit, 'UF')),
+                'cep'             => $this->formatter->cep($this->val($enderEmit, 'CEP')),
                 'simples_nacional' => OptanteSimplesNacional::labelFor($this->val($regTrib, 'opSimpNac')),
                 'regime_sn'       => RegimeApuracaoTributariaSN::labelFor($this->val($regTrib, 'regApTribSN')),
             ],
@@ -119,39 +119,39 @@ final class DanfseTemplate
                 'nome'      => $this->val($toma, 'xNome') ?: '-',
                 'cnpj_cpf'  => $this->formattedDocument($toma),
                 'im'        => $this->val($toma, 'IM') ?: '-',
-                'telefone'  => $this->fmt->phone($this->val($toma, 'fone')),
+                'telefone'  => $this->formatter->phone($this->val($toma, 'fone')),
                 'email'     => strtolower($this->val($toma, 'email')),
                 'endereco'  => $this->address($endToma),
                 'municipio' => $this->city($this->val($endToma, 'endNac', 'cMun')),
-                'cep'       => $this->fmt->cep($this->val($endToma, 'endNac', 'CEP')),
+                'cep'       => $this->formatter->cep($this->val($endToma, 'endNac', 'CEP')),
             ],
 
             'intermediario' => $interm === [] ? null : [
                 'nome'      => $this->val($interm, 'xNome') ?: '-',
                 'cnpj_cpf'  => $this->formattedDocument($interm),
                 'im'        => $this->val($interm, 'IMPrestMun') ?: '-',
-                'telefone'  => $this->fmt->phone($this->val($interm, 'fone')),
+                'telefone'  => $this->formatter->phone($this->val($interm, 'fone')),
                 'email'     => strtolower($this->val($interm, 'email')),
                 'endereco'  => $this->address($endInterm),
                 'municipio' => $this->city($this->val($endInterm, 'endNac', 'cMun')),
-                'cep'       => $this->fmt->cep($this->val($endInterm, 'endNac', 'CEP')),
+                'cep'       => $this->formatter->cep($this->val($endInterm, 'endNac', 'CEP')),
             ],
 
             'servico' => [
-                'codigo_trib_nacional'  => $this->fmt->codTribNacional($this->val($cServ, 'cTribNac')),
-                'desc_trib_nacional'    => $this->fmt->limit(trim($this->val($inf, 'xTribNac')), 60),
+                'codigo_trib_nacional'  => $this->formatter->codTribNacional($this->val($cServ, 'cTribNac')),
+                'desc_trib_nacional'    => $this->formatter->limit(trim($this->val($infNfse, 'xTribNac')), 60),
                 'codigo_trib_municipal' => $this->val($cServ, 'cTribMun') ?: '-',
-                'desc_trib_municipal'   => $this->fmt->limit(trim($this->val($inf, 'xTribMun')), 60),
-                'local_prestacao'       => $this->val($inf, 'xLocPrestacao') ?: '-',
+                'desc_trib_municipal'   => $this->formatter->limit(trim($this->val($infNfse, 'xTribMun')), 60),
+                'local_prestacao'       => $this->val($infNfse, 'xLocPrestacao') ?: '-',
                 'pais_prestacao'        => $this->val($serv, 'locPrest', 'cPaisPrestacao') ?: '-',
                 'descricao'             => $this->val($cServ, 'xDescServ') ?: '-',
             ],
 
             'tributacao_municipal' => [
                 'tributacao_issqn'     => TributacaoISSQN::labelFor($this->val($tribMun, 'tribISSQN')),
-                'municipio_incidencia' => $this->val($inf, 'xLocIncid') ?: '-',
+                'municipio_incidencia' => $this->val($infNfse, 'xLocIncid') ?: '-',
                 'regime_especial'      => RegimeEspecialTributacao::labelFor($this->val($regTrib, 'regEspTrib')),
-                'valor_servico'        => $this->fmt->currency($this->val($valores, 'vServPrest', 'vServ')),
+                'valor_servico'        => $this->formatter->currency($this->val($valores, 'vServPrest', 'vServ')),
                 'bc_issqn'             => $this->currencyOrDash($this->val($tribMun, 'vBC')),
                 'aliquota'             => $this->percentOrDash($this->val($tribMun, 'pAliq')),
                 'retencao_issqn'       => TipoRetencaoISSQN::labelFor($this->val($tribMun, 'tpRetISSQN')),
@@ -167,11 +167,11 @@ final class DanfseTemplate
             ],
 
             'totais' => [
-                'valor_servico'           => $this->fmt->currency($this->val($valores, 'vServPrest', 'vServ')),
+                'valor_servico'           => $this->formatter->currency($this->val($valores, 'vServPrest', 'vServ')),
                 'desconto_condicionado'   => $this->currencyOrDash($this->val($tribMun, 'vDescCond')),
                 'desconto_incondicionado' => $this->currencyOrDash($this->val($tribMun, 'vDescIncond')),
                 'issqn_retido'            => ($this->val($tribMun, 'vISSQN') !== '' && ($this->val($tribMun, 'tpRetISSQN') ?: '1') !== '1')
-                    ? $this->fmt->currency($this->val($tribMun, 'vISSQN'))
+                    ? $this->formatter->currency($this->val($tribMun, 'vISSQN'))
                     : '-',
                 'retencoes_federais' => $this->sumCurrency(
                     $this->val($tribFed, 'vRetIRRF'),
@@ -182,7 +182,7 @@ final class DanfseTemplate
                     $this->val($tribFed, 'piscofins', 'vPis'),
                     $this->val($tribFed, 'piscofins', 'vCofins'),
                 ),
-                'valor_liquido' => $this->fmt->currency($this->val($inf, 'valores', 'vLiq')),
+                'valor_liquido' => $this->formatter->currency($this->val($infNfse, 'valores', 'vLiq')),
             ],
 
             'totais_tributos' => [
@@ -243,27 +243,27 @@ final class DanfseTemplate
     {
         $cnpj = $this->val($party, 'CNPJ');
         if ($cnpj !== '') {
-            return $this->fmt->cnpjCpf($cnpj);
+            return $this->formatter->cnpjCpf($cnpj);
         }
 
         $cpf = $this->val($party, 'CPF');
         if ($cpf !== '') {
-            return $this->fmt->cnpjCpf($cpf);
+            return $this->formatter->cnpjCpf($cpf);
         }
 
         return $this->val($party, 'NIF') ?: '-';
     }
 
     /**
-     * @param array<string, mixed> $end
+     * @param array<string, mixed> $endereco
      */
-    private function address(array $end): string
+    private function address(array $endereco): string
     {
         $parts = array_filter([
-            $this->val($end, 'xLgr'),
-            $this->val($end, 'nro'),
-            $this->val($end, 'xBairro'),
-        ], static fn (string $v): bool => $v !== '');
+            $this->val($endereco, 'xLgr'),
+            $this->val($endereco, 'nro'),
+            $this->val($endereco, 'xBairro'),
+        ], static fn (string $value): bool => $value !== '');
 
         return $parts === [] ? '-' : implode(', ', $parts);
     }
@@ -280,7 +280,7 @@ final class DanfseTemplate
 
     private function currencyOrDash(string $value): string
     {
-        return $value !== '' ? $this->fmt->currency($value) : '-';
+        return $value !== '' ? $this->formatter->currency($value) : '-';
     }
 
     private function percentOrDash(string $value): string
@@ -290,16 +290,16 @@ final class DanfseTemplate
 
     private function sumCurrency(string ...$values): string
     {
-        $sum      = 0.0;
+        $total    = 0.0;
         $hasValue = false;
-        foreach ($values as $v) {
-            if ($v !== '') {
-                $sum += (float) $v;
+        foreach ($values as $value) {
+            if ($value !== '') {
+                $total += (float) $value;
                 $hasValue = true;
             }
         }
 
-        return $hasValue ? $this->fmt->currency((string) $sum) : '-';
+        return $hasValue ? $this->formatter->currency((string) $total) : '-';
     }
 
     private function generateQrCode(string $chaveAcesso, Ambiente $ambiente): string

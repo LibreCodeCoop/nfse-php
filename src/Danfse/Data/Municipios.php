@@ -5597,7 +5597,7 @@ final class Municipios
     public static function lookup(string|int $cMun): string
     {
         $code = (int) $cMun;
-        $m    = self::MAP[$code] ?? null;
-        return $m !== null ? $m['nome'] . ' - ' . $m['uf'] : (string) $cMun;
+        $municipio = self::MAP[$code] ?? null;
+        return $municipio !== null ? $municipio['nome'] . ' - ' . $municipio['uf'] : (string) $cMun;
     }
 }
