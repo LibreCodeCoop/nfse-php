@@ -59,7 +59,7 @@ final class DanfseTemplate
         });
 
         ob_start();
-        include __DIR__ . '/template.php';
+        include __DIR__ . '/HTMLTemplate.php';
 
         return (string) ob_get_clean();
     }
