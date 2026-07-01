@@ -9,20 +9,28 @@ namespace LibreCodeCoop\NfsePHP\Tests\Unit\Danfse;
 
 use LibreCodeCoop\NfsePHP\Danfse\Data\Municipios;
 use LibreCodeCoop\NfsePHP\Tests\TestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
  * @covers \LibreCodeCoop\NfsePHP\Danfse\Data\Municipios
  */
 class MunicipiosTest extends TestCase
 {
-    public function testLookupReturnsNameAndUf(): void
+    #[DataProvider('lookupProvider')]
+    public function testLookup(string|int $code, string $expected): void
     {
-        self::assertSame('São Paulo - SP', Municipios::lookup('3550308'));
-        self::assertSame('Niterói - RJ', Municipios::lookup(3303302));
+        self::assertSame($expected, Municipios::lookup($code));
     }
 
-    public function testLookupReturnsCodeWhenUnknown(): void
+    /**
+     * @return array<string, array{string|int, string}>
+     */
+    public static function lookupProvider(): array
     {
-        self::assertSame('9999999', Municipios::lookup('9999999'));
+        return [
+            'known code as string' => ['3550308', 'São Paulo - SP'],
+            'known code as int' => [3303302, 'Niterói - RJ'],
+            'unknown code returns raw' => ['9999999', '9999999'],
+        ];
     }
 }

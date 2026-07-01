@@ -9,6 +9,7 @@ namespace LibreCodeCoop\NfsePHP\Tests\Unit\Danfse;
 
 use LibreCodeCoop\NfsePHP\Danfse\Formatter;
 use LibreCodeCoop\NfsePHP\Tests\TestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
  * @covers \LibreCodeCoop\NfsePHP\Danfse\Formatter
@@ -22,62 +23,142 @@ class FormatterTest extends TestCase
         $this->formatter = new Formatter();
     }
 
-    public function testCnpjIsFormatted(): void
+    #[DataProvider('cnpjCpfProvider')]
+    public function testCnpjCpf(string $input, string $expected): void
     {
-        self::assertSame('11.222.333/0001-81', $this->formatter->cnpjCpf('11222333000181'));
+        self::assertSame($expected, $this->formatter->cnpjCpf($input));
     }
 
-    public function testCpfIsFormatted(): void
+    /**
+     * @return array<string, array{string, string}>
+     */
+    public static function cnpjCpfProvider(): array
     {
-        self::assertSame('123.456.789-09', $this->formatter->cnpjCpf('12345678909'));
+        return [
+            'formatted cnpj' => ['11222333000181', '11.222.333/0001-81'],
+            'formatted cpf' => ['12345678909', '123.456.789-09'],
+            'empty returns dash' => ['', '-'],
+            'dash returns dash' => ['-', '-'],
+            'unexpected length returns raw' => ['12345', '12345'],
+        ];
     }
 
-    public function testCnpjCpfReturnsDashForEmpty(): void
+    #[DataProvider('phoneProvider')]
+    public function testPhone(string $input, string $expected): void
     {
-        self::assertSame('-', $this->formatter->cnpjCpf(''));
-        self::assertSame('-', $this->formatter->cnpjCpf('-'));
+        self::assertSame($expected, $this->formatter->phone($input));
     }
 
-    public function testCnpjCpfReturnsRawWhenLengthUnexpected(): void
+    /**
+     * @return array<string, array{string, string}>
+     */
+    public static function phoneProvider(): array
     {
-        self::assertSame('12345', $this->formatter->cnpjCpf('12345'));
+        return [
+            'eight-digit local' => ['2130001234', '(21) 3000-1234'],
+            'nine-digit mobile' => ['11987654321', '(11) 98765-4321'],
+        ];
     }
 
-    public function testPhoneWithEightDigitsLocalAndMobile(): void
+    #[DataProvider('cepProvider')]
+    public function testCep(string $input, string $expected): void
     {
-        self::assertSame('(21) 3000-1234', $this->formatter->phone('2130001234'));
-        self::assertSame('(11) 98765-4321', $this->formatter->phone('11987654321'));
+        self::assertSame($expected, $this->formatter->cep($input));
     }
 
-    public function testCepIsFormatted(): void
+    /**
+     * @return array<string, array{string, string}>
+     */
+    public static function cepProvider(): array
     {
-        self::assertSame('24020-005', $this->formatter->cep('24020005'));
-        self::assertSame('-', $this->formatter->cep(''));
+        return [
+            'formatted cep' => ['24020005', '24020-005'],
+            'empty returns dash' => ['', '-'],
+        ];
     }
 
-    public function testDateAndDateTime(): void
+    #[DataProvider('dateProvider')]
+    public function testDate(string $input, string $expected): void
     {
-        self::assertSame('15/01/2026', $this->formatter->date('2026-01-15'));
-        self::assertSame('15/01/2026 14:30:00', $this->formatter->dateTime('2026-01-15T14:30:00-03:00'));
-        self::assertSame('-', $this->formatter->date(''));
+        self::assertSame($expected, $this->formatter->date($input));
     }
 
-    public function testCurrency(): void
+    /**
+     * @return array<string, array{string, string}>
+     */
+    public static function dateProvider(): array
     {
-        self::assertSame('R$ 1.500,00', $this->formatter->currency('1500.00'));
-        self::assertSame('R$ 1.292,75', $this->formatter->currency('1292.75'));
-        self::assertSame('-', $this->formatter->currency(''));
+        return [
+            'iso date' => ['2026-01-15', '15/01/2026'],
+            'empty returns dash' => ['', '-'],
+        ];
     }
 
-    public function testCodTribNacional(): void
+    #[DataProvider('dateTimeProvider')]
+    public function testDateTime(string $input, string $expected): void
     {
-        self::assertSame('01.07.00', $this->formatter->codTribNacional('010700'));
-        self::assertSame('-', $this->formatter->codTribNacional(''));
+        self::assertSame($expected, $this->formatter->dateTime($input));
     }
 
-    public function testLimitTruncatesWithEllipsis(): void
+    /**
+     * @return array<string, array{string, string}>
+     */
+    public static function dateTimeProvider(): array
     {
-        self::assertSame('abc', $this->formatter->limit('abc', 5));
-        self::assertSame('abcde...', $this->formatter->limit('abcdefgh', 5));
+        return [
+            'iso datetime with offset' => ['2026-01-15T14:30:00-03:00', '15/01/2026 14:30:00'],
+        ];
+    }
+
+    #[DataProvider('currencyProvider')]
+    public function testCurrency(string $input, string $expected): void
+    {
+        self::assertSame($expected, $this->formatter->currency($input));
+    }
+
+    /**
+     * @return array<string, array{string, string}>
+     */
+    public static function currencyProvider(): array
+    {
+        return [
+            'thousands' => ['1500.00', 'R$ 1.500,00'],
+            'cents' => ['1292.75', 'R$ 1.292,75'],
+            'empty returns dash' => ['', '-'],
+        ];
+    }
+
+    #[DataProvider('codTribNacionalProvider')]
+    public function testCodTribNacional(string $input, string $expected): void
+    {
+        self::assertSame($expected, $this->formatter->codTribNacional($input));
+    }
+
+    /**
+     * @return array<string, array{string, string}>
+     */
+    public static function codTribNacionalProvider(): array
+    {
+        return [
+            'formatted code' => ['010700', '01.07.00'],
+            'empty returns dash' => ['', '-'],
+        ];
+    }
+
+    #[DataProvider('limitProvider')]
+    public function testLimit(string $input, int $max, string $expected): void
+    {
+        self::assertSame($expected, $this->formatter->limit($input, $max));
+    }
+
+    /**
+     * @return array<string, array{string, int, string}>
+     */
+    public static function limitProvider(): array
+    {
+        return [
+            'shorter than limit is untouched' => ['abc', 5, 'abc'],
+            'longer than limit is truncated with ellipsis' => ['abcdefgh', 5, 'abcde...'],
+        ];
     }
 }
