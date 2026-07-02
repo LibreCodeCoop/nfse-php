@@ -19,10 +19,13 @@
     },
     "require": {
         "php": "^8.2",
-        "ext-openssl": "*",
         "ext-dom": "*",
+        "ext-mbstring": "*",
+        "ext-openssl": "*",
         "ext-soap": "*",
+        "bacon/bacon-qr-code": "^3.0",
         "csharpru/vault-php": "^4.4",
+        "dompdf/dompdf": "^3.0",
         "psr/http-client": "^1.0",
         "psr/http-factory": "^1.0"
     },

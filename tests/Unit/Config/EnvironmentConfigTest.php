@@ -9,32 +9,31 @@ namespace LibreCodeCoop\NfsePHP\Tests\Unit\Config;
 
 use LibreCodeCoop\NfsePHP\Config\EnvironmentConfig;
 use LibreCodeCoop\NfsePHP\Tests\TestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
  * @covers \LibreCodeCoop\NfsePHP\Config\EnvironmentConfig
  */
 class EnvironmentConfigTest extends TestCase
 {
-    public function testDefaultsToProductionUrl(): void
+    #[DataProvider('modeUrlProvider')]
+    public function testModeSelectsBaseUrl(bool $sandboxMode, string $expectedUrl): void
     {
-        $config = new EnvironmentConfig();
+        $config = new EnvironmentConfig(sandboxMode: $sandboxMode);
 
-        self::assertFalse($config->sandboxMode);
-        self::assertSame(
-            'https://sefin.nfse.gov.br/SefinNacional',
-            $config->baseUrl,
-        );
+        self::assertSame($sandboxMode, $config->sandboxMode);
+        self::assertSame($expectedUrl, $config->baseUrl);
     }
 
-    public function testSandboxModeSelectsSandboxUrl(): void
+    /**
+     * @return array<string, array{bool, string}>
+     */
+    public static function modeUrlProvider(): array
     {
-        $config = new EnvironmentConfig(sandboxMode: true);
-
-        self::assertTrue($config->sandboxMode);
-        self::assertSame(
-            'https://sefin.producaorestrita.nfse.gov.br/SefinNacional',
-            $config->baseUrl,
-        );
+        return [
+            'production by default' => [false, 'https://sefin.nfse.gov.br/SefinNacional'],
+            'sandbox mode' => [true, 'https://sefin.producaorestrita.nfse.gov.br/SefinNacional'],
+        ];
     }
 
     public function testCustomBaseUrlOverridesMode(): void
@@ -52,27 +51,5 @@ class EnvironmentConfigTest extends TestCase
         $config = new EnvironmentConfig(sandboxMode: true, baseUrl: $custom);
 
         self::assertSame($custom, $config->baseUrl);
-    }
-
-    public function testDanfseBaseUrlDefaultsToProductionAdn(): void
-    {
-        $config = new EnvironmentConfig(sandboxMode: false);
-
-        self::assertSame('https://adn.nfse.gov.br/danfse', $config->danfseBaseUrl);
-    }
-
-    public function testDanfseBaseUrlDefaultsToSandboxAdn(): void
-    {
-        $config = new EnvironmentConfig(sandboxMode: true);
-
-        self::assertSame('https://adn.producaorestrita.nfse.gov.br/danfse', $config->danfseBaseUrl);
-    }
-
-    public function testCustomDanfseBaseUrlOverridesDefault(): void
-    {
-        $custom = 'http://localhost:9999/danfse';
-        $config = new EnvironmentConfig(danfseBaseUrl: $custom);
-
-        self::assertSame($custom, $config->danfseBaseUrl);
     }
 }

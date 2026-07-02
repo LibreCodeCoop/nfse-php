@@ -28,9 +28,10 @@ interface NfseClientInterface
     public function cancel(string $chaveAcesso, string $motivo): bool;
 
     /**
-     * Retrieve the DANFSE (PDF rendering document) for an NFS-e from ADN.
+     * Generate the DANFSe (PDF auxiliary document) locally from an authorized
+     * NFS-e XML (the XML returned by emit()/query() in ReceiptData::$rawXml).
      *
      * Returns the raw PDF bytes as a string.
      */
-    public function getDanfse(string $chaveAcesso): string;
+    public function getDanfse(string $nfseXml): string;
 }

@@ -30,6 +30,6 @@ enum NfseErrorCode: string
     /** Gateway returned an error when querying an NFS-e (HTTP 4xx/5xx). */
     case QueryFailed = 'QUERY_FAILED';
 
-    /** ADN gateway returned an error when retrieving DANFSE artifact (HTTP 4xx/5xx). */
+    /** DANFSe PDF could not be generated locally (invalid NFS-e XML or render error). */
     case ArtifactRetrievalFailed = 'ARTIFACT_RETRIEVAL_FAILED';
 }

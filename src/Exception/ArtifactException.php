@@ -8,7 +8,8 @@ declare(strict_types=1);
 namespace LibreCodeCoop\NfsePHP\Exception;
 
 /**
- * Thrown when the ADN gateway returns an error during DANFSE artifact retrieval.
+ * Thrown when the DANFSe PDF cannot be generated locally (invalid NFS-e XML or
+ * a PDF rendering failure).
  */
 class ArtifactException extends GatewayException
 {

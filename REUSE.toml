@@ -13,8 +13,7 @@ default-copyright = "2026 LibreCode coop and contributors"
 [[annotations]]
 path = [
     ".gitignore",
-    "composer.json",
-    "tests/Integration/.gitkeep"
+    "composer.json"
 ]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "2026 LibreCode coop and contributors"

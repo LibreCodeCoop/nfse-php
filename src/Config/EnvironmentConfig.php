@@ -20,22 +20,15 @@ final readonly class EnvironmentConfig
 {
     private const BASE_URL_PROD    = 'https://sefin.nfse.gov.br/SefinNacional';
     private const BASE_URL_SANDBOX = 'https://sefin.producaorestrita.nfse.gov.br/SefinNacional';
-    private const DANFSE_BASE_URL_PROD    = 'https://adn.nfse.gov.br/danfse';
-    private const DANFSE_BASE_URL_SANDBOX = 'https://adn.producaorestrita.nfse.gov.br/danfse';
 
     public string $baseUrl;
-    public string $danfseBaseUrl;
 
     public function __construct(
         public bool $sandboxMode = false,
         ?string $baseUrl = null,
-        ?string $danfseBaseUrl = null,
     ) {
         $this->baseUrl = $baseUrl ?? ($sandboxMode
             ? self::BASE_URL_SANDBOX
             : self::BASE_URL_PROD);
-        $this->danfseBaseUrl = $danfseBaseUrl ?? ($sandboxMode
-            ? self::DANFSE_BASE_URL_SANDBOX
-            : self::DANFSE_BASE_URL_PROD);
     }
 }
