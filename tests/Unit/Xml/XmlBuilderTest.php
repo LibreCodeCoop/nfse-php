@@ -319,7 +319,8 @@ class XmlBuilderTest extends TestCase
 
         // For "não optante" (opSimpNac = 1), pAliq must NOT be present.
         self::assertStringNotContainsString('<pAliq>', $xml);
-        self::assertStringNotContainsString('<pTotTrib>', $xml);
+        self::assertStringContainsString('<tribFed/>', str_replace(["\n", '  '], '', $xml));
+        self::assertStringContainsString('<pTotTrib><pTotTribFed>0.00</pTotTribFed><pTotTribEst>0.00</pTotTribEst><pTotTribMun>0.00</pTotTribMun></pTotTrib>', str_replace(["\n", '  '], '', $xml));
 
         self::assertStringContainsString('<tribMun>', $xml);
         self::assertStringContainsString('<tribISSQN>', $xml);
@@ -340,7 +341,8 @@ class XmlBuilderTest extends TestCase
 
         // For "optante" (opSimpNac = 2), pAliq MUST be present.
         self::assertStringContainsString('<pAliq>', $xml);
-        self::assertStringNotContainsString('<pTotTrib>', $xml);
+        self::assertStringContainsString('<tribFed/>', str_replace(["\n", '  '], '', $xml));
+        self::assertStringContainsString('<pTotTrib><pTotTribFed>0.00</pTotTribFed><pTotTribEst>0.00</pTotTribEst><pTotTribMun>0.00</pTotTribMun></pTotTrib>', str_replace(["\n", '  '], '', $xml));
     }
 
     public function testBuildDpsIncludesTotalTributosPercentuaisWhenConfigured(): void
