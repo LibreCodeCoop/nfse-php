@@ -192,7 +192,7 @@ class XmlBuilderTest extends TestCase
             numeroDps: '345',
         ));
 
-        $doc = new \\DOMDocument();
+        $doc = new \DOMDocument();
         $doc->loadXML($xml);
 
         self::assertSame(
