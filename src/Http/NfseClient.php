@@ -22,6 +22,7 @@ use LibreCodeCoop\NfsePHP\Exception\NetworkException;
 use LibreCodeCoop\NfsePHP\Exception\NfseErrorCode;
 use LibreCodeCoop\NfsePHP\Exception\QueryException;
 use LibreCodeCoop\NfsePHP\Support\DpsIdentifier;
+use LibreCodeCoop\NfsePHP\Support\GzipBase64;
 use LibreCodeCoop\NfsePHP\Xml\DpsSigner;
 use LibreCodeCoop\NfsePHP\Xml\XmlBuilder;
 
@@ -385,15 +386,7 @@ class NfseClient implements NfseClientInterface, DpsLookupInterface
         $rawXml = null;
 
         if (isset($response['nfseXmlGZipB64']) && is_string($response['nfseXmlGZipB64'])) {
-            $decodedXml = base64_decode($response['nfseXmlGZipB64'], true);
-
-            if ($decodedXml !== false) {
-                $inflatedXml = gzdecode($decodedXml);
-
-                if ($inflatedXml !== false) {
-                    $rawXml = $inflatedXml;
-                }
-            }
+            $rawXml = GzipBase64::decode($response['nfseXmlGZipB64'], 'SEFIN NFS-e XML response');
         }
 
         return new ReceiptData(

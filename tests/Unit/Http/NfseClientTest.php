@@ -237,6 +237,54 @@ class NfseClientTest extends TestCase
         self::assertStringContainsString('<xMotivo>Cancelamento a pedido do tomador</xMotivo>', $eventoXml);
     }
 
+    public function testEmitRejectsMalformedBase64NfseXmlWithoutPhpWarning(): void
+    {
+        $payload = json_encode([
+            'nNFSe' => '42',
+            'chaveAcesso' => 'abc-123',
+            'nfseXmlGZipB64' => '***not-base64***',
+        ], JSON_THROW_ON_ERROR);
+
+        self::$server->setResponseOfPath(
+            '/SefinNacional/nfse',
+            new Response($payload, ['Content-Type' => 'application/json'], 201)
+        );
+
+        $client = $this->makeClient($this->signer);
+
+        try {
+            $client->emit($this->makeDps());
+            self::fail('Expected NetworkException');
+        } catch (\LibreCodeCoop\NfsePHP\Exception\NetworkException $e) {
+            self::assertSame(NfseErrorCode::InvalidResponse, $e->errorCode);
+            self::assertStringContainsString('Invalid Base64', $e->getMessage());
+        }
+    }
+
+    public function testEmitRejectsMalformedGzipNfseXmlWithoutPhpWarning(): void
+    {
+        $payload = json_encode([
+            'nNFSe' => '42',
+            'chaveAcesso' => 'abc-123',
+            'nfseXmlGZipB64' => base64_encode('not-gzip'),
+        ], JSON_THROW_ON_ERROR);
+
+        self::$server->setResponseOfPath(
+            '/SefinNacional/nfse',
+            new Response($payload, ['Content-Type' => 'application/json'], 201)
+        );
+
+        $client = $this->makeClient($this->signer);
+
+        try {
+            $client->emit($this->makeDps());
+            self::fail('Expected NetworkException');
+        } catch (\LibreCodeCoop\NfsePHP\Exception\NetworkException $e) {
+            self::assertSame(NfseErrorCode::InvalidResponse, $e->errorCode);
+            self::assertStringContainsString('Invalid GZip', $e->getMessage());
+        }
+    }
+
     // -------------------------------------------------------------------------
     // Typed exception tests
     // -------------------------------------------------------------------------
