@@ -329,13 +329,16 @@ class XmlBuilder
             if ($value === '') {
                 throw new \InvalidArgumentException('Service taker address requires ' . $tag . '.');
             }
-
-            $end->appendChild($doc->createElement($tag, $value));
         }
+
+        $end->appendChild($doc->createElement('xLgr', $dps->tomadorLogradouro));
+        $end->appendChild($doc->createElement('nro', $dps->tomadorNumero));
 
         if ($dps->tomadorComplemento !== '') {
             $end->appendChild($doc->createElement('xCpl', $dps->tomadorComplemento));
         }
+
+        $end->appendChild($doc->createElement('xBairro', $dps->tomadorBairro));
 
         return $end;
     }
