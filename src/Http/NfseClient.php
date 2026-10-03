@@ -10,11 +10,13 @@ namespace LibreCodeCoop\NfsePHP\Http;
 use LibreCodeCoop\NfsePHP\Config\CertConfig;
 use LibreCodeCoop\NfsePHP\Config\EnvironmentConfig;
 use LibreCodeCoop\NfsePHP\Contracts\DpsLookupInterface;
+use LibreCodeCoop\NfsePHP\Contracts\EventLookupInterface;
 use LibreCodeCoop\NfsePHP\Contracts\NfseClientInterface;
 use LibreCodeCoop\NfsePHP\Contracts\SecretStoreInterface;
 use LibreCodeCoop\NfsePHP\Contracts\XmlSignerInterface;
 use LibreCodeCoop\NfsePHP\Danfse\DanfseGenerator;
 use LibreCodeCoop\NfsePHP\Dto\DpsData;
+use LibreCodeCoop\NfsePHP\Dto\EventReceiptData;
 use LibreCodeCoop\NfsePHP\Dto\ReceiptData;
 use LibreCodeCoop\NfsePHP\Exception\CancellationException;
 use LibreCodeCoop\NfsePHP\Exception\IssuanceException;
@@ -32,7 +34,7 @@ use LibreCodeCoop\NfsePHP\Xml\XmlBuilder;
  * Communicates with the SEFIN gateway to issue, query, and cancel NFS-e.
  * All requests carry a signed DPS XML payload.
  */
-class NfseClient implements NfseClientInterface, DpsLookupInterface
+class NfseClient implements NfseClientInterface, DpsLookupInterface, EventLookupInterface
 {
     private readonly string $baseUrl;
     private readonly XmlSignerInterface $signer;
@@ -133,6 +135,35 @@ class NfseClient implements NfseClientInterface, DpsLookupInterface
         }
 
         return true;
+    }
+
+    #[\Override]
+    public function queryEvent(string $chaveAcesso, int $tipoEvento, int $numSeqEvento = 1): EventReceiptData
+    {
+        if ($tipoEvento < 100000 || $tipoEvento > 999999) {
+            throw new \InvalidArgumentException('Event type must be a six-digit code.');
+        }
+
+        if ($numSeqEvento < 1) {
+            throw new \InvalidArgumentException('Event sequence number must be at least 1.');
+        }
+
+        [$httpStatus, $body] = $this->get(
+            '/nfse/' . rawurlencode($chaveAcesso)
+            . '/eventos/' . $tipoEvento
+            . '/' . $numSeqEvento,
+        );
+
+        if ($httpStatus >= 400) {
+            throw new QueryException(
+                'SEFIN gateway returned error for event query (HTTP ' . $httpStatus . ')',
+                NfseErrorCode::QueryFailed,
+                $httpStatus,
+                $body,
+            );
+        }
+
+        return $this->parseEventResponse($body);
     }
 
     public function cancel(string $chaveAcesso, string $motivo): bool
@@ -376,6 +407,37 @@ class NfseClient implements NfseClientInterface, DpsLookupInterface
         }
 
         return 0;
+    }
+
+    /**
+     * @param array<string, mixed> $response
+     */
+    private function parseEventResponse(array $response): EventReceiptData
+    {
+        $encodedXml = $response['eventoXmlGZipB64'] ?? null;
+
+        if (!is_string($encodedXml) || $encodedXml === '') {
+            throw new NetworkException(
+                'SEFIN gateway returned an event response without eventoXmlGZipB64.',
+                NfseErrorCode::InvalidResponse,
+            );
+        }
+
+        $rawXml = GzipBase64::decode($encodedXml, 'SEFIN event XML response');
+
+        if (trim($rawXml) === '') {
+            throw new NetworkException(
+                'SEFIN gateway returned an empty event XML.',
+                NfseErrorCode::InvalidResponse,
+            );
+        }
+
+        return new EventReceiptData(
+            tipoAmbiente: (int) ($response['tipoAmbiente'] ?? 0),
+            versaoAplicativo: (string) ($response['versaoAplicativo'] ?? ''),
+            dataHoraProcessamento: (string) ($response['dataHoraProcessamento'] ?? ''),
+            rawXml: $rawXml,
+        );
     }
 
     /**
