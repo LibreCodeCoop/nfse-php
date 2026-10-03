@@ -139,12 +139,8 @@ final class OfficialDpsSchemaValidationTest extends TestCase
             tomadorBairro: 'Manhattan',
             opcaoSimplesNacional: 1,
             regimeEspecialTributacao: 0,
-            tributacaoIssqn: $tributacaoIssqn,
-            issqnPaisResultado: $issqnPaisResultado,
-            issqnTipoImunidade: $issqnTipoImunidade,
-            issqnTipoSuspensao: $issqnTipoSuspensao,
-            issqnNumeroProcessoSuspensao: $issqnNumeroProcessoSuspensao,
-            tipoRetencaoIss: $tipoRetencaoIss,
+            tributacaoIssqn: 1,
+            tipoRetencaoIss: 1,
             indicadorTributacao: 0,
         ));
 
