@@ -144,6 +144,66 @@ class NfseClientTest extends TestCase
         self::assertSame('99', $receipt->nfseNumber);
     }
 
+    public function testQueryDpsReturnsAccessKeyAndAcceptsInfDpsPrefix(): void
+    {
+        self::$server->setResponseOfPath(
+            '/SefinNacional/dps/330330221122233300018100001000000000000001',
+            new Response('{"chaveAcesso":"12345678901234567890123456789012345678901234567890"}', ['Content-Type' => 'application/json'], 200)
+        );
+
+        $client = $this->makeClient($this->signer);
+
+        self::assertSame(
+            '12345678901234567890123456789012345678901234567890',
+            $client->queryDps('DPS330330221122233300018100001000000000000001'),
+        );
+
+        $request = self::$server->getLastRequest();
+        self::assertNotNull($request);
+        self::assertSame('GET', $request->getRequestMethod());
+    }
+
+    public function testExistsDpsUsesHeadAndReturnsTrueWhenFound(): void
+    {
+        self::$server->setResponseOfPath(
+            '/SefinNacional/dps/330330221122233300018100001000000000000001',
+            new Response('', [], 200)
+        );
+
+        $client = $this->makeClient($this->signer);
+
+        self::assertTrue($client->existsDps('330330221122233300018100001000000000000001'));
+
+        $request = self::$server->getLastRequest();
+        self::assertNotNull($request);
+        self::assertSame('HEAD', $request->getRequestMethod());
+    }
+
+    public function testExistsDpsReturnsFalseOnNotFound(): void
+    {
+        self::$server->setResponseOfPath(
+            '/SefinNacional/dps/missing-dps',
+            new Response('', [], 404)
+        );
+
+        $client = $this->makeClient($this->signer);
+
+        self::assertFalse($client->existsDps('missing-dps'));
+    }
+
+    public function testQueryDpsRejectsMissingAccessKey(): void
+    {
+        self::$server->setResponseOfPath(
+            '/SefinNacional/dps/known-without-key',
+            new Response('{}', ['Content-Type' => 'application/json'], 200)
+        );
+
+        $client = $this->makeClient($this->signer);
+
+        $this->expectException(\LibreCodeCoop\NfsePHP\Exception\NetworkException::class);
+        $client->queryDps('known-without-key');
+    }
+
     public function testCancelReturnsTrueOnSuccess(): void
     {
         self::$server->setResponseOfPath(
