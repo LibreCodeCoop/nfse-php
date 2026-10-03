@@ -593,6 +593,85 @@ class XmlBuilderTest extends TestCase
         ));
     }
 
+    public function testIssqnExportCanEmitForeignResultCountry(): void
+    {
+        $xml = $this->builder->buildDps($this->makeDps(
+            tributacaoIssqn: 3,
+            issqnPaisResultado: 'us',
+        ));
+
+        self::assertStringContainsString('<tribISSQN>3</tribISSQN>', $xml);
+        self::assertStringContainsString('<cPaisResult>US</cPaisResult>', $xml);
+    }
+
+    public function testIssqnResultCountryIsRejectedOutsideExport(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('only be informed for service export');
+
+        $this->builder->buildDps($this->makeDps(
+            tributacaoIssqn: 1,
+            issqnPaisResultado: 'US',
+        ));
+    }
+
+    public function testIssqnImmunityRequiresAndEmitsImmunityType(): void
+    {
+        $xml = $this->builder->buildDps($this->makeDps(
+            tributacaoIssqn: 2,
+            issqnTipoImunidade: 3,
+        ));
+
+        self::assertStringContainsString('<tribISSQN>2</tribISSQN>', $xml);
+        self::assertStringContainsString('<tpImunidade>3</tpImunidade>', $xml);
+    }
+
+    public function testIssqnImmunityWithoutTypeIsRejected(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('immunity type is required');
+
+        $this->builder->buildDps($this->makeDps(tributacaoIssqn: 2));
+    }
+
+    public function testIssqnSuspendedEnforceabilityEmitsOfficialGroup(): void
+    {
+        $process = str_repeat('1', 30);
+        $xml = $this->builder->buildDps($this->makeDps(
+            tributacaoIssqn: 1,
+            issqnTipoSuspensao: 1,
+            issqnNumeroProcessoSuspensao: $process,
+        ));
+
+        self::assertStringContainsString(
+            '<exigSusp><tpSusp>1</tpSusp><nProcesso>' . $process . '</nProcesso></exigSusp>',
+            str_replace(["\n", '  '], '', $xml),
+        );
+    }
+
+    public function testIssqnSuspensionIsRejectedForNonTaxableOperation(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('only allowed for taxable operations');
+
+        $this->builder->buildDps($this->makeDps(
+            tributacaoIssqn: 3,
+            issqnTipoSuspensao: 1,
+            issqnNumeroProcessoSuspensao: str_repeat('1', 30),
+        ));
+    }
+
+    public function testIssqnSuspensionRequiresThirtyDigitProceedingNumber(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('exactly 30 digits');
+
+        $this->builder->buildDps($this->makeDps(
+            issqnTipoSuspensao: 2,
+            issqnNumeroProcessoSuspensao: '123',
+        ));
+    }
+
     // -------------------------------------------------------------------------
 
     private function makeDps(
@@ -619,6 +698,10 @@ class XmlBuilderTest extends TestCase
         string $tomadorEmail = '',
         int $regimeEspecialTributacao = 0,
         int $tributacaoIssqn = 1,
+        string $issqnPaisResultado = '',
+        ?int $issqnTipoImunidade = null,
+        ?int $issqnTipoSuspensao = null,
+        string $issqnNumeroProcessoSuspensao = '',
         int $tipoRetencaoIss = 1,
         int $opcaoSimplesNacional = 1,
         int $tipoAmbiente = 2,
@@ -666,6 +749,10 @@ class XmlBuilderTest extends TestCase
             tomadorEmail:             $tomadorEmail,
             regimeEspecialTributacao: $regimeEspecialTributacao,
             tributacaoIssqn:          $tributacaoIssqn,
+            issqnPaisResultado:        $issqnPaisResultado,
+            issqnTipoImunidade:        $issqnTipoImunidade,
+            issqnTipoSuspensao:        $issqnTipoSuspensao,
+            issqnNumeroProcessoSuspensao: $issqnNumeroProcessoSuspensao,
             tipoRetencaoIss:          $tipoRetencaoIss,
             issRetido:                $issRetido,
             opcaoSimplesNacional:     $opcaoSimplesNacional,
