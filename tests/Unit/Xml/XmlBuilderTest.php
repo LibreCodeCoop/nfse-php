@@ -262,6 +262,7 @@ class XmlBuilderTest extends TestCase
             tomadorCep: '24020077',
             tomadorLogradouro: 'Avenida Rio Branco',
             tomadorNumero: '100',
+            tomadorBairro: 'Centro',
             tomadorTelefone: '21988887777',
             tomadorEmail: 'financeiro@example.test',
         );
@@ -269,7 +270,7 @@ class XmlBuilderTest extends TestCase
         $xml = $this->builder->buildDps($dps);
 
         self::assertStringContainsString('<toma>', $xml);
-        self::assertStringContainsString('<end><endNac><cMun>3303302</cMun><CEP>24020077</CEP></endNac><xLgr>Avenida Rio Branco</xLgr><nro>100</nro></end>', str_replace(["\n", '  '], '', $xml));
+        self::assertStringContainsString('<end><endNac><cMun>3303302</cMun><CEP>24020077</CEP></endNac><xLgr>Avenida Rio Branco</xLgr><nro>100</nro><xBairro>Centro</xBairro></end>', str_replace(["\n", '  '], '', $xml));
         self::assertStringContainsString('<fone>21988887777</fone>', $xml);
         self::assertStringContainsString('<email>financeiro@example.test</email>', $xml);
     }
