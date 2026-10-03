@@ -88,3 +88,7 @@ All commits must use [Conventional Commits](https://www.conventionalcommits.org/
 
 If this library saves you hours of integration pain, please ⭐ the repository.  
 It helps other developers discover the project and motivates the team to keep improving it.
+
+## ADN contributor distribution
+
+Use `Http\\AdnClient` for the contributor ADN API. It is intentionally separate from `NfseClient`: SEFIN handles issuance/query/cancellation, while ADN distributes NFS-e, DPS and event documents by NSU or access key.
