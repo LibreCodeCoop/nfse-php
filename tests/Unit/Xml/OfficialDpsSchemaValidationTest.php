@@ -37,14 +37,21 @@ final class OfficialDpsSchemaValidationTest extends TestCase
         self::assertSame([], $this->validator->validate($xml));
     }
 
-    public function testAlphanumericCnpjDpsMatchesOfficialSchema(): void
+    public function testFebruarySchemaSnapshotDocumentsPreAlphanumericCnpjContract(): void
     {
         $xml = $this->builder->buildDps($this->makeDps(
             cnpjPrestador: '12ABC34501DE35',
             documentoTomador: '98XYZ76501AB12',
         ));
 
-        self::assertSame([], $this->validator->validate($xml));
+        $errors = $this->validator->validate($xml);
+
+        self::assertNotSame([], $errors);
+        self::assertTrue(
+            array_any($errors, static fn (string $error): bool => str_contains($error, "CNPJ")
+                && str_contains($error, "[0-9]{14}")),
+            'The 2026-02-09 official schema snapshot should make its pre-alphanumeric CNPJ limitation explicit.',
+        );
     }
 
     public function testIbsCbsDpsMatchesOfficialSchema(): void
@@ -81,7 +88,7 @@ final class OfficialDpsSchemaValidationTest extends TestCase
         return new DpsData(
             cnpjPrestador: $cnpjPrestador,
             municipioIbge: '3303302',
-            itemListaServico: '0107',
+            itemListaServico: '001',
             valorServico: '1000.00',
             aliquota: '5.00',
             discriminacao: 'Consultoria em tecnologia da informacao',
