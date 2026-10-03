@@ -1,0 +1,16 @@
+{
+  "_meta": {
+    "kind": "synthetic",
+    "contract": "SEFIN NFS-e contributor API",
+    "scenario": "business rejection"
+  },
+  "status": 422,
+  "response": {
+    "erros": [
+      {
+        "Codigo": "E999",
+        "Descricao": "Synthetic fiscal rejection for contract testing."
+      }
+    ]
+  }
+}
