@@ -469,6 +469,111 @@ class XmlBuilderTest extends TestCase
         ));
     }
 
+    public function testForeignServiceTakerWithNifAndAddressIsEmittedInOfficialOrder(): void
+    {
+        $xml = $this->builder->buildDps(new DpsData(
+            cnpjPrestador: '11222333000181',
+            municipioIbge: '3303302',
+            itemListaServico: '001',
+            valorServico: '1000.00',
+            aliquota: '5.00',
+            discriminacao: 'Consultoria internacional',
+            tomadorNif: 'US-TAX-12345',
+            nomeTomador: 'Foreign Customer LLC',
+            tomadorPaisCodigo: 'us',
+            tomadorCodigoPostalExterior: '10001',
+            tomadorCidadeExterior: 'New York',
+            tomadorEstadoExterior: 'NY',
+            tomadorLogradouro: '5th Avenue',
+            tomadorNumero: '100',
+            tomadorComplemento: 'Suite 10',
+            tomadorBairro: 'Manhattan',
+        ));
+
+        self::assertStringContainsString('<NIF>US-TAX-12345</NIF>', $xml);
+        self::assertStringContainsString('<cPais>US</cPais>', $xml);
+        self::assertStringContainsString('<cEndPost>10001</cEndPost>', $xml);
+        self::assertStringContainsString('<xCidade>New York</xCidade>', $xml);
+        self::assertStringContainsString('<xEstProvReg>NY</xEstProvReg>', $xml);
+
+        $normalized = str_replace(["\n", '  '], '', $xml);
+        self::assertMatchesRegularExpression(
+            '/<end><endExt>.*<\/endExt><xLgr>5th Avenue<\/xLgr><nro>100<\/nro><xCpl>Suite 10<\/xCpl><xBairro>Manhattan<\/xBairro><\/end>/',
+            $normalized,
+        );
+    }
+
+    public function testForeignServiceTakerCanUseReasonForMissingNif(): void
+    {
+        $xml = $this->builder->buildDps(new DpsData(
+            cnpjPrestador: '11222333000181',
+            municipioIbge: '3303302',
+            itemListaServico: '001',
+            valorServico: '1000.00',
+            aliquota: '5.00',
+            discriminacao: 'Consultoria internacional',
+            tomadorCodigoNaoNif: 2,
+            nomeTomador: 'Foreign Customer Without NIF',
+        ));
+
+        self::assertStringContainsString('<cNaoNIF>2</cNaoNIF>', $xml);
+        self::assertStringNotContainsString('<CNPJ>', $xml);
+        self::assertStringNotContainsString('<CPF>', $xml);
+        self::assertStringNotContainsString('<NIF>', $xml);
+    }
+
+    public function testForeignAddressRejectsPartialConfiguration(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Incomplete foreign service taker address');
+
+        $this->builder->buildDps(new DpsData(
+            cnpjPrestador: '11222333000181',
+            municipioIbge: '3303302',
+            itemListaServico: '001',
+            valorServico: '1000.00',
+            aliquota: '5.00',
+            discriminacao: 'Consultoria internacional',
+            tomadorNif: 'NIF-123',
+            nomeTomador: 'Foreign Customer',
+            tomadorPaisCodigo: 'US',
+            tomadorCidadeExterior: 'New York',
+        ));
+    }
+
+    public function testForeignServiceTakerRejectsInvalidNoNifReason(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('cNaoNIF must be 0, 1 or 2');
+
+        $this->builder->buildDps(new DpsData(
+            cnpjPrestador: '11222333000181',
+            municipioIbge: '3303302',
+            itemListaServico: '001',
+            valorServico: '1000.00',
+            aliquota: '5.00',
+            discriminacao: 'Consultoria internacional',
+            tomadorCodigoNaoNif: 3,
+            nomeTomador: 'Foreign Customer',
+        ));
+    }
+
+    public function testIdentifiedServiceTakerRequiresName(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Service taker name is required');
+
+        $this->builder->buildDps(new DpsData(
+            cnpjPrestador: '11222333000181',
+            municipioIbge: '3303302',
+            itemListaServico: '001',
+            valorServico: '1000.00',
+            aliquota: '5.00',
+            discriminacao: 'Consultoria',
+            documentoTomador: '12345678000195',
+        ));
+    }
+
     // -------------------------------------------------------------------------
 
     private function makeDps(
