@@ -516,10 +516,16 @@ class XmlBuilderTest extends TestCase
             nomeTomador: 'Foreign Customer Without NIF',
         ));
 
-        self::assertStringContainsString('<cNaoNIF>2</cNaoNIF>', $xml);
-        self::assertStringNotContainsString('<CNPJ>', $xml);
-        self::assertStringNotContainsString('<CPF>', $xml);
-        self::assertStringNotContainsString('<NIF>', $xml);
+        $document = new \DOMDocument();
+        self::assertTrue($document->loadXML($xml));
+
+        $xpath = new \DOMXPath($document);
+        $xpath->registerNamespace('n', 'http://www.sped.fazenda.gov.br/nfse');
+
+        self::assertSame('2', $xpath->evaluate('string(//n:toma/n:cNaoNIF)'));
+        self::assertSame(0, $xpath->query('//n:toma/n:CNPJ')?->length);
+        self::assertSame(0, $xpath->query('//n:toma/n:CPF')?->length);
+        self::assertSame(0, $xpath->query('//n:toma/n:NIF')?->length);
     }
 
     public function testForeignAddressRejectsPartialConfiguration(): void
