@@ -1,0 +1,26 @@
+{
+  "_meta": {
+    "kind": "synthetic",
+    "contract": "ADN contributor distribution API",
+    "scenario": "one distributed NFS-e"
+  },
+  "status": 200,
+  "response": {
+    "StatusProcessamento": "PROCESSADO",
+    "TipoAmbiente": "2",
+    "VersaoAplicativo": "1.01",
+    "DataHoraProcessamento": "2026-10-03T12:00:00-03:00",
+    "UltimoNSU": 11,
+    "LoteDFe": [
+      {
+        "NSU": 11,
+        "ChaveAcesso": "ACCESS-42",
+        "TipoDocumento": "NFSE",
+        "DataHoraGeracao": "2026-10-03T11:59:59-03:00",
+        "ArquivoXml": "H4sIAFItwWoC/7PxcwtOVajIzckrtlXKKCkpsNLXLy8v1ysuSE3RS0usSs1LSdRLzy/TSyrSz0srTlWys8nMSwNr8kyxVQIyDI2MgYJ5ICE7EyMbfQjLRh+qDMgCUwBV3H52aQAAAA=="
+      }
+    ],
+    "Alertas": [],
+    "Erros": []
+  }
+}
