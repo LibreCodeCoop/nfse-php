@@ -173,9 +173,9 @@ class XmlBuilderTest extends TestCase
         $dps = $this->makeDps(documentoTomador: '00000000E08G12', nomeTomador: 'Empresa Alfa S.A.');
         $xml = $this->builder->buildDps($dps);
 
-        $doc   = new \\DOMDocument();
+        $doc   = new \DOMDocument();
         $doc->loadXML($xml);
-        $xpath = new \\DOMXPath($doc);
+        $xpath = new \DOMXPath($doc);
         $xpath->registerNamespace('n', 'http://www.sped.fazenda.gov.br/nfse');
 
         $nodes = $xpath->query('//n:toma/n:CNPJ');
