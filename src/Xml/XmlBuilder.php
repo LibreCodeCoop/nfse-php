@@ -54,7 +54,7 @@ class XmlBuilder
         $prest->appendChild($this->buildRegTrib($doc, $dps));
         $infDps->appendChild($prest);
 
-        if ($dps->documentoTomador !== '') {
+        if ($this->hasTomador($dps)) {
             $infDps->appendChild($this->buildToma($doc, $dps));
         }
 
@@ -217,44 +217,34 @@ class XmlBuilder
 
         $docLen = strlen($dps->documentoTomador);
 
-        if ($docLen === 14) {
+        if ($dps->tomadorNif !== '') {
+            $toma->appendChild($doc->createElement('NIF', $dps->tomadorNif));
+        } elseif ($dps->tomadorCodigoNaoNif !== null) {
+            if (!in_array($dps->tomadorCodigoNaoNif, [0, 1, 2], true)) {
+                throw new \InvalidArgumentException('Foreign service taker cNaoNIF must be 0, 1 or 2.');
+            }
+
+            $toma->appendChild($doc->createElement('cNaoNIF', (string) $dps->tomadorCodigoNaoNif));
+        } elseif ($docLen === 14) {
             $toma->appendChild($doc->createElement('CNPJ', $dps->documentoTomador));
         } elseif ($docLen === 11) {
             $toma->appendChild($doc->createElement('CPF', $dps->documentoTomador));
+        } else {
+            throw new \InvalidArgumentException('Service taker identification must be CNPJ, CPF, NIF or cNaoNIF.');
         }
 
-        if ($dps->nomeTomador !== '') {
-            $toma->appendChild($doc->createElement('xNome', htmlspecialchars($dps->nomeTomador, ENT_XML1)));
+        if ($dps->nomeTomador === '') {
+            throw new \InvalidArgumentException('Service taker name is required when a taker is informed.');
         }
+
+        $toma->appendChild($doc->createElement('xNome', htmlspecialchars($dps->nomeTomador, ENT_XML1)));
 
         if ($dps->tomadorInscricaoMunicipal !== '') {
             $toma->appendChild($doc->createElement('IM', $dps->tomadorInscricaoMunicipal));
         }
 
-        if ($this->hasTomadorAddress($dps)) {
-            $end = $doc->createElement('end');
-            $endNac = $doc->createElement('endNac');
-            $endNac->appendChild($doc->createElement('cMun', $dps->tomadorCodigoMunicipio));
-            $endNac->appendChild($doc->createElement('CEP', $dps->tomadorCep));
-            $end->appendChild($endNac);
-
-            if ($dps->tomadorLogradouro !== '') {
-                $end->appendChild($doc->createElement('xLgr', htmlspecialchars($dps->tomadorLogradouro, ENT_XML1)));
-            }
-
-            if ($dps->tomadorNumero !== '') {
-                $end->appendChild($doc->createElement('nro', htmlspecialchars($dps->tomadorNumero, ENT_XML1)));
-            }
-
-            if ($dps->tomadorComplemento !== '') {
-                $end->appendChild($doc->createElement('xCpl', htmlspecialchars($dps->tomadorComplemento, ENT_XML1)));
-            }
-
-            if ($dps->tomadorBairro !== '') {
-                $end->appendChild($doc->createElement('xBairro', htmlspecialchars($dps->tomadorBairro, ENT_XML1)));
-            }
-
-            $toma->appendChild($end);
+        if ($this->hasTomadorAddressConfiguration($dps)) {
+            $toma->appendChild($this->buildTomadorAddress($doc, $dps));
         }
 
         if ($dps->tomadorTelefone !== '') {
@@ -268,10 +258,84 @@ class XmlBuilder
         return $toma;
     }
 
-    private function hasTomadorAddress(DpsData $dps): bool
+    private function hasTomador(DpsData $dps): bool
+    {
+        return $dps->documentoTomador !== ''
+            || $dps->tomadorNif !== ''
+            || $dps->tomadorCodigoNaoNif !== null;
+    }
+
+    private function hasTomadorAddressConfiguration(DpsData $dps): bool
     {
         return $dps->tomadorCodigoMunicipio !== ''
-            && $dps->tomadorCep !== '';
+            || $dps->tomadorCep !== ''
+            || $dps->tomadorPaisCodigo !== ''
+            || $dps->tomadorCodigoPostalExterior !== ''
+            || $dps->tomadorCidadeExterior !== ''
+            || $dps->tomadorEstadoExterior !== '';
+    }
+
+    private function buildTomadorAddress(\DOMDocument $doc, DpsData $dps): \DOMElement
+    {
+        $end = $doc->createElement('end');
+        $hasForeignAddress = $dps->tomadorPaisCodigo !== ''
+            || $dps->tomadorCodigoPostalExterior !== ''
+            || $dps->tomadorCidadeExterior !== ''
+            || $dps->tomadorEstadoExterior !== '';
+
+        if ($hasForeignAddress) {
+            foreach ([
+                'country' => $dps->tomadorPaisCodigo,
+                'postal code' => $dps->tomadorCodigoPostalExterior,
+                'city' => $dps->tomadorCidadeExterior,
+                'state/province/region' => $dps->tomadorEstadoExterior,
+            ] as $field => $value) {
+                if ($value === '') {
+                    throw new \InvalidArgumentException('Incomplete foreign service taker address: missing ' . $field . '.');
+                }
+            }
+
+            if (!preg_match('/^[A-Z]{2}$/', strtoupper($dps->tomadorPaisCodigo))) {
+                throw new \InvalidArgumentException('Foreign service taker country must be an ISO alpha-2 code.');
+            }
+
+            $endExt = $doc->createElement('endExt');
+            $endExt->appendChild($doc->createElement('cPais', strtoupper($dps->tomadorPaisCodigo)));
+            $endExt->appendChild($doc->createElement('cEndPost', $dps->tomadorCodigoPostalExterior));
+            $endExt->appendChild($doc->createElement('xCidade', $dps->tomadorCidadeExterior));
+            $endExt->appendChild($doc->createElement('xEstProvReg', $dps->tomadorEstadoExterior));
+            $end->appendChild($endExt);
+        } else {
+            if ($dps->tomadorCodigoMunicipio === '' || $dps->tomadorCep === '') {
+                throw new \InvalidArgumentException('Incomplete national service taker address: municipality and CEP are required.');
+            }
+
+            $endNac = $doc->createElement('endNac');
+            $endNac->appendChild($doc->createElement('cMun', $dps->tomadorCodigoMunicipio));
+            $endNac->appendChild($doc->createElement('CEP', $dps->tomadorCep));
+            $end->appendChild($endNac);
+        }
+
+        foreach ([
+            'xLgr' => $dps->tomadorLogradouro,
+            'nro' => $dps->tomadorNumero,
+            'xBairro' => $dps->tomadorBairro,
+        ] as $tag => $value) {
+            if ($value === '') {
+                throw new \InvalidArgumentException('Service taker address requires ' . $tag . '.');
+            }
+        }
+
+        $end->appendChild($doc->createElement('xLgr', $dps->tomadorLogradouro));
+        $end->appendChild($doc->createElement('nro', $dps->tomadorNumero));
+
+        if ($dps->tomadorComplemento !== '') {
+            $end->appendChild($doc->createElement('xCpl', $dps->tomadorComplemento));
+        }
+
+        $end->appendChild($doc->createElement('xBairro', $dps->tomadorBairro));
+
+        return $end;
     }
 
     private function buildTribFederal(\DOMDocument $doc, DpsData $dps): \DOMElement

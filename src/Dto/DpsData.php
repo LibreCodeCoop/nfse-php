@@ -57,6 +57,24 @@ final readonly class DpsData
         /** CNPJ (14 chars, numeric or alphanumeric) or CPF (11 digits) do tomador. Empty string for foreign. */
         public string $documentoTomador = '',
 
+        /** NIF (foreign tax identifier) of the service taker. */
+        public string $tomadorNif = '',
+
+        /** Reason for not providing a foreign NIF: 0 unknown, 1 exempt, 2 not required. */
+        public ?int $tomadorCodigoNaoNif = null,
+
+        /** ISO 3166-1 alpha-2 country code for a foreign service taker address. */
+        public string $tomadorPaisCodigo = '',
+
+        /** Foreign postal code (1-11 characters). */
+        public string $tomadorCodigoPostalExterior = '',
+
+        /** Foreign city name. */
+        public string $tomadorCidadeExterior = '',
+
+        /** Foreign state, province or region. */
+        public string $tomadorEstadoExterior = '',
+
         /** Nome / Razão Social do tomador. */
         public string $nomeTomador = '',
 
