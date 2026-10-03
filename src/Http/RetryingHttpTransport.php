@@ -62,6 +62,25 @@ final class RetryingHttpTransport implements HttpTransportInterface
         while (true) {
             try {
                 $response = $this->inner->request($request);
+
+                if (
+                    !$retryableMethod
+                    || !$this->isTransientStatus($response->status)
+                    || $attempt >= $this->maxAttempts
+                ) {
+                    return $response;
+                }
+
+                $this->beforeRetry(
+                    request: $request,
+                    attempt: $attempt,
+                    reason: 'transient_http_status',
+                    status: $response->status,
+                );
+
+                $attempt++;
+
+                continue;
             } catch (NetworkException $exception) {
                 if (!$retryableMethod || $attempt >= $this->maxAttempts) {
                     throw $exception;
@@ -75,26 +94,7 @@ final class RetryingHttpTransport implements HttpTransportInterface
                 );
 
                 $attempt++;
-
-                continue;
             }
-
-            if (
-                !$retryableMethod
-                || !$this->isTransientStatus($response->status)
-                || $attempt >= $this->maxAttempts
-            ) {
-                return $response;
-            }
-
-            $this->beforeRetry(
-                request: $request,
-                attempt: $attempt,
-                reason: 'transient_http_status',
-                status: $response->status,
-            );
-
-            $attempt++;
         }
     }
 
