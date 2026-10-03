@@ -1,0 +1,12 @@
+{
+  "_meta": {
+    "kind": "synthetic",
+    "contract": "ADN municipal parameters API",
+    "scenario": "municipal agreement lookup"
+  },
+  "status": 200,
+  "response": {
+    "conveniado": true,
+    "codigoMunicipio": "3303302"
+  }
+}
