@@ -114,6 +114,18 @@ final readonly class DpsData
         /** Tributação do ISSQN: 1 tributável, 2 imunidade, 3 exportação, 4 não incidência. */
         public int $tributacaoIssqn = 1,
 
+        /** ISO alpha-2 country where the service result occurred for applicable export scenarios. */
+        public string $issqnPaisResultado = '',
+
+        /** ISSQN immunity type (1-5 for national emitter flows). */
+        public ?int $issqnTipoImunidade = null,
+
+        /** Suspended enforceability type: 1 judicial decision, 2 administrative proceeding. */
+        public ?int $issqnTipoSuspensao = null,
+
+        /** 30-digit judicial/administrative proceeding number for suspended enforceability. */
+        public string $issqnNumeroProcessoSuspensao = '',
+
         /** Tipo de retenção do ISSQN: 1 não retido, 2 tomador, 3 intermediário. */
         public int $tipoRetencaoIss = 1,
 
