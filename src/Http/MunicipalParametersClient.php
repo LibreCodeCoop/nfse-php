@@ -9,6 +9,8 @@ namespace LibreCodeCoop\NfsePHP\Http;
 
 use LibreCodeCoop\NfsePHP\Config\CertConfig;
 use LibreCodeCoop\NfsePHP\Config\MunicipalParametersConfig;
+use LibreCodeCoop\NfsePHP\Contracts\HttpTransportInterface;
+use LibreCodeCoop\NfsePHP\Dto\HttpRequestData;
 use LibreCodeCoop\NfsePHP\Exception\NetworkException;
 use LibreCodeCoop\NfsePHP\Exception\NfseErrorCode;
 use LibreCodeCoop\NfsePHP\Exception\QueryException;
@@ -23,10 +25,14 @@ use LibreCodeCoop\NfsePHP\Exception\QueryException;
  */
 final class MunicipalParametersClient
 {
+    private readonly HttpTransportInterface $transport;
+
     public function __construct(
         private readonly MunicipalParametersConfig $config,
         private readonly CertConfig $cert,
+        ?HttpTransportInterface $transport = null,
     ) {
+        $this->transport = $transport ?? new NativeStreamTransport();
     }
 
     /** @return array<string, mixed> */
@@ -87,31 +93,17 @@ final class MunicipalParametersClient
     /** @return array<string, mixed> */
     private function get(string $path): array
     {
-        $context = stream_context_create([
-            'http' => [
-                'method' => 'GET',
-                'header' => "Accept: application/json\r\n",
-                'ignore_errors' => true,
-                'timeout' => $this->config->timeoutSeconds,
-            ],
-            'ssl' => $this->sslContextOptions(),
-        ]);
-
-        $url = $this->config->baseUrl . $path;
-        $http_response_header = [];
-        $body = file_get_contents($url, false, $context);
-        $httpStatus = $this->parseHttpStatus($http_response_header);
-
-        if ($body === false && $httpStatus === 0) {
-            throw new NetworkException('Failed to connect to ADN municipal parameters API at ' . $url);
-        }
-
-        if ($body === false) {
-            $body = '';
-        }
+        $response = $this->transport->request(new HttpRequestData(
+            method: 'GET',
+            url: $this->config->baseUrl . $path,
+            headers: ['Accept' => 'application/json'],
+            timeoutSeconds: $this->config->timeoutSeconds,
+            clientCertificatePath: $this->cert->transportCertificatePath,
+            clientPrivateKeyPath: $this->cert->transportPrivateKeyPath,
+        ));
 
         try {
-            $decoded = json_decode($body, true, 512, JSON_THROW_ON_ERROR);
+            $decoded = json_decode($response->body, true, 512, JSON_THROW_ON_ERROR);
         } catch (\JsonException $e) {
             throw new NetworkException(
                 'Unexpected non-JSON response from ADN municipal parameters API.',
@@ -127,11 +119,11 @@ final class MunicipalParametersClient
             );
         }
 
-        if ($httpStatus >= 400) {
+        if ($response->status >= 400) {
             throw new QueryException(
-                'ADN municipal parameters API returned error (HTTP ' . $httpStatus . ')',
+                'ADN municipal parameters API returned error (HTTP ' . $response->status . ')',
                 NfseErrorCode::QueryFailed,
-                $httpStatus,
+                $response->status,
                 $decoded,
             );
         }
@@ -174,35 +166,4 @@ final class MunicipalParametersClient
         return $value;
     }
 
-    /**
-     * @return array<string, bool|string>
-     */
-    private function sslContextOptions(): array
-    {
-        $options = [
-            'verify_peer' => true,
-            'verify_peer_name' => true,
-        ];
-
-        if ($this->cert->transportCertificatePath !== null && $this->cert->transportPrivateKeyPath !== null) {
-            $options['local_cert'] = $this->cert->transportCertificatePath;
-            $options['local_pk'] = $this->cert->transportPrivateKeyPath;
-        }
-
-        return $options;
-    }
-
-    /** @param list<string> $headers */
-    private function parseHttpStatus(array $headers): int
-    {
-        if (!isset($headers[0])) {
-            return 0;
-        }
-
-        if (preg_match('/HTTP\/[\d.]+ (\d{3})/', $headers[0], $matches)) {
-            return (int) $matches[1];
-        }
-
-        return 0;
-    }
 }
