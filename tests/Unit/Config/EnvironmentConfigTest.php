@@ -45,6 +45,30 @@ class EnvironmentConfigTest extends TestCase
         self::assertSame($custom, $config->baseUrl);
     }
 
+    public function testRequestTimeoutDefaultsToThirtySeconds(): void
+    {
+        self::assertSame(30, (new EnvironmentConfig())->requestTimeoutSeconds);
+    }
+
+    public function testRequestTimeoutIsConfigurable(): void
+    {
+        self::assertSame(12, (new EnvironmentConfig(requestTimeoutSeconds: 12))->requestTimeoutSeconds);
+    }
+
+    public function testRequestTimeoutRejectsNonPositiveValue(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+
+        new EnvironmentConfig(requestTimeoutSeconds: 0);
+    }
+
+    public function testCustomBaseUrlIsNormalizedWithoutTrailingSlash(): void
+    {
+        $config = new EnvironmentConfig(baseUrl: 'http://localhost:8080/SefinNacional/');
+
+        self::assertSame('http://localhost:8080/SefinNacional', $config->baseUrl);
+    }
+
     public function testCustomBaseUrlOverridesSandboxUrl(): void
     {
         $custom = 'http://mock-server/SefinNacional';

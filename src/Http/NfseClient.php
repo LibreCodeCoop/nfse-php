@@ -187,17 +187,7 @@ class NfseClient implements NfseClientInterface, DpsLookupInterface
             'dpsXmlGZipB64' => base64_encode($compressedPayload),
         ], JSON_THROW_ON_ERROR);
 
-        $context = stream_context_create([
-            'http' => [
-                'method'        => 'POST',
-                'header'        => "Content-Type: application/json\r\nAccept: application/json\r\n",
-                'content'       => $payload,
-                'ignore_errors' => true,
-            ],
-            'ssl' => $this->sslContextOptions(),
-        ]);
-
-        return $this->fetchAndDecode($path, $context);
+        return $this->fetchAndDecode($path, $this->createHttpContext('POST', $payload));
     }
 
     /**
@@ -205,16 +195,7 @@ class NfseClient implements NfseClientInterface, DpsLookupInterface
      */
     private function get(string $path): array
     {
-        $context = stream_context_create([
-            'http' => [
-                'method'        => 'GET',
-                'header'        => "Accept: application/json\r\n",
-                'ignore_errors' => true,
-            ],
-            'ssl' => $this->sslContextOptions(),
-        ]);
-
-        return $this->fetchAndDecode($path, $context);
+        return $this->fetchAndDecode($path, $this->createHttpContext('GET'));
     }
 
     private function head(string $path): int
@@ -240,17 +221,37 @@ class NfseClient implements NfseClientInterface, DpsLookupInterface
             'pedidoRegistroEventoXmlGZipB64' => $eventoXmlGZipB64,
         ], JSON_THROW_ON_ERROR);
 
-        $context = stream_context_create([
-            'http' => [
-                'method'        => 'POST',
-                'header'        => "Content-Type: application/json\r\nAccept: application/json\r\n",
-                'content'       => $payload,
-                'ignore_errors' => true,
-            ],
+        return $this->fetchAndDecode($path, $this->createHttpContext('POST', $payload));
+    }
+
+    /**
+     * Build the HTTP/SSL stream context shared by all SEFIN requests.
+     *
+     * @return resource
+     */
+    protected function createHttpContext(string $method, ?string $jsonPayload = null): mixed
+    {
+        $headers = "Accept: application/json\r\n";
+
+        if ($jsonPayload !== null) {
+            $headers = "Content-Type: application/json\r\n" . $headers;
+        }
+
+        $httpOptions = [
+            'method' => $method,
+            'header' => $headers,
+            'ignore_errors' => true,
+            'timeout' => $this->environment->requestTimeoutSeconds,
+        ];
+
+        if ($jsonPayload !== null) {
+            $httpOptions['content'] = $jsonPayload;
+        }
+
+        return stream_context_create([
+            'http' => $httpOptions,
             'ssl' => $this->sslContextOptions(),
         ]);
-
-        return $this->fetchAndDecode($path, $context);
     }
 
     private function buildCancelEventXml(string $chaveAcesso, string $motivo): string
