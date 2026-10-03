@@ -23,10 +23,14 @@ final class XmlToArray
      */
     public function convert(string $xml): array
     {
+        if (preg_match('/<!DOCTYPE/i', $xml) === 1) {
+            throw new \InvalidArgumentException('DOCTYPE is not allowed in NFS-e XML.');
+        }
+
         $previous = libxml_use_internal_errors(true);
 
         try {
-            $root = new \SimpleXMLElement($xml);
+            $root = new \SimpleXMLElement($xml, LIBXML_NONET);
         } finally {
             libxml_clear_errors();
             libxml_use_internal_errors($previous);
