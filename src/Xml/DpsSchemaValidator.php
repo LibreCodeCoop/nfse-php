@@ -95,7 +95,6 @@ final class DpsSchemaValidator
     private function isKnownUpstreamSchemaIssue(string $message): bool
     {
         return str_contains($message, "Element '{http://www.sped.fazenda.gov.br/nfse}serie'")
-            && str_contains($message, "pattern '^0{0,4}\\d{1,5}}
-");
+            && str_contains($message, "not accepted by the pattern '^0{0,4}");
     }
 }
