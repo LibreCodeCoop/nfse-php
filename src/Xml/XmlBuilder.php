@@ -156,8 +156,66 @@ class XmlBuilder
 
     private function buildTribMun(\DOMDocument $doc, DpsData $dps): \DOMElement
     {
+        if (!in_array($dps->tributacaoIssqn, [1, 2, 3, 4], true)) {
+            throw new \InvalidArgumentException('ISSQN taxation code must be 1, 2, 3 or 4.');
+        }
+
+        if (!in_array($dps->tipoRetencaoIss, [1, 2, 3], true)) {
+            throw new \InvalidArgumentException('ISSQN withholding type must be 1, 2 or 3.');
+        }
+
         $tribMun = $doc->createElement('tribMun');
         $tribMun->appendChild($doc->createElement('tribISSQN', (string) $dps->tributacaoIssqn));
+
+        if ($dps->issqnPaisResultado !== '') {
+            if ($dps->tributacaoIssqn !== 3) {
+                throw new \InvalidArgumentException('ISSQN result country may only be informed for service export.');
+            }
+
+            $country = strtoupper($dps->issqnPaisResultado);
+
+            if (preg_match('/^[A-Z]{2}$/', $country) !== 1 || $country === 'BR') {
+                throw new \InvalidArgumentException('ISSQN export result country must be a foreign ISO alpha-2 code.');
+            }
+
+            $tribMun->appendChild($doc->createElement('cPaisResult', $country));
+        }
+
+        if ($dps->issqnTipoImunidade !== null) {
+            if ($dps->tributacaoIssqn !== 2) {
+                throw new \InvalidArgumentException('ISSQN immunity type may only be informed for immunity taxation.');
+            }
+
+            if (!in_array($dps->issqnTipoImunidade, [1, 2, 3, 4, 5], true)) {
+                throw new \InvalidArgumentException('ISSQN immunity type must be between 1 and 5 for national issuance.');
+            }
+
+            $tribMun->appendChild($doc->createElement('tpImunidade', (string) $dps->issqnTipoImunidade));
+        } elseif ($dps->tributacaoIssqn === 2) {
+            throw new \InvalidArgumentException('ISSQN immunity type is required when tribISSQN is immunity.');
+        }
+
+        $hasSuspension = $dps->issqnTipoSuspensao !== null || $dps->issqnNumeroProcessoSuspensao !== '';
+
+        if ($hasSuspension) {
+            if ($dps->tributacaoIssqn !== 1) {
+                throw new \InvalidArgumentException('ISSQN suspended enforceability is only allowed for taxable operations.');
+            }
+
+            if (!in_array($dps->issqnTipoSuspensao, [1, 2], true)) {
+                throw new \InvalidArgumentException('ISSQN suspension type must be 1 or 2.');
+            }
+
+            if (preg_match('/^\d{30}$/', $dps->issqnNumeroProcessoSuspensao) !== 1) {
+                throw new \InvalidArgumentException('ISSQN suspension proceeding number must contain exactly 30 digits.');
+            }
+
+            $exigSusp = $doc->createElement('exigSusp');
+            $exigSusp->appendChild($doc->createElement('tpSusp', (string) $dps->issqnTipoSuspensao));
+            $exigSusp->appendChild($doc->createElement('nProcesso', $dps->issqnNumeroProcessoSuspensao));
+            $tribMun->appendChild($exigSusp);
+        }
+
         $tribMun->appendChild($doc->createElement('tpRetISSQN', (string) $dps->tipoRetencaoIss));
 
         if ($dps->opcaoSimplesNacional !== 1) {
