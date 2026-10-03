@@ -48,13 +48,18 @@ jobs:
         run: composer run test:unit
 
       - name: Run integration tests when certificate secrets are present
-        if: ${{ matrix.php-version == '8.3' && env.NFSE_CLIENT_CERT_B64 != '' }}
+        if: ${{ matrix.php-version == '8.3' }}
         env:
           NFSE_CLIENT_CERT_B64: ${{ secrets.NFSE_CLIENT_CERT_B64 }}
           NFSE_CLIENT_KEY_B64: ${{ secrets.NFSE_CLIENT_KEY_B64 }}
           NFS_TEST_CNPJ: "11222333000181"
           NFS_SANDBOX: "true"
-        run: composer run test:integration
+        run: |
+          if [ -z "$NFSE_CLIENT_CERT_B64" ]; then
+            echo "NFS-e integration certificate is not configured; skipping."
+            exit 0
+          fi
+          composer run test:integration
 
   coverage:
     name: Coverage
