@@ -240,9 +240,11 @@ class XmlBuilder
             throw new \InvalidArgumentException('Service taker identification must be CNPJ, CPF, NIF or cNaoNIF.');
         }
 
-        if ($dps->nomeTomador !== '') {
-            $toma->appendChild($doc->createElement('xNome', htmlspecialchars($dps->nomeTomador, ENT_XML1)));
+        if ($dps->nomeTomador === '') {
+            throw new \InvalidArgumentException('Service taker name is required when a taker is informed.');
         }
+
+        $toma->appendChild($doc->createElement('xNome', htmlspecialchars($dps->nomeTomador, ENT_XML1)));
 
         if ($dps->tomadorInscricaoMunicipal !== '') {
             $toma->appendChild($doc->createElement('IM', $dps->tomadorInscricaoMunicipal));
