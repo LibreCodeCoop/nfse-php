@@ -74,6 +74,103 @@ final class OfficialDpsSchemaValidationTest extends TestCase
         self::assertSame([], $this->validator->validate($xml));
     }
 
+    public function testRetainedIssDpsMatchesOfficialSchema(): void
+    {
+        $xml = $this->builder->buildDps($this->makeDps(
+            tipoRetencaoIss: 2,
+        ));
+
+        self::assertSame([], $this->validator->validate($xml));
+    }
+
+    public function testIssqnImmunityDpsMatchesOfficialSchema(): void
+    {
+        $xml = $this->builder->buildDps($this->makeDps(
+            tributacaoIssqn: 2,
+            issqnTipoImunidade: 3,
+        ));
+
+        self::assertSame([], $this->validator->validate($xml));
+    }
+
+    public function testIssqnExportDpsMatchesOfficialSchema(): void
+    {
+        $xml = $this->builder->buildDps($this->makeDps(
+            tributacaoIssqn: 3,
+            issqnPaisResultado: 'US',
+        ));
+
+        self::assertSame([], $this->validator->validate($xml));
+    }
+
+    public function testIssqnSuspendedEnforceabilityDpsMatchesOfficialSchema(): void
+    {
+        $xml = $this->builder->buildDps($this->makeDps(
+            tributacaoIssqn: 1,
+            issqnTipoSuspensao: 1,
+            issqnNumeroProcessoSuspensao: str_repeat('1', 30),
+        ));
+
+        self::assertSame([], $this->validator->validate($xml));
+    }
+
+    public function testForeignServiceTakerDpsMatchesOfficialSchema(): void
+    {
+        $xml = $this->builder->buildDps(new DpsData(
+            cnpjPrestador: '11222333000181',
+            municipioIbge: '3303302',
+            itemListaServico: '001',
+            valorServico: '1000.00',
+            aliquota: '5.00',
+            discriminacao: 'Consultoria internacional',
+            tipoAmbiente: 2,
+            serie: '1',
+            numeroDps: '43',
+            dataCompetencia: '2026-10-03',
+            codigoTributacaoNacional: '010701',
+            tomadorNif: 'US-TAX-12345',
+            nomeTomador: 'Foreign Customer LLC',
+            tomadorPaisCodigo: 'US',
+            tomadorCodigoPostalExterior: '10001',
+            tomadorCidadeExterior: 'New York',
+            tomadorEstadoExterior: 'NY',
+            tomadorLogradouro: '5th Avenue',
+            tomadorNumero: '100',
+            tomadorBairro: 'Manhattan',
+            opcaoSimplesNacional: 1,
+            regimeEspecialTributacao: 0,
+            tributacaoIssqn: $tributacaoIssqn,
+            issqnPaisResultado: $issqnPaisResultado,
+            issqnTipoImunidade: $issqnTipoImunidade,
+            issqnTipoSuspensao: $issqnTipoSuspensao,
+            issqnNumeroProcessoSuspensao: $issqnNumeroProcessoSuspensao,
+            tipoRetencaoIss: $tipoRetencaoIss,
+            indicadorTributacao: 0,
+        ));
+
+        self::assertSame([], $this->validator->validate($xml));
+    }
+
+    public function testValidatorRejectsInvalidOfficialEnumEvenWhenXmlIsWellFormed(): void
+    {
+        $xml = $this->builder->buildDps($this->makeDps());
+        $invalidXml = str_replace('<tribISSQN>1</tribISSQN>', '<tribISSQN>9</tribISSQN>', $xml);
+
+        self::assertNotSame([], $this->validator->validate($invalidXml));
+    }
+
+    public function testValidatorRejectsWrongTribMunElementOrder(): void
+    {
+        $xml = $this->builder->buildDps($this->makeDps());
+        $invalidXml = str_replace(
+            '<tribISSQN>1</tribISSQN><tpRetISSQN>1</tpRetISSQN>',
+            '<tpRetISSQN>1</tpRetISSQN><tribISSQN>1</tribISSQN>',
+            str_replace(["\n", '  '], '', $xml),
+        );
+
+        self::assertNotSame([], $this->validator->validate($invalidXml));
+    }
+
     public function testValidatorReportsMalformedXml(): void
     {
         $errors = $this->validator->validate('<DPS>');
@@ -90,6 +187,12 @@ final class OfficialDpsSchemaValidationTest extends TestCase
         ?int $ibsCbsIndDest = null,
         string $ibsCbsCst = '',
         string $ibsCbsClassificacaoTributaria = '',
+        int $tributacaoIssqn = 1,
+        string $issqnPaisResultado = '',
+        ?int $issqnTipoImunidade = null,
+        ?int $issqnTipoSuspensao = null,
+        string $issqnNumeroProcessoSuspensao = '',
+        int $tipoRetencaoIss = 1,
     ): DpsData {
         return new DpsData(
             cnpjPrestador: $cnpjPrestador,
