@@ -94,10 +94,73 @@ class DanfseTemplateTest extends TestCase
         $html = (new DanfseTemplate())->render($this->fixtureNfseData(), new DanfseConfig());
 
         self::assertStringContainsString('<!DOCTYPE html>', $html);
+        self::assertStringContainsString('DANFSe v2.0', $html);
         self::assertStringContainsString('3303302112233450000195000000000000100000000001', $html);
         self::assertStringContainsString('data:image/svg+xml;base64,', $html);
         // Production environment: no homologação watermark
         self::assertStringNotContainsString('HOMOLOGAÇÃO', $html);
+    }
+
+    public function testBuildDataMapsAuthorizedIbsCbsTotalsWithoutRecalculating(): void
+    {
+        $nfseData = $this->fixtureNfseData();
+        $nfseData['infNFSe']['IBSCBS'] = [
+            'cLocalidadeIncid' => '3303302',
+            'xLocalidadeIncid' => 'Niterói',
+            'valores' => [
+                'vBC' => '1500.00',
+                'uf' => ['pIBSUF' => '0.10'],
+                'mun' => ['pIBSMun' => '0.05'],
+                'fed' => ['pCBS' => '0.90'],
+            ],
+            'totCIBS' => [
+                'vTotNF' => '1515.75',
+                'gIBS' => ['vIBSTot' => '2.25'],
+                'gCBS' => ['vCBS' => '13.50'],
+            ],
+        ];
+
+        $data = (new DanfseTemplate())->buildData($nfseData);
+
+        self::assertNotNull($data['ibs_cbs']);
+        self::assertSame('Niterói', $data['ibs_cbs']['localidade_incidencia']);
+        self::assertSame('R$ 1.500,00', $data['ibs_cbs']['base_calculo']);
+        self::assertSame('0.10%', $data['ibs_cbs']['aliquota_ibs_uf']);
+        self::assertSame('0.05%', $data['ibs_cbs']['aliquota_ibs_municipal']);
+        self::assertSame('0.90%', $data['ibs_cbs']['aliquota_cbs']);
+        self::assertSame('R$ 2,25', $data['ibs_cbs']['total_ibs']);
+        self::assertSame('R$ 13,50', $data['ibs_cbs']['total_cbs']);
+        self::assertSame('R$ 1.515,75', $data['ibs_cbs']['valor_total_nfse']);
+    }
+
+    public function testRenderShowsIbsCbsSectionOnlyWhenAuthorizedXmlContainsIt(): void
+    {
+        $withoutIbsCbs = (new DanfseTemplate())->render($this->fixtureNfseData(), new DanfseConfig());
+
+        self::assertStringNotContainsString('TRIBUTAÇÃO IBS / CBS', $withoutIbsCbs);
+
+        $nfseData = $this->fixtureNfseData();
+        $nfseData['infNFSe']['IBSCBS'] = [
+            'xLocalidadeIncid' => 'Niterói',
+            'valores' => [
+                'vBC' => '1000.00',
+                'uf' => ['pIBSUF' => '0.10'],
+                'mun' => ['pIBSMun' => '0.05'],
+                'fed' => ['pCBS' => '0.90'],
+            ],
+            'totCIBS' => [
+                'vTotNF' => '1010.50',
+                'gIBS' => ['vIBSTot' => '1.50'],
+                'gCBS' => ['vCBS' => '9.00'],
+            ],
+        ];
+
+        $withIbsCbs = (new DanfseTemplate())->render($nfseData, new DanfseConfig());
+
+        self::assertStringContainsString('TRIBUTAÇÃO IBS / CBS', $withIbsCbs);
+        self::assertStringContainsString('R$ 1.010,50', $withIbsCbs);
+        self::assertStringContainsString('R$ 1,50', $withIbsCbs);
+        self::assertStringContainsString('R$ 9,00', $withIbsCbs);
     }
 
     public function testHomologacaoEnvironmentShowsWatermark(): void

@@ -144,7 +144,7 @@
                 <?php endif; ?>
             </td>
             <td class="title-cell">
-                <div style="font-size: 10pt; font-weight: bold;">DANFSe v1.0</div>
+                <div style="font-size: 10pt; font-weight: bold;">DANFSe v2.0</div>
                 <div style="font-size: 8pt; font-weight: bold;">Documento Auxiliar da NFS-e</div>
                 <?php if ($isHomologacao): ?>
                     <div style="color: red; font-weight: bold;">NFS-e SEM VALIDADE JURÍDICA</div>
@@ -496,6 +496,55 @@
             </tr>
         </table>
     </div>
+
+    <!-- Tributação IBS / CBS (NT 008 v1.02) -->
+    <?php if ($data['ibs_cbs'] !== null): ?>
+    <div class="bordered-section">
+        <table>
+            <tr>
+                <td colspan="4" class="section-header">
+                    <span class="section-title">TRIBUTAÇÃO IBS / CBS</span>
+                </td>
+            </tr>
+            <tr>
+                <td style="width: 25%;">
+                    <span class="label">Localidade de Incidência</span>
+                    <span class="value"><?= $data['ibs_cbs']['localidade_incidencia'] ?></span>
+                </td>
+                <td style="width: 25%;">
+                    <span class="label">Base de Cálculo</span>
+                    <span class="value"><?= $data['ibs_cbs']['base_calculo'] ?></span>
+                </td>
+                <td style="width: 25%;">
+                    <span class="label">Alíquota IBS UF</span>
+                    <span class="value"><?= $data['ibs_cbs']['aliquota_ibs_uf'] ?></span>
+                </td>
+                <td style="width: 25%;">
+                    <span class="label">Alíquota IBS Município</span>
+                    <span class="value"><?= $data['ibs_cbs']['aliquota_ibs_municipal'] ?></span>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <span class="label">Alíquota CBS</span>
+                    <span class="value"><?= $data['ibs_cbs']['aliquota_cbs'] ?></span>
+                </td>
+                <td>
+                    <span class="label">Total IBS</span>
+                    <span class="value"><?= $data['ibs_cbs']['total_ibs'] ?></span>
+                </td>
+                <td>
+                    <span class="label">Total CBS</span>
+                    <span class="value"><?= $data['ibs_cbs']['total_cbs'] ?></span>
+                </td>
+                <td>
+                    <span class="label">Valor Total da NFS-e c/ IBS/CBS</span>
+                    <span class="value" style="font-weight: bold;"><?= $data['ibs_cbs']['valor_total_nfse'] ?></span>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <?php endif; ?>
 
     <!-- Valor Total -->
     <div class="bordered-section">
