@@ -279,6 +279,42 @@ class NfseClientTest extends TestCase
         }
     }
 
+    public function testHttpContextAppliesTimeoutMtlsAndJsonHeaders(): void
+    {
+        $client = new class (
+            new EnvironmentConfig(
+                baseUrl: self::$server->getServerRoot() . '/SefinNacional',
+                requestTimeoutSeconds: 7,
+            ),
+            new CertConfig(
+                cnpj: '29842527000145',
+                pfxPath: '/dev/null',
+                vaultPath: 'secret/nfse/29842527000145',
+                transportCertificatePath: '/tmp/client.crt.pem',
+                transportPrivateKeyPath: '/tmp/client.key.pem',
+            ),
+            new NoOpSecretStore(),
+            $this->signer,
+        ) extends NfseClient {
+            /** @return array<string, mixed> */
+            public function contextOptions(string $method, ?string $payload = null): array
+            {
+                return stream_context_get_options($this->createHttpContext($method, $payload));
+            }
+        };
+
+        $options = $client->contextOptions('POST', '{"test":true}');
+
+        self::assertSame(7, $options['http']['timeout'] ?? null);
+        self::assertSame('POST', $options['http']['method'] ?? null);
+        self::assertSame('{"test":true}', $options['http']['content'] ?? null);
+        self::assertStringContainsString('Content-Type: application/json', (string) ($options['http']['header'] ?? ''));
+        self::assertTrue($options['ssl']['verify_peer'] ?? false);
+        self::assertTrue($options['ssl']['verify_peer_name'] ?? false);
+        self::assertSame('/tmp/client.crt.pem', $options['ssl']['local_cert'] ?? null);
+        self::assertSame('/tmp/client.key.pem', $options['ssl']['local_pk'] ?? null);
+    }
+
     // -------------------------------------------------------------------------
     // getDanfse tests
     // -------------------------------------------------------------------------
