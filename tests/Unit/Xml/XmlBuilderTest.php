@@ -232,7 +232,7 @@ class XmlBuilderTest extends TestCase
         $doc->loadXML($xml);
 
         self::assertSame(
-            'DPS3303302211222333000181000120000000000000345',
+            'DPS330330221122233300018100012000000000000345',
             $doc->getElementsByTagName('infDPS')->item(0)?->attributes?->getNamedItem('Id')?->nodeValue,
         );
         self::assertSame('1', $doc->getElementsByTagName('tpAmb')->item(0)?->textContent);
