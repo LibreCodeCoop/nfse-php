@@ -218,6 +218,26 @@ class XmlBuilderTest extends TestCase
         self::assertStringContainsString('<CNPJ>00000000E08G12</CNPJ>', $xml);
     }
 
+    public function testDpsIdentifierUsesCnpjRegistrationTypeInProduction(): void
+    {
+        $xml = $this->builder->buildDps($this->makeDps(
+            tipoAmbiente: 1,
+            cnpjPrestador: '11222333000181',
+            municipioIbge: '3303302',
+            serie: '12',
+            numeroDps: '345',
+        ));
+
+        $doc = new \DOMDocument();
+        $doc->loadXML($xml);
+
+        self::assertSame(
+            'DPS330330221122233300018100012000000000000345',
+            $doc->getElementsByTagName('infDPS')->item(0)?->attributes?->getNamedItem('Id')?->nodeValue,
+        );
+        self::assertSame('1', $doc->getElementsByTagName('tpAmb')->item(0)?->textContent);
+    }
+
     public function testTomadorCpfBlockIsIncludedWhenDocumentHas11Digits(): void
     {
         $dps = $this->makeDps(documentoTomador: '12345678901', nomeTomador: 'Pessoa Física Tomadora');
@@ -476,6 +496,7 @@ class XmlBuilderTest extends TestCase
         int $regimeEspecialTributacao = 0,
         int $tipoRetencaoIss = 1,
         int $opcaoSimplesNacional = 1,
+        int $tipoAmbiente = 2,
         int $indicadorTributacao = 0,
         string $totalTributosPercentualFederal = '',
         string $totalTributosPercentualEstadual = '',
@@ -522,6 +543,7 @@ class XmlBuilderTest extends TestCase
             tipoRetencaoIss:          $tipoRetencaoIss,
             issRetido:                $issRetido,
             opcaoSimplesNacional:     $opcaoSimplesNacional,
+            tipoAmbiente:              $tipoAmbiente,
             indicadorTributacao:      $indicadorTributacao,
             totalTributosPercentualFederal: $totalTributosPercentualFederal,
             totalTributosPercentualEstadual: $totalTributosPercentualEstadual,
