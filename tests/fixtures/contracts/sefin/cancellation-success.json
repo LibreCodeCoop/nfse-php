@@ -1,0 +1,11 @@
+{
+  "_meta": {
+    "kind": "synthetic",
+    "contract": "SEFIN NFS-e contributor API",
+    "scenario": "cancellation accepted"
+  },
+  "status": 200,
+  "response": {
+    "sucesso": true
+  }
+}
