@@ -1,0 +1,13 @@
+{
+  "_meta": {
+    "kind": "synthetic",
+    "contract": "ADN municipal parameters API",
+    "scenario": "UTF-8 municipal benefit response"
+  },
+  "status": 200,
+  "response": {
+    "numeroBeneficio": "BEN-1",
+    "descricao": "Redução de base em São Gonçalo",
+    "observacao": "Serviço técnico – homologação"
+  }
+}
