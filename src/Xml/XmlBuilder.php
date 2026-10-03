@@ -131,9 +131,12 @@ class XmlBuilder
 
     private function buildIdentifier(DpsData $dps): string
     {
+        // TSIdDPS uses the federal registration type, not tpAmb.
+        // This client issues on behalf of legal entities identified by CNPJ,
+        // whose registration type is 2 (CPF is 1).
         return 'DPS'
             . $dps->municipioIbge
-            . $dps->tipoAmbiente
+            . '2'
             . $dps->cnpjPrestador
             . str_pad($dps->serie, 5, '0', STR_PAD_LEFT)
             . str_pad($dps->numeroDps, 15, '0', STR_PAD_LEFT);
