@@ -88,6 +88,9 @@ final class DanfseTemplate
         $tribMun = $this->node($valores, 'trib', 'tribMun');
         $tribFed = $this->node($valores, 'trib', 'tribFed');
         $totTrib = $this->node($valores, 'trib', 'totTrib', 'pTotTrib');
+        $ibsCbs = $this->node($infNfse, 'IBSCBS');
+        $ibsCbsValores = $this->node($ibsCbs, 'valores');
+        $ibsCbsTotais = $this->node($ibsCbs, 'totCIBS');
 
         $id          = $this->val($infNfse, 'Id');
         $chaveAcesso = str_starts_with($id, 'NFS') ? substr($id, 3) : $id;
@@ -189,6 +192,19 @@ final class DanfseTemplate
                 'federais'   => $this->percentOrDash($this->val($totTrib, 'pTotTribFed')),
                 'estaduais'  => $this->percentOrDash($this->val($totTrib, 'pTotTribEst')),
                 'municipais' => $this->percentOrDash($this->val($totTrib, 'pTotTribMun')),
+            ],
+
+            'ibs_cbs' => $ibsCbs === [] ? null : [
+                'localidade_incidencia' => $this->val($ibsCbs, 'xLocalidadeIncid')
+                    ?: $this->val($ibsCbs, 'cLocalidadeIncid')
+                    ?: '-',
+                'base_calculo' => $this->currencyOrDash($this->val($ibsCbsValores, 'vBC')),
+                'aliquota_ibs_uf' => $this->percentOrDash($this->val($ibsCbsValores, 'uf', 'pIBSUF')),
+                'aliquota_ibs_municipal' => $this->percentOrDash($this->val($ibsCbsValores, 'mun', 'pIBSMun')),
+                'aliquota_cbs' => $this->percentOrDash($this->val($ibsCbsValores, 'fed', 'pCBS')),
+                'total_ibs' => $this->currencyOrDash($this->val($ibsCbsTotais, 'gIBS', 'vIBSTot')),
+                'total_cbs' => $this->currencyOrDash($this->val($ibsCbsTotais, 'gCBS', 'vCBS')),
+                'valor_total_nfse' => $this->currencyOrDash($this->val($ibsCbsTotais, 'vTotNF')),
             ],
 
             'informacoes_complementares' => $this->val($serv, 'infoCompl', 'xInfComp'),
