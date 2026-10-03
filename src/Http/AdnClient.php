@@ -34,7 +34,7 @@ final class AdnClient
         private readonly CertConfig $cert,
         ?HttpTransportInterface $transport = null,
     ) {
-        $this->transport = $transport ?? new NativeStreamTransport();
+        $this->transport = $transport ?? new RetryingHttpTransport(new NativeStreamTransport());
     }
 
     public function getDfe(int $nsu, ?string $cnpjConsulta = null, bool $lote = true): AdnDistributionData

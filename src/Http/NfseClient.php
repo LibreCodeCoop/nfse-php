@@ -54,7 +54,7 @@ class NfseClient implements NfseClientInterface, DpsLookupInterface, EventLookup
         $this->baseUrl         = $environment->baseUrl;
         $this->signer          = $signer ?? new DpsSigner($secretStore);
         $this->danfseGenerator = $danfseGenerator ?? new DanfseGenerator();
-        $this->transport       = $transport ?? new NativeStreamTransport();
+        $this->transport       = $transport ?? new RetryingHttpTransport(new NativeStreamTransport());
     }
 
     public function emit(DpsData $dps): ReceiptData
