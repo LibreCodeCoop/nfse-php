@@ -47,9 +47,15 @@ final class OfficialDpsSchemaValidationTest extends TestCase
         $errors = $this->validator->validate($xml);
 
         self::assertNotSame([], $errors);
-        self::assertTrue(
-            array_any($errors, static fn (string $error): bool => str_contains($error, "CNPJ")
-                && str_contains($error, "[0-9]{14}")),
+        $cnpjPatternError = array_filter(
+            $errors,
+            static fn (string $error): bool => str_contains($error, 'CNPJ')
+                && str_contains($error, '[0-9]{14}'),
+        );
+
+        self::assertNotSame(
+            [],
+            $cnpjPatternError,
             'The 2026-02-09 official schema snapshot should make its pre-alphanumeric CNPJ limitation explicit.',
         );
     }
