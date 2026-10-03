@@ -17,7 +17,7 @@ final readonly class HttpRequestData
         public string $url,
         public array $headers = [],
         public ?string $body = null,
-        public int $timeoutSeconds = 30,
+        public float $timeoutSeconds = 30.0,
         public ?string $clientCertificatePath = null,
         public ?string $clientPrivateKeyPath = null,
     ) {
