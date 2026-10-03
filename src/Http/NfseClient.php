@@ -11,12 +11,14 @@ use LibreCodeCoop\NfsePHP\Config\CertConfig;
 use LibreCodeCoop\NfsePHP\Config\EnvironmentConfig;
 use LibreCodeCoop\NfsePHP\Contracts\DpsLookupInterface;
 use LibreCodeCoop\NfsePHP\Contracts\EventLookupInterface;
+use LibreCodeCoop\NfsePHP\Contracts\HttpTransportInterface;
 use LibreCodeCoop\NfsePHP\Contracts\NfseClientInterface;
 use LibreCodeCoop\NfsePHP\Contracts\SecretStoreInterface;
 use LibreCodeCoop\NfsePHP\Contracts\XmlSignerInterface;
 use LibreCodeCoop\NfsePHP\Danfse\DanfseGenerator;
 use LibreCodeCoop\NfsePHP\Dto\DpsData;
 use LibreCodeCoop\NfsePHP\Dto\EventReceiptData;
+use LibreCodeCoop\NfsePHP\Dto\HttpRequestData;
 use LibreCodeCoop\NfsePHP\Dto\ReceiptData;
 use LibreCodeCoop\NfsePHP\Exception\CancellationException;
 use LibreCodeCoop\NfsePHP\Exception\IssuanceException;
@@ -39,6 +41,7 @@ class NfseClient implements NfseClientInterface, DpsLookupInterface, EventLookup
     private readonly string $baseUrl;
     private readonly XmlSignerInterface $signer;
     private readonly DanfseGenerator $danfseGenerator;
+    private readonly HttpTransportInterface $transport;
 
     public function __construct(
         private readonly EnvironmentConfig $environment,
@@ -46,10 +49,12 @@ class NfseClient implements NfseClientInterface, DpsLookupInterface, EventLookup
         private readonly SecretStoreInterface $secretStore,
         ?XmlSignerInterface $signer = null,
         ?DanfseGenerator $danfseGenerator = null,
+        ?HttpTransportInterface $transport = null,
     ) {
         $this->baseUrl         = $environment->baseUrl;
         $this->signer          = $signer ?? new DpsSigner($secretStore);
         $this->danfseGenerator = $danfseGenerator ?? new DanfseGenerator();
+        $this->transport       = $transport ?? new NativeStreamTransport();
     }
 
     public function emit(DpsData $dps): ReceiptData
@@ -219,7 +224,7 @@ class NfseClient implements NfseClientInterface, DpsLookupInterface, EventLookup
             'dpsXmlGZipB64' => base64_encode($compressedPayload),
         ], JSON_THROW_ON_ERROR);
 
-        return $this->fetchAndDecode($path, $this->createHttpContext('POST', $payload));
+        return $this->fetchAndDecode($path, 'POST', $payload);
     }
 
     /**
@@ -227,21 +232,12 @@ class NfseClient implements NfseClientInterface, DpsLookupInterface, EventLookup
      */
     private function get(string $path): array
     {
-        return $this->fetchAndDecode($path, $this->createHttpContext('GET'));
+        return $this->fetchAndDecode($path, 'GET');
     }
 
     private function head(string $path): int
     {
-        $context = stream_context_create([
-            'http' => [
-                'method'        => 'HEAD',
-                'header'        => "Accept: application/json\r\n",
-                'ignore_errors' => true,
-            ],
-            'ssl' => $this->sslContextOptions(),
-        ]);
-
-        return $this->fetchStatus($path, $context);
+        return $this->request($path, 'HEAD')->status;
     }
 
     /**
@@ -253,37 +249,56 @@ class NfseClient implements NfseClientInterface, DpsLookupInterface, EventLookup
             'pedidoRegistroEventoXmlGZipB64' => $eventoXmlGZipB64,
         ], JSON_THROW_ON_ERROR);
 
-        return $this->fetchAndDecode($path, $this->createHttpContext('POST', $payload));
+        return $this->fetchAndDecode($path, 'POST', $payload);
+    }
+
+    private function request(string $path, string $method, ?string $jsonPayload = null): \LibreCodeCoop\NfsePHP\Dto\HttpResponseData
+    {
+        $headers = ['Accept' => 'application/json'];
+
+        if ($jsonPayload !== null) {
+            $headers['Content-Type'] = 'application/json';
+        }
+
+        return $this->transport->request(new HttpRequestData(
+            method: $method,
+            url: $this->baseUrl . $path,
+            headers: $headers,
+            body: $jsonPayload,
+            timeoutSeconds: $this->environment->requestTimeoutSeconds,
+            clientCertificatePath: $this->cert->transportCertificatePath,
+            clientPrivateKeyPath: $this->cert->transportPrivateKeyPath,
+        ));
     }
 
     /**
-     * Build the HTTP/SSL stream context shared by all SEFIN requests.
-     *
-     * @return resource
+     * @return array{int, array<string, mixed>}
      */
-    protected function createHttpContext(string $method, ?string $jsonPayload = null): mixed
+    private function fetchAndDecode(string $path, string $method, ?string $jsonPayload = null): array
     {
-        $headers = "Accept: application/json\r\n";
+        $response = $this->request($path, $method, $jsonPayload);
+        $body = $response->body;
 
-        if ($jsonPayload !== null) {
-            $headers = "Content-Type: application/json\r\n" . $headers;
+        try {
+            $decoded = json_decode($body, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException $e) {
+            $responsePreview = trim(substr(strip_tags($body), 0, 180));
+
+            throw new NetworkException(
+                'Unexpected non-JSON response from SEFIN gateway' . ($responsePreview !== '' ? ': ' . $responsePreview : ''),
+                NfseErrorCode::InvalidResponse,
+                $e,
+            );
         }
 
-        $httpOptions = [
-            'method' => $method,
-            'header' => $headers,
-            'ignore_errors' => true,
-            'timeout' => $this->environment->requestTimeoutSeconds,
-        ];
-
-        if ($jsonPayload !== null) {
-            $httpOptions['content'] = $jsonPayload;
+        if (!is_array($decoded)) {
+            throw new NetworkException(
+                'Unexpected response format from SEFIN gateway',
+                NfseErrorCode::InvalidResponse,
+            );
         }
 
-        return stream_context_create([
-            'http' => $httpOptions,
-            'ssl' => $this->sslContextOptions(),
-        ]);
+        return [$response->status, $decoded];
     }
 
     private function buildCancelEventXml(string $chaveAcesso, string $motivo): string
@@ -312,101 +327,6 @@ class NfseClient implements NfseClientInterface, DpsLookupInterface, EventLookup
         $infPedReg->appendChild($e101101);
 
         return $doc->saveXML($doc->documentElement) ?: '';
-    }
-
-    /**
-     * @return array<string, bool|string>
-     */
-    private function sslContextOptions(): array
-    {
-        $options = [
-            'verify_peer'      => true,
-            'verify_peer_name' => true,
-        ];
-
-        if ($this->cert->transportCertificatePath !== null && $this->cert->transportPrivateKeyPath !== null) {
-            $options['local_cert'] = $this->cert->transportCertificatePath;
-            $options['local_pk']   = $this->cert->transportPrivateKeyPath;
-        }
-
-        return $options;
-    }
-
-    private function fetchStatus(string $path, mixed $context): int
-    {
-        $url = $this->baseUrl . $path;
-
-        $http_response_header = [];
-        $result = file_get_contents($url, false, $context);
-        $httpStatus = $this->parseHttpStatus($http_response_header);
-
-        if ($result === false && $httpStatus === 0) {
-            throw new NetworkException('Failed to connect to SEFIN gateway at ' . $url);
-        }
-
-        return $httpStatus;
-    }
-
-    /**
-     * Perform the raw HTTP request and decode the JSON body.
-     *
-     * PHP sets $http_response_header in the calling scope when file_get_contents
-     * uses an HTTP wrapper. We initialize it to [] so static analysers have a
-     * typed baseline; the HTTP wrapper will overwrite it on a successful
-     * connection, even when the server responds with 4xx/5xx.
-     *
-     * @return array{int, array<string, mixed>}
-     */
-    private function fetchAndDecode(string $path, mixed $context): array
-    {
-        $url = $this->baseUrl . $path;
-
-        $http_response_header = [];
-        $body                 = file_get_contents($url, false, $context);
-        $httpStatus           = $this->parseHttpStatus($http_response_header);
-
-        if ($body === false) {
-            throw new NetworkException('Failed to connect to SEFIN gateway at ' . $url);
-        }
-
-        try {
-            $decoded = json_decode($body, true, 512, JSON_THROW_ON_ERROR);
-        } catch (\JsonException $e) {
-            $responsePreview = trim(substr(strip_tags($body), 0, 180));
-
-            throw new NetworkException(
-                'Unexpected non-JSON response from SEFIN gateway' . ($responsePreview !== '' ? ': ' . $responsePreview : ''),
-                NfseErrorCode::InvalidResponse,
-                $e,
-            );
-        }
-
-        if (!is_array($decoded)) {
-            throw new NetworkException(
-                'Unexpected response format from SEFIN gateway',
-                NfseErrorCode::InvalidResponse,
-            );
-        }
-
-        return [$httpStatus, $decoded];
-    }
-
-    /**
-     * Extract the HTTP status code from the first response header line.
-     *
-     * @param list<string> $headers
-     */
-    private function parseHttpStatus(array $headers): int
-    {
-        if (!isset($headers[0])) {
-            return 0;
-        }
-
-        if (preg_match('/HTTP\/[\d.]+ (\d{3})/', $headers[0], $m)) {
-            return (int) $m[1];
-        }
-
-        return 0;
     }
 
     /**
