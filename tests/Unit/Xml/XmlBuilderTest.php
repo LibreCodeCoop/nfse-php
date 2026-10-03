@@ -168,6 +168,40 @@ class XmlBuilderTest extends TestCase
         self::assertSame('Empresa Tomadora S.A.', $nameNodes->item(0)->textContent);
     }
 
+    public function testTomadorCnpjBlockAcceptsAlphanumericCnpj(): void
+    {
+        $dps = $this->makeDps(documentoTomador: '00000000E08G12', nomeTomador: 'Empresa Alfa S.A.');
+        $xml = $this->builder->buildDps($dps);
+
+        $doc   = new \\DOMDocument();
+        $doc->loadXML($xml);
+        $xpath = new \\DOMXPath($doc);
+        $xpath->registerNamespace('n', 'http://www.sped.fazenda.gov.br/nfse');
+
+        $nodes = $xpath->query('//n:toma/n:CNPJ');
+        self::assertSame(1, $nodes->length);
+        self::assertSame('00000000E08G12', $nodes->item(0)->textContent);
+    }
+
+    public function testBuildDpsIdentifierAcceptsAlphanumericProviderCnpj(): void
+    {
+        $xml = $this->builder->buildDps($this->makeDps(
+            cnpjPrestador: '00000000E08G12',
+            municipioIbge: '3303302',
+            serie: '12',
+            numeroDps: '345',
+        ));
+
+        $doc = new \\DOMDocument();
+        $doc->loadXML($xml);
+
+        self::assertSame(
+            'DPS3303302200000000E08G1200012000000000000345',
+            $doc->getElementsByTagName('infDPS')->item(0)?->attributes?->getNamedItem('Id')?->nodeValue,
+        );
+        self::assertStringContainsString('<CNPJ>00000000E08G12</CNPJ>', $xml);
+    }
+
     public function testTomadorCpfBlockIsIncludedWhenDocumentHas11Digits(): void
     {
         $dps = $this->makeDps(documentoTomador: '12345678901', nomeTomador: 'Pessoa Física Tomadora');
