@@ -1,0 +1,14 @@
+{
+  "_meta": {
+    "kind": "synthetic",
+    "contract": "SEFIN NFS-e contributor API",
+    "scenario": "event query success"
+  },
+  "status": 200,
+  "response": {
+    "tipoAmbiente": 2,
+    "versaoAplicativo": "1.01",
+    "dataHoraProcessamento": "2026-10-03T12:01:00-03:00",
+    "eventoXmlGZipB64": "H4sIAFItwWoC/7NJLUvNK8lXqMjNySu2VcooKSmw0tcvLy/XKy5ITdFLS6xKzUtJ1EvPL9NLKtLPSytOVbKzycxLc4Vo80yxVXINCzE0MgYKJ2f4uQWn2jk6O7sGB+uaGNnoQ0Vs9OE6gGyIjXYAySBV+XoAAAA="
+  }
+}
