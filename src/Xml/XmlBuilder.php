@@ -60,7 +60,73 @@ class XmlBuilder
         $infDps->appendChild($this->buildServico($doc, $dps));
         $infDps->appendChild($this->buildValores($doc, $dps));
 
+        if ($this->hasIbsCbsConfiguration($dps)) {
+            $infDps->appendChild($this->buildIbsCbs($doc, $dps));
+        }
+
         return $doc->saveXML() ?: '';
+    }
+
+    private function buildIbsCbs(\DOMDocument $doc, DpsData $dps): \DOMElement
+    {
+        $missing = [];
+
+        if ($dps->ibsCbsFinalidade === null) {
+            $missing[] = 'finNFSe';
+        }
+
+        if ($dps->ibsCbsCodigoIndicadorOperacao === '') {
+            $missing[] = 'cIndOp';
+        }
+
+        if ($dps->ibsCbsIndDest === null) {
+            $missing[] = 'indDest';
+        }
+
+        if ($dps->ibsCbsCst === '') {
+            $missing[] = 'CST';
+        }
+
+        if ($dps->ibsCbsClassificacaoTributaria === '') {
+            $missing[] = 'cClassTrib';
+        }
+
+        if ($missing !== []) {
+            throw new \InvalidArgumentException(
+                'Incomplete IBSCBS configuration: missing ' . implode(', ', $missing),
+            );
+        }
+
+        $ibsCbs = $doc->createElement('IBSCBS');
+        $ibsCbs->appendChild($doc->createElement('finNFSe', (string) $dps->ibsCbsFinalidade));
+
+        if ($dps->ibsCbsIndFinal !== null) {
+            $ibsCbs->appendChild($doc->createElement('indFinal', (string) $dps->ibsCbsIndFinal));
+        }
+
+        $ibsCbs->appendChild($doc->createElement('cIndOp', $dps->ibsCbsCodigoIndicadorOperacao));
+        $ibsCbs->appendChild($doc->createElement('indDest', (string) $dps->ibsCbsIndDest));
+
+        $valores = $doc->createElement('valores');
+        $trib = $doc->createElement('trib');
+        $gIbsCbs = $doc->createElement('gIBSCBS');
+        $gIbsCbs->appendChild($doc->createElement('CST', $dps->ibsCbsCst));
+        $gIbsCbs->appendChild($doc->createElement('cClassTrib', $dps->ibsCbsClassificacaoTributaria));
+        $trib->appendChild($gIbsCbs);
+        $valores->appendChild($trib);
+        $ibsCbs->appendChild($valores);
+
+        return $ibsCbs;
+    }
+
+    private function hasIbsCbsConfiguration(DpsData $dps): bool
+    {
+        return $dps->ibsCbsFinalidade !== null
+            || $dps->ibsCbsIndFinal !== null
+            || $dps->ibsCbsCodigoIndicadorOperacao !== ''
+            || $dps->ibsCbsIndDest !== null
+            || $dps->ibsCbsCst !== ''
+            || $dps->ibsCbsClassificacaoTributaria !== '';
     }
 
     private function buildIdentifier(DpsData $dps): string
