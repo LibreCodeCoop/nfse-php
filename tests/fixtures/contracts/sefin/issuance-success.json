@@ -1,0 +1,14 @@
+{
+  "_meta": {
+    "kind": "synthetic",
+    "contract": "SEFIN NFS-e contributor API",
+    "scenario": "issuance success"
+  },
+  "status": 201,
+  "response": {
+    "nNFSe": "42",
+    "chaveAcesso": "ACCESS-42",
+    "dataHoraProcessamento": "2026-10-03T12:00:00-03:00",
+    "nfseXmlGZipB64": "H4sIAFItwWoC/7PxcwtOVajIzckrtlXKKCkpsNLXLy8v1ysuSE3RS0usSs1LSdRLzy/TSyrSz0srTlWys8nMSwNr8kyxVQIyDI2MgYJ5ICE7EyMbfQjLRh+qDMgCUwBV3H52aQAAAA=="
+  }
+}
