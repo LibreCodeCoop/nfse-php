@@ -9,9 +9,11 @@ namespace LibreCodeCoop\NfsePHP\Http;
 
 use LibreCodeCoop\NfsePHP\Config\AdnEnvironmentConfig;
 use LibreCodeCoop\NfsePHP\Config\CertConfig;
+use LibreCodeCoop\NfsePHP\Contracts\HttpTransportInterface;
 use LibreCodeCoop\NfsePHP\Dto\AdnDistributionData;
 use LibreCodeCoop\NfsePHP\Dto\AdnDocumentData;
 use LibreCodeCoop\NfsePHP\Dto\AdnMessageData;
+use LibreCodeCoop\NfsePHP\Dto\HttpRequestData;
 use LibreCodeCoop\NfsePHP\Exception\NetworkException;
 use LibreCodeCoop\NfsePHP\Exception\NfseErrorCode;
 use LibreCodeCoop\NfsePHP\Exception\QueryException;
@@ -25,10 +27,14 @@ use LibreCodeCoop\NfsePHP\Support\GzipBase64;
  */
 final class AdnClient
 {
+    private readonly HttpTransportInterface $transport;
+
     public function __construct(
         private readonly AdnEnvironmentConfig $environment,
         private readonly CertConfig $cert,
+        ?HttpTransportInterface $transport = null,
     ) {
+        $this->transport = $transport ?? new NativeStreamTransport();
     }
 
     public function getDfe(int $nsu, ?string $cnpjConsulta = null, bool $lote = true): AdnDistributionData
@@ -67,31 +73,17 @@ final class AdnClient
 
     private function request(string $path): AdnDistributionData
     {
-        $context = stream_context_create([
-            'http' => [
-                'method' => 'GET',
-                'header' => "Accept: application/json\r\n",
-                'ignore_errors' => true,
-                'timeout' => $this->environment->timeoutSeconds,
-            ],
-            'ssl' => $this->sslContextOptions(),
-        ]);
-
-        $url = $this->environment->baseUrl . $path;
-        $http_response_header = [];
-        $body = file_get_contents($url, false, $context);
-        $httpStatus = $this->parseHttpStatus($http_response_header);
-
-        if ($body === false && $httpStatus === 0) {
-            throw new NetworkException('Failed to connect to ADN contributor API at ' . $url);
-        }
-
-        if ($body === false) {
-            $body = '';
-        }
+        $response = $this->transport->request(new HttpRequestData(
+            method: 'GET',
+            url: $this->environment->baseUrl . $path,
+            headers: ['Accept' => 'application/json'],
+            timeoutSeconds: $this->environment->timeoutSeconds,
+            clientCertificatePath: $this->cert->transportCertificatePath,
+            clientPrivateKeyPath: $this->cert->transportPrivateKeyPath,
+        ));
 
         try {
-            $decoded = json_decode($body, true, 512, JSON_THROW_ON_ERROR);
+            $decoded = json_decode($response->body, true, 512, JSON_THROW_ON_ERROR);
         } catch (\JsonException $e) {
             throw new NetworkException(
                 'Unexpected non-JSON response from ADN contributor API.',
@@ -107,11 +99,11 @@ final class AdnClient
             );
         }
 
-        if ($httpStatus >= 400) {
+        if ($response->status >= 400) {
             throw new QueryException(
-                'ADN contributor API returned error (HTTP ' . $httpStatus . ')',
+                'ADN contributor API returned error (HTTP ' . $response->status . ')',
                 NfseErrorCode::QueryFailed,
-                $httpStatus,
+                $response->status,
                 $decoded,
             );
         }
@@ -242,37 +234,4 @@ final class AdnClient
         return null;
     }
 
-    /**
-     * @return array<string, bool|string>
-     */
-    private function sslContextOptions(): array
-    {
-        $options = [
-            'verify_peer' => true,
-            'verify_peer_name' => true,
-        ];
-
-        if ($this->cert->transportCertificatePath !== null && $this->cert->transportPrivateKeyPath !== null) {
-            $options['local_cert'] = $this->cert->transportCertificatePath;
-            $options['local_pk'] = $this->cert->transportPrivateKeyPath;
-        }
-
-        return $options;
-    }
-
-    /**
-     * @param list<string> $headers
-     */
-    private function parseHttpStatus(array $headers): int
-    {
-        if (!isset($headers[0])) {
-            return 0;
-        }
-
-        if (preg_match('/HTTP\/[\d.]+ (\d{3})/', $headers[0], $matches)) {
-            return (int) $matches[1];
-        }
-
-        return 0;
-    }
 }
