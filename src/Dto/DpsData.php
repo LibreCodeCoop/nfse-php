@@ -140,6 +140,24 @@ final readonly class DpsData
 
         /** Valor da contribuição previdenciária retida. */
         public string $federalValorCp = '',
+
+        /** Finalidade da NFS-e para IBS/CBS. Null keeps the IBSCBS group disabled. */
+        public ?int $ibsCbsFinalidade = null,
+
+        /** Indicador de uso/consumo pessoal para IBS/CBS. */
+        public ?int $ibsCbsIndFinal = null,
+
+        /** Código indicador da operação (cIndOp), conforme tabela oficial. */
+        public string $ibsCbsCodigoIndicadorOperacao = '',
+
+        /** Indicador do destinatário dos serviços. */
+        public ?int $ibsCbsIndDest = null,
+
+        /** Código de Situação Tributária do IBS/CBS (CST). */
+        public string $ibsCbsCst = '',
+
+        /** Código de Classificação Tributária do IBS/CBS. */
+        public string $ibsCbsClassificacaoTributaria = '',
     ) {
     }
 }
