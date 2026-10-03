@@ -38,19 +38,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Resolve Composer cache directory
-        id: composer-cache
-        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
-
-      - name: Cache Composer downloads
-        uses: actions/cache@v4
-        with:
-          path: ${{ steps.composer-cache.outputs.dir }}
-          key: composer-${{ runner.os }}-php-${{ matrix.php-version }}-${{ hashFiles('composer.json') }}
-          restore-keys: |
-            composer-${{ runner.os }}-php-${{ matrix.php-version }}-
-            composer-${{ runner.os }}-
-
       - name: Install dependencies
         run: composer install --prefer-dist --no-progress
 
@@ -59,6 +46,15 @@ jobs:
           NFS_TEST_CNPJ: "11222333000181"
           NFS_SANDBOX: "true"
         run: composer run test:unit
+
+      - name: Run integration tests when certificate secrets are present
+        if: ${{ matrix.php-version == '8.3' && env.NFSE_CLIENT_CERT_B64 != '' }}
+        env:
+          NFSE_CLIENT_CERT_B64: ${{ secrets.NFSE_CLIENT_CERT_B64 }}
+          NFSE_CLIENT_KEY_B64: ${{ secrets.NFSE_CLIENT_KEY_B64 }}
+          NFS_TEST_CNPJ: "11222333000181"
+          NFS_SANDBOX: "true"
+        run: composer run test:integration
 
   coverage:
     name: Coverage
@@ -81,19 +77,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Resolve Composer cache directory
-        id: composer-cache
-        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
-
-      - name: Cache Composer downloads
-        uses: actions/cache@v4
-        with:
-          path: ${{ steps.composer-cache.outputs.dir }}
-          key: composer-${{ runner.os }}-php-8.3-${{ hashFiles('composer.json') }}
-          restore-keys: |
-            composer-${{ runner.os }}-php-8.3-
-            composer-${{ runner.os }}-
-
       - name: Install dependencies
         run: composer install --prefer-dist --no-progress
 
@@ -109,48 +92,3 @@ jobs:
           COVERALLS_REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: vendor/bin/php-coveralls --coverage_clover=build/logs/clover.xml --json_path=build/logs/coveralls-upload.json -v
 
-  integration:
-    name: Integration
-    if: ${{ secrets.NFSE_CLIENT_CERT_B64 != '' }}
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - name: Set up PHP 8.3
-        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2.37.2
-        with:
-          php-version: "8.3"
-          extensions: openssl, dom, soap
-          coverage: none
-          ini-file: development
-          ini-values: disable_functions=
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Resolve Composer cache directory
-        id: composer-cache
-        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
-
-      - name: Cache Composer downloads
-        uses: actions/cache@v4
-        with:
-          path: ${{ steps.composer-cache.outputs.dir }}
-          key: composer-${{ runner.os }}-php-8.3-${{ hashFiles('composer.json') }}
-          restore-keys: |
-            composer-${{ runner.os }}-php-8.3-
-            composer-${{ runner.os }}-
-
-      - name: Install dependencies
-        run: composer install --prefer-dist --no-progress
-
-      - name: Run integration tests
-        env:
-          NFSE_CLIENT_CERT_B64: ${{ secrets.NFSE_CLIENT_CERT_B64 }}
-          NFSE_CLIENT_KEY_B64: ${{ secrets.NFSE_CLIENT_KEY_B64 }}
-          NFS_TEST_CNPJ: "11222333000181"
-          NFS_SANDBOX: "true"
-        run: composer run test:integration
