@@ -149,18 +149,29 @@ class XmlBuilderTest extends TestCase
         self::assertStringContainsString('&lt;consultoria&gt;', $xml);
     }
 
-    public function testIssRetidoSetsTribCode(): void
+    public function testIssRetentionDoesNotChangeIssqnTaxationCode(): void
     {
-        $dpsRetido  = $this->makeDps(issRetido: true, tipoRetencaoIss: 2);
-        $dpsProprio = $this->makeDps(issRetido: false, tipoRetencaoIss: 1);
+        $dpsRetido  = $this->makeDps(tributacaoIssqn: 1, issRetido: true, tipoRetencaoIss: 2);
+        $dpsProprio = $this->makeDps(tributacaoIssqn: 1, issRetido: false, tipoRetencaoIss: 1);
 
         $xmlRetido  = $this->builder->buildDps($dpsRetido);
         $xmlProprio = $this->builder->buildDps($dpsProprio);
 
-        self::assertStringContainsString('<tribISSQN>2</tribISSQN>', $xmlRetido);
+        self::assertStringContainsString('<tribISSQN>1</tribISSQN>', $xmlRetido);
         self::assertStringContainsString('<tribISSQN>1</tribISSQN>', $xmlProprio);
         self::assertStringContainsString('<tpRetISSQN>2</tpRetISSQN>', $xmlRetido);
         self::assertStringContainsString('<tpRetISSQN>1</tpRetISSQN>', $xmlProprio);
+    }
+
+    public function testIssqnTaxationCodeIsIndependentFromRetention(): void
+    {
+        $xml = $this->builder->buildDps($this->makeDps(
+            tributacaoIssqn: 3,
+            tipoRetencaoIss: 1,
+        ));
+
+        self::assertStringContainsString('<tribISSQN>3</tribISSQN>', $xml);
+        self::assertStringContainsString('<tpRetISSQN>1</tpRetISSQN>', $xml);
     }
 
     // -------------------------------------------------------------------------
@@ -494,6 +505,7 @@ class XmlBuilderTest extends TestCase
         string $tomadorTelefone = '',
         string $tomadorEmail = '',
         int $regimeEspecialTributacao = 0,
+        int $tributacaoIssqn = 1,
         int $tipoRetencaoIss = 1,
         int $opcaoSimplesNacional = 1,
         int $tipoAmbiente = 2,
@@ -540,6 +552,7 @@ class XmlBuilderTest extends TestCase
             tomadorTelefone:          $tomadorTelefone,
             tomadorEmail:             $tomadorEmail,
             regimeEspecialTributacao: $regimeEspecialTributacao,
+            tributacaoIssqn:          $tributacaoIssqn,
             tipoRetencaoIss:          $tipoRetencaoIss,
             issRetido:                $issRetido,
             opcaoSimplesNacional:     $opcaoSimplesNacional,
