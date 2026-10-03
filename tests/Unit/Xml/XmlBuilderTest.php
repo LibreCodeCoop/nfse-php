@@ -130,6 +130,42 @@ class XmlBuilderTest extends TestCase
         );
     }
 
+    public function testBuildDpsCanEmitExplicitMunicipalTaxCode(): void
+    {
+        $xml = $this->builder->buildDps($this->makeDps(
+            itemListaServico: '0107',
+            codigoTributacaoNacional: '010701',
+            codigoTributacaoMunicipal: '007',
+        ));
+
+        self::assertStringContainsString(
+            '<cTribNac>010701</cTribNac><cTribMun>007</cTribMun>',
+            str_replace(["\n", '  '], '', $xml),
+        );
+    }
+
+    public function testBuildDpsCanExplicitlyOmitMunicipalTaxCode(): void
+    {
+        $xml = $this->builder->buildDps($this->makeDps(
+            itemListaServico: '0107',
+            codigoTributacaoNacional: '010701',
+            codigoTributacaoMunicipal: '',
+        ));
+
+        self::assertStringContainsString('<cTribNac>010701</cTribNac>', $xml);
+        self::assertStringNotContainsString('<cTribMun>', $xml);
+    }
+
+    public function testBuildDpsKeepsLegacyMunicipalTaxCodeFallbackWhenFieldIsNull(): void
+    {
+        $xml = $this->builder->buildDps($this->makeDps(
+            itemListaServico: '0107',
+            codigoTributacaoMunicipal: null,
+        ));
+
+        self::assertStringContainsString('<cTribMun>0107</cTribMun>', $xml);
+    }
+
     public function testBuildDpsContainsValorServico(): void
     {
         $dps = $this->makeDps(valorServico: '1500.00');
@@ -725,6 +761,7 @@ class XmlBuilderTest extends TestCase
         ?int $ibsCbsIndDest = null,
         string $ibsCbsCst = '',
         string $ibsCbsClassificacaoTributaria = '',
+        ?string $codigoTributacaoMunicipal = null,
     ): DpsData {
         return new DpsData(
             cnpjPrestador:            $cnpjPrestador,
@@ -777,6 +814,7 @@ class XmlBuilderTest extends TestCase
             ibsCbsIndDest: $ibsCbsIndDest,
             ibsCbsCst: $ibsCbsCst,
             ibsCbsClassificacaoTributaria: $ibsCbsClassificacaoTributaria,
+            codigoTributacaoMunicipal: $codigoTributacaoMunicipal,
         );
     }
 }
