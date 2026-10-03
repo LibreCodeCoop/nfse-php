@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  phpunit:
+  compatibility:
     name: PHP ${{ matrix.php-version }}
     runs-on: ubuntu-latest
 
@@ -32,7 +32,7 @@ jobs:
         with:
           php-version: ${{ matrix.php-version }}
           extensions: openssl, dom, soap
-          coverage: xdebug
+          coverage: none
           ini-file: development
           ini-values: disable_functions=
         env:
@@ -43,36 +43,57 @@ jobs:
 
       - name: Run unit tests
         env:
+          NFS_TEST_CNPJ: "11222333000181"
+          NFS_SANDBOX: "true"
+        run: composer run test:unit
+
+      - name: Run integration tests when certificate secrets are present
+        if: ${{ matrix.php-version == '8.3' }}
+        env:
+          NFSE_CLIENT_CERT_B64: ${{ secrets.NFSE_CLIENT_CERT_B64 }}
+          NFSE_CLIENT_KEY_B64: ${{ secrets.NFSE_CLIENT_KEY_B64 }}
+          NFS_TEST_CNPJ: "11222333000181"
+          NFS_SANDBOX: "true"
+        run: |
+          if [ -z "$NFSE_CLIENT_CERT_B64" ]; then
+            echo "NFS-e integration certificate is not configured; skipping."
+            exit 0
+          fi
+          composer run test:integration
+
+  coverage:
+    name: Coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up PHP 8.3
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2.37.2
+        with:
+          php-version: "8.3"
+          extensions: openssl, dom, soap
+          coverage: xdebug
+          ini-file: development
+          ini-values: disable_functions=
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress
+
+      - name: Generate coverage
+        env:
           XDEBUG_MODE: coverage
           NFS_TEST_CNPJ: "11222333000181"
           NFS_SANDBOX: "true"
         run: composer run test:coverage
 
-      - name: Run integration tests (only when cert secrets present)
-        if: ${{ env.NFSE_CLIENT_CERT_B64 != '' }}
-        env:
-          XDEBUG_MODE: debug
-          NFSE_CLIENT_CERT_B64: ${{ secrets.NFSE_CLIENT_CERT_B64 }}
-          NFSE_CLIENT_KEY_B64: ${{ secrets.NFSE_CLIENT_KEY_B64 }}
-          NFS_TEST_CNPJ: "11222333000181"
-          NFS_SANDBOX: "true"
-        run: composer run test:integration
-
       - name: Upload coverage results to Coveralls
-        if: ${{ matrix.php-version == '8.2' }}
         env:
           COVERALLS_REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          COVERALLS_PARALLEL: true
-          COVERALLS_FLAG_NAME: php-${{ matrix.php-version }}
         run: vendor/bin/php-coveralls --coverage_clover=build/logs/clover.xml --json_path=build/logs/coveralls-upload.json -v
 
-  finish-coverage:
-    if: ${{ github.event.pull_request.base.ref == 'main' }}
-    needs: phpunit
-    runs-on: ubuntu-latest
-    steps:
-      - name: Let Coveralls know that all tests have finished
-        uses: coverallsapp/github-action@v2.3.8
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          parallel-finished: true
