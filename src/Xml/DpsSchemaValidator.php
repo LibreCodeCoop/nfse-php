@@ -34,7 +34,7 @@ final class DpsSchemaValidator
             $document = new \DOMDocument();
 
             if (!$document->loadXML($xml, LIBXML_NONET)) {
-                return $this->collectErrors();
+                return $this->collectActionableErrors();
             }
 
             $isValid = $document->schemaValidate($this->resolvedSchemaPath());
@@ -43,7 +43,7 @@ final class DpsSchemaValidator
                 return [];
             }
 
-            return $this->collectErrors();
+            return $this->collectActionableErrors();
         } finally {
             libxml_clear_errors();
             libxml_use_internal_errors($previousUseErrors);
@@ -64,12 +64,16 @@ final class DpsSchemaValidator
     /**
      * @return list<string>
      */
-    private function collectErrors(): array
+    private function collectActionableErrors(): array
     {
         $errors = [];
 
         foreach (libxml_get_errors() as $error) {
             $message = trim($error->message);
+
+            if ($this->isKnownUpstreamSchemaIssue($message)) {
+                continue;
+            }
 
             if ($error->line > 0) {
                 $message .= ' (line ' . $error->line . ')';
@@ -79,5 +83,19 @@ final class DpsSchemaValidator
         }
 
         return $errors;
+    }
+
+    /**
+     * The official 2026-02-09 v1.01 package uses ^ and $ in TSSerieDPS.
+     * XML Schema regular expressions do not define those characters as
+     * anchors, so libxml interprets them literally and rejects every normal
+     * DPS series. Keep the vendored schema byte-for-byte intact and ignore
+     * only this exact upstream defect while retaining all other validation.
+     */
+    private function isKnownUpstreamSchemaIssue(string $message): bool
+    {
+        return str_contains($message, "Element '{http://www.sped.fazenda.gov.br/nfse}serie'")
+            && str_contains($message, "pattern '^0{0,4}\\d{1,5}}
+");
     }
 }
