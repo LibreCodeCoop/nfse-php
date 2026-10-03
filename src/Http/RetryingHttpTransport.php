@@ -76,7 +76,8 @@ final class RetryingHttpTransport implements HttpTransportInterface
 
     private function sleepBeforeRetry(int $failedAttempt): void
     {
-        $delay = (int) ($this->baseDelayMilliseconds * (2 ** max(0, $failedAttempt - 1)));
+        $multiplier = 1 << max(0, $failedAttempt - 1);
+        $delay = $this->baseDelayMilliseconds * $multiplier;
 
         if ($delay <= 0) {
             return;
@@ -88,6 +89,6 @@ final class RetryingHttpTransport implements HttpTransportInterface
             return;
         }
 
-        usleep((int) ($delay * 1000));
+        usleep($delay * 1000);
     }
 }
