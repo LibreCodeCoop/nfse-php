@@ -14,6 +14,7 @@ use LibreCodeCoop\NfsePHP\Exception\NetworkException;
 
 final class NativeStreamTransport implements HttpTransportInterface
 {
+    #[\Override]
     public function request(HttpRequestData $request): HttpResponseData
     {
         $httpOptions = [
