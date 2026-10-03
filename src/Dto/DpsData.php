@@ -193,6 +193,14 @@ final readonly class DpsData
 
         /** Código de Classificação Tributária do IBS/CBS. */
         public string $ibsCbsClassificacaoTributaria = '',
+
+        /**
+         * Código de tributação municipal (cTribMun).
+         *
+         * Null preserves the legacy behavior of using itemListaServico.
+         * An empty string explicitly omits cTribMun.
+         */
+        public ?string $codigoTributacaoMunicipal = null,
     ) {
     }
 }
