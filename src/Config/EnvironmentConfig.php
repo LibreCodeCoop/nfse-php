@@ -26,9 +26,14 @@ final readonly class EnvironmentConfig
     public function __construct(
         public bool $sandboxMode = false,
         ?string $baseUrl = null,
+        public int $requestTimeoutSeconds = 30,
     ) {
-        $this->baseUrl = $baseUrl ?? ($sandboxMode
+        if ($requestTimeoutSeconds < 1) {
+            throw new \InvalidArgumentException('SEFIN request timeout must be at least 1 second.');
+        }
+
+        $this->baseUrl = rtrim($baseUrl ?? ($sandboxMode
             ? self::BASE_URL_SANDBOX
-            : self::BASE_URL_PROD);
+            : self::BASE_URL_PROD), '/');
     }
 }
