@@ -204,6 +204,83 @@ class NfseClientTest extends TestCase
         $client->queryDps('known-without-key');
     }
 
+    public function testQueryEventReturnsDecodedEventXml(): void
+    {
+        $eventXml = '<evento versao="1.01"><infEvento Id="EVT123"/></evento>';
+        $payload = json_encode([
+            'tipoAmbiente' => 2,
+            'versaoAplicativo' => 'Sefin_1.0',
+            'dataHoraProcessamento' => '2026-10-03T04:00:00-03:00',
+            'eventoXmlGZipB64' => base64_encode(gzencode($eventXml)),
+        ], JSON_THROW_ON_ERROR);
+
+        self::$server->setResponseOfPath(
+            '/SefinNacional/nfse/ACCESS-KEY/eventos/101101/1',
+            new Response($payload, ['Content-Type' => 'application/json'], 200)
+        );
+
+        $client = $this->makeClient($this->signer);
+        $event = $client->queryEvent('ACCESS-KEY', 101101, 1);
+
+        self::assertSame(2, $event->tipoAmbiente);
+        self::assertSame('Sefin_1.0', $event->versaoAplicativo);
+        self::assertSame('2026-10-03T04:00:00-03:00', $event->dataHoraProcessamento);
+        self::assertSame($eventXml, $event->rawXml);
+
+        $request = self::$server->getLastRequest();
+        self::assertNotNull($request);
+        self::assertSame('GET', $request->getRequestMethod());
+    }
+
+    public function testQueryEventRejectsInvalidEventTypeBeforeRequest(): void
+    {
+        $client = $this->makeClient($this->signer);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $client->queryEvent('ACCESS-KEY', 12345);
+    }
+
+    public function testQueryEventRejectsInvalidSequenceBeforeRequest(): void
+    {
+        $client = $this->makeClient($this->signer);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $client->queryEvent('ACCESS-KEY', 101101, 0);
+    }
+
+    public function testQueryEventThrowsQueryExceptionWhenNotFound(): void
+    {
+        self::$server->setResponseOfPath(
+            '/SefinNacional/nfse/ACCESS-KEY/eventos/101101/1',
+            new Response('{"error":"not found"}', ['Content-Type' => 'application/json'], 404)
+        );
+
+        $client = $this->makeClient($this->signer);
+
+        $this->expectException(QueryException::class);
+        $client->queryEvent('ACCESS-KEY', 101101, 1);
+    }
+
+    public function testQueryEventRejectsMalformedCompressedXml(): void
+    {
+        $payload = json_encode([
+            'tipoAmbiente' => 2,
+            'versaoAplicativo' => 'Sefin_1.0',
+            'dataHoraProcessamento' => '2026-10-03T04:00:00-03:00',
+            'eventoXmlGZipB64' => base64_encode('not-gzip'),
+        ], JSON_THROW_ON_ERROR);
+
+        self::$server->setResponseOfPath(
+            '/SefinNacional/nfse/ACCESS-KEY/eventos/101101/1',
+            new Response($payload, ['Content-Type' => 'application/json'], 200)
+        );
+
+        $client = $this->makeClient($this->signer);
+
+        $this->expectException(\LibreCodeCoop\NfsePHP\Exception\NetworkException::class);
+        $client->queryEvent('ACCESS-KEY', 101101, 1);
+    }
+
     public function testCancelReturnsTrueOnSuccess(): void
     {
         self::$server->setResponseOfPath(
