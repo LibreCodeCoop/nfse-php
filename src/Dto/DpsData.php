@@ -93,7 +93,10 @@ final readonly class DpsData
         /** Regime especial de tributação. */
         public int $regimeEspecialTributacao = 0,
 
-        /** Tipo de retenção do ISSQN. */
+        /** Tributação do ISSQN: 1 tributável, 2 imunidade, 3 exportação, 4 não incidência. */
+        public int $tributacaoIssqn = 1,
+
+        /** Tipo de retenção do ISSQN: 1 não retido, 2 tomador, 3 intermediário. */
         public int $tipoRetencaoIss = 1,
 
         /** Indicador de tributação total. */
@@ -108,7 +111,9 @@ final readonly class DpsData
         /** Percentual total estimado de tributos municipais. */
         public string $totalTributosPercentualMunicipal = '',
 
-        /** Whether ISS is retained at source. */
+        /**
+         * @deprecated Use tipoRetencaoIss. Retention and ISSQN taxation are independent fields.
+         */
         public bool $issRetido = false,
 
         /** Situação Tributária do PIS/COFINS (CST). */
