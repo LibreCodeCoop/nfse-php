@@ -183,10 +183,14 @@ class DpsSigner implements XmlSignerInterface
         $sha1Algo = 'http://www.w3.org/2000/09/xmldsig#sha1';
         $envAlgo  = 'http://www.w3.org/2000/09/xmldsig#enveloped-signature';
 
+        if (preg_match('/<!DOCTYPE/i', $xml) === 1) {
+            throw new PfxImportException('DOCTYPE is not allowed in DPS XML.');
+        }
+
         $doc = new \DOMDocument('1.0', 'UTF-8');
         $doc->preserveWhiteSpace = false;
 
-        if (!$doc->loadXML($xml)) {
+        if (!$doc->loadXML($xml, LIBXML_NONET)) {
             throw new PfxImportException('Cannot parse XML for signing');
         }
 
