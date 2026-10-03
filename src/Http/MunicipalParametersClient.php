@@ -32,7 +32,7 @@ final class MunicipalParametersClient
         private readonly CertConfig $cert,
         ?HttpTransportInterface $transport = null,
     ) {
-        $this->transport = $transport ?? new NativeStreamTransport();
+        $this->transport = $transport ?? new RetryingHttpTransport(new NativeStreamTransport());
     }
 
     /** @return array<string, mixed> */
