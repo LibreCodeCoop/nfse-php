@@ -9,6 +9,7 @@ namespace LibreCodeCoop\NfsePHP\Http;
 
 use LibreCodeCoop\NfsePHP\Config\CertConfig;
 use LibreCodeCoop\NfsePHP\Config\EnvironmentConfig;
+use LibreCodeCoop\NfsePHP\Contracts\DpsLookupInterface;
 use LibreCodeCoop\NfsePHP\Contracts\NfseClientInterface;
 use LibreCodeCoop\NfsePHP\Contracts\SecretStoreInterface;
 use LibreCodeCoop\NfsePHP\Contracts\XmlSignerInterface;
@@ -20,6 +21,7 @@ use LibreCodeCoop\NfsePHP\Exception\IssuanceException;
 use LibreCodeCoop\NfsePHP\Exception\NetworkException;
 use LibreCodeCoop\NfsePHP\Exception\NfseErrorCode;
 use LibreCodeCoop\NfsePHP\Exception\QueryException;
+use LibreCodeCoop\NfsePHP\Support\DpsIdentifier;
 use LibreCodeCoop\NfsePHP\Xml\DpsSigner;
 use LibreCodeCoop\NfsePHP\Xml\XmlBuilder;
 
@@ -29,7 +31,7 @@ use LibreCodeCoop\NfsePHP\Xml\XmlBuilder;
  * Communicates with the SEFIN gateway to issue, query, and cancel NFS-e.
  * All requests carry a signed DPS XML payload.
  */
-class NfseClient implements NfseClientInterface
+class NfseClient implements NfseClientInterface, DpsLookupInterface
 {
     private readonly string $baseUrl;
     private readonly XmlSignerInterface $signer;
@@ -80,6 +82,56 @@ class NfseClient implements NfseClientInterface
         }
 
         return $this->parseReceiptResponse($body);
+    }
+
+    #[\Override]
+    public function queryDps(string $idDps): string
+    {
+        $id = rawurlencode(DpsIdentifier::forApi($idDps));
+        [$httpStatus, $body] = $this->get('/dps/' . $id);
+
+        if ($httpStatus >= 400) {
+            throw new QueryException(
+                'SEFIN gateway returned error for DPS query (HTTP ' . $httpStatus . ')',
+                NfseErrorCode::QueryFailed,
+                $httpStatus,
+                $body,
+            );
+        }
+
+        $chaveAcesso = isset($body['chaveAcesso']) && is_scalar($body['chaveAcesso'])
+            ? trim((string) $body['chaveAcesso'])
+            : '';
+
+        if ($chaveAcesso === '') {
+            throw new NetworkException(
+                'SEFIN gateway returned a DPS query response without chaveAcesso.',
+                NfseErrorCode::InvalidResponse,
+            );
+        }
+
+        return $chaveAcesso;
+    }
+
+    #[\Override]
+    public function existsDps(string $idDps): bool
+    {
+        $id = rawurlencode(DpsIdentifier::forApi($idDps));
+        $httpStatus = $this->head('/dps/' . $id);
+
+        if ($httpStatus === 404) {
+            return false;
+        }
+
+        if ($httpStatus >= 400 || $httpStatus === 0) {
+            throw new QueryException(
+                'SEFIN gateway returned error for DPS existence check (HTTP ' . $httpStatus . ')',
+                NfseErrorCode::QueryFailed,
+                $httpStatus,
+            );
+        }
+
+        return true;
     }
 
     public function cancel(string $chaveAcesso, string $motivo): bool
@@ -165,6 +217,20 @@ class NfseClient implements NfseClientInterface
         return $this->fetchAndDecode($path, $context);
     }
 
+    private function head(string $path): int
+    {
+        $context = stream_context_create([
+            'http' => [
+                'method'        => 'HEAD',
+                'header'        => "Accept: application/json\r\n",
+                'ignore_errors' => true,
+            ],
+            'ssl' => $this->sslContextOptions(),
+        ]);
+
+        return $this->fetchStatus($path, $context);
+    }
+
     /**
      * @return array{int, array<string, mixed>}
      */
@@ -231,6 +297,21 @@ class NfseClient implements NfseClientInterface
         }
 
         return $options;
+    }
+
+    private function fetchStatus(string $path, mixed $context): int
+    {
+        $url = $this->baseUrl . $path;
+
+        $http_response_header = [];
+        $result = file_get_contents($url, false, $context);
+        $httpStatus = $this->parseHttpStatus($http_response_header);
+
+        if ($result === false && $httpStatus === 0) {
+            throw new NetworkException('Failed to connect to SEFIN gateway at ' . $url);
+        }
+
+        return $httpStatus;
     }
 
     /**
