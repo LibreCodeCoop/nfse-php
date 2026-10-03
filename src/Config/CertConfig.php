@@ -17,7 +17,7 @@ namespace LibreCodeCoop\NfsePHP\Config;
 final readonly class CertConfig
 {
     public function __construct(
-        /** CNPJ do prestador de serviço (only digits, 14 chars). */
+        /** CNPJ do prestador de serviço (14 chars; numeric or alphanumeric). */
         public string $cnpj,
 
         /** Absolute filesystem path to the PFX certificate bundle. */

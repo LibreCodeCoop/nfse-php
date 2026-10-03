@@ -36,6 +36,8 @@ class FormatterTest extends TestCase
     {
         return [
             'formatted cnpj' => ['11222333000181', '11.222.333/0001-81'],
+            'alphanumeric cnpj' => ['00.000.000/E08G-12', '00.000.000/E08G-12'],
+            'lowercase alphanumeric cnpj is normalized' => ['12.abc.345/01de-35', '12.ABC.345/01DE-35'],
             'formatted cpf' => ['12345678909', '123.456.789-09'],
             'empty returns dash' => ['', '-'],
             'dash returns dash' => ['-', '-'],

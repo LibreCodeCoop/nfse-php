@@ -15,7 +15,7 @@ namespace LibreCodeCoop\NfsePHP\Dto;
 final readonly class DpsData
 {
     public function __construct(
-        /** CNPJ do prestador de serviço (only digits, 14 chars). */
+        /** CNPJ do prestador de serviço (14 chars; numeric or alphanumeric). */
         public string $cnpjPrestador,
 
         /** Código IBGE do município do prestador (7 digits). */
@@ -54,7 +54,7 @@ final readonly class DpsData
         /** Código de tributação nacional do serviço (6 digits). */
         public string $codigoTributacaoNacional = '000000',
 
-        /** CNPJ ou CPF do tomador (only digits, 11 or 14 chars). Empty string for foreign. */
+        /** CNPJ (14 chars, numeric or alphanumeric) or CPF (11 digits) do tomador. Empty string for foreign. */
         public string $documentoTomador = '',
 
         /** Nome / Razão Social do tomador. */

@@ -20,17 +20,21 @@ final class Formatter
             return '-';
         }
 
-        $digits = preg_replace('/\D/', '', $value) ?? '';
+        $normalized = strtoupper(preg_replace('/[^A-Z0-9]/i', '', $value) ?? '');
 
-        if (strlen($digits) === 14) {
-            return preg_replace('/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/', '$1.$2.$3/$4-$5', $digits) ?? $digits;
+        if (preg_match('/^[A-Z0-9]{12}\\d{2}$/', $normalized) === 1) {
+            return preg_replace(
+                '/^([A-Z0-9]{2})([A-Z0-9]{3})([A-Z0-9]{3})([A-Z0-9]{4})(\\d{2})$/',
+                '$1.$2.$3/$4-$5',
+                $normalized,
+            ) ?? $normalized;
         }
 
-        if (strlen($digits) === 11) {
-            return preg_replace('/(\d{3})(\d{3})(\d{3})(\d{2})/', '$1.$2.$3-$4', $digits) ?? $digits;
+        if (preg_match('/^\\d{11}$/', $normalized) === 1) {
+            return preg_replace('/(\\d{3})(\\d{3})(\\d{3})(\\d{2})/', '$1.$2.$3-$4', $normalized) ?? $normalized;
         }
 
-        return $digits;
+        return $normalized;
     }
 
     public function phone(string $value): string
