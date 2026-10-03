@@ -18,3 +18,11 @@ path = [
 precedence = "aggregate"
 SPDX-FileCopyrightText = "2026 LibreCode coop and contributors"
 SPDX-License-Identifier = "AGPL-3.0-or-later"
+
+[[annotations]]
+path = [
+    "references/schemas/nfse/1.01/*.xsd"
+]
+precedence = "override"
+SPDX-FileCopyrightText = "Sistema Nacional NFS-e / Governo Federal"
+SPDX-License-Identifier = "CC-BY-ND-3.0"
