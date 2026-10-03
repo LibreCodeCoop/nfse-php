@@ -250,8 +250,10 @@ class XmlBuilder
         $cServ = $doc->createElement('cServ');
         $cServ->appendChild($doc->createElement('cTribNac', $dps->codigoTributacaoNacional));
 
-        if ($dps->itemListaServico !== '') {
-            $cServ->appendChild($doc->createElement('cTribMun', $dps->itemListaServico));
+        $municipalTaxCode = $dps->codigoTributacaoMunicipal ?? $dps->itemListaServico;
+
+        if ($municipalTaxCode !== '') {
+            $cServ->appendChild($doc->createElement('cTribMun', $municipalTaxCode));
         }
 
         $cServ->appendChild($doc->createElement('xDescServ', htmlspecialchars($dps->discriminacao, ENT_XML1)));
