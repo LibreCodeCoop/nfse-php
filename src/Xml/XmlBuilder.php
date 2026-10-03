@@ -157,7 +157,7 @@ class XmlBuilder
     private function buildTribMun(\DOMDocument $doc, DpsData $dps): \DOMElement
     {
         $tribMun = $doc->createElement('tribMun');
-        $tribMun->appendChild($doc->createElement('tribISSQN', $dps->issRetido ? '2' : '1'));
+        $tribMun->appendChild($doc->createElement('tribISSQN', (string) $dps->tributacaoIssqn));
         $tribMun->appendChild($doc->createElement('tpRetISSQN', (string) $dps->tipoRetencaoIss));
 
         if ($dps->opcaoSimplesNacional !== 1) {
