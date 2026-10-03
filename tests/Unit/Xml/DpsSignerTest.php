@@ -100,6 +100,16 @@ class DpsSignerTest extends TestCase
         self::assertStringContainsString('X509Certificate', $signed);
     }
 
+    public function testSignRejectsDoctype(): void
+    {
+        $xml = '<?xml version="1.0"?><!DOCTYPE DPS [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><DPS><infDPS Id="DPS1">&xxe;</infDPS></DPS>';
+
+        $this->expectException(PfxImportException::class);
+        $this->expectExceptionMessage('DOCTYPE is not allowed');
+
+        $this->signer->sign($xml, $this->testCnpj);
+    }
+
     public function testSignThrowsPfxImportExceptionWhenFileNotFound(): void
     {
         $store = new NoOpSecretStore();
