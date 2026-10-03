@@ -357,6 +357,48 @@ class XmlBuilderTest extends TestCase
         self::assertStringContainsString('<pTotTrib><pTotTribFed>3.65</pTotTribFed><pTotTribEst>0.00</pTotTribEst><pTotTribMun>2.00</pTotTribMun></pTotTrib>', str_replace(["\n", '  '], '', $xml));
     }
 
+    public function testBuildDpsOmitsIbsCbsWhenNotConfigured(): void
+    {
+        $xml = $this->builder->buildDps($this->makeDps());
+
+        self::assertStringNotContainsString('<IBSCBS>', $xml);
+    }
+
+    public function testBuildDpsIncludesMinimalIbsCbsGroupInSchemaOrder(): void
+    {
+        $xml = $this->builder->buildDps($this->makeDps(
+            ibsCbsFinalidade: 0,
+            ibsCbsIndFinal: 0,
+            ibsCbsCodigoIndicadorOperacao: '010101',
+            ibsCbsIndDest: 0,
+            ibsCbsCst: '000',
+            ibsCbsClassificacaoTributaria: '000001',
+        ));
+
+        $normalized = str_replace(["\n", '  '], '', $xml);
+
+        self::assertStringContainsString(
+            '<IBSCBS><finNFSe>0</finNFSe><indFinal>0</indFinal><cIndOp>010101</cIndOp><indDest>0</indDest><valores><trib><gIBSCBS><CST>000</CST><cClassTrib>000001</cClassTrib></gIBSCBS></trib></valores></IBSCBS>',
+            $normalized,
+        );
+
+        self::assertLessThan(
+            strpos($normalized, '<IBSCBS>'),
+            strpos($normalized, '</valores>'),
+            'IBSCBS must be emitted after the legacy valores group.',
+        );
+    }
+
+    public function testBuildDpsRejectsPartialIbsCbsConfiguration(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('missing finNFSe, indDest, CST, cClassTrib');
+
+        $this->builder->buildDps($this->makeDps(
+            ibsCbsCodigoIndicadorOperacao: '010101',
+        ));
+    }
+
     // -------------------------------------------------------------------------
 
     private function makeDps(
@@ -398,6 +440,12 @@ class XmlBuilderTest extends TestCase
         string $federalValorIrrf = '',
         string $federalValorCsll = '',
         string $federalValorCp = '',
+        ?int $ibsCbsFinalidade = null,
+        ?int $ibsCbsIndFinal = null,
+        string $ibsCbsCodigoIndicadorOperacao = '',
+        ?int $ibsCbsIndDest = null,
+        string $ibsCbsCst = '',
+        string $ibsCbsClassificacaoTributaria = '',
     ): DpsData {
         return new DpsData(
             cnpjPrestador:            $cnpjPrestador,
@@ -438,6 +486,12 @@ class XmlBuilderTest extends TestCase
             federalValorIrrf: $federalValorIrrf,
             federalValorCsll: $federalValorCsll,
             federalValorCp: $federalValorCp,
+            ibsCbsFinalidade: $ibsCbsFinalidade,
+            ibsCbsIndFinal: $ibsCbsIndFinal,
+            ibsCbsCodigoIndicadorOperacao: $ibsCbsCodigoIndicadorOperacao,
+            ibsCbsIndDest: $ibsCbsIndDest,
+            ibsCbsCst: $ibsCbsCst,
+            ibsCbsClassificacaoTributaria: $ibsCbsClassificacaoTributaria,
         );
     }
 }
