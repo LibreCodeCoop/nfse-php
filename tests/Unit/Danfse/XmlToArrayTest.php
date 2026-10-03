@@ -47,6 +47,16 @@ class XmlToArrayTest extends TestCase
         self::assertSame('1500.00', $inf['DPS']['infDPS']['valores']['vServPrest']['vServ']);
     }
 
+    public function testRejectsDoctypeBeforeParsingExternalXml(): void
+    {
+        $xml = '<?xml version="1.0"?><!DOCTYPE NFSe [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><NFSe>&xxe;</NFSe>';
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('DOCTYPE is not allowed');
+
+        (new XmlToArray())->convert($xml);
+    }
+
     public function testIgnoresDigitalSignature(): void
     {
         $signed = str_replace(
