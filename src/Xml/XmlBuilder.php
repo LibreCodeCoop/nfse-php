@@ -16,7 +16,7 @@ use LibreCodeCoop\NfsePHP\Dto\DpsData;
 class XmlBuilder
 {
     private const XSD_NAMESPACE = 'http://www.sped.fazenda.gov.br/nfse';
-    private const XSD_SCHEMA    = 'http://www.sped.fazenda.gov.br/nfse tiDPS_v1.00.xsd';
+    private const XSD_SCHEMA    = 'http://www.sped.fazenda.gov.br/nfse DPS_v1.01.xsd';
     private const DPS_VERSION   = '1.01';
 
     public function buildDps(DpsData $dps): string

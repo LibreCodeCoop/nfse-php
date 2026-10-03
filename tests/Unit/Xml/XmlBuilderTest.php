@@ -44,6 +44,22 @@ class XmlBuilderTest extends TestCase
         self::assertSame('1.01', $doc->documentElement?->getAttribute('versao'));
     }
 
+    public function testBuildDpsReferencesProductionV101Schema(): void
+    {
+        $xml = $this->builder->buildDps($this->makeDps());
+
+        $doc = new \DOMDocument();
+        $doc->loadXML($xml);
+
+        self::assertSame(
+            'http://www.sped.fazenda.gov.br/nfse DPS_v1.01.xsd',
+            $doc->documentElement?->getAttributeNS(
+                'http://www.w3.org/2001/XMLSchema-instance',
+                'schemaLocation',
+            ),
+        );
+    }
+
     public function testBuildDpsUsesOfficialIdentifierShape(): void
     {
         $xml = $this->builder->buildDps($this->makeDps(cnpjPrestador: '11222333000181', municipioIbge: '3303302', serie: '12', numeroDps: '345'));
