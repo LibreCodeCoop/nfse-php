@@ -1,0 +1,11 @@
+{
+  "_meta": {
+    "kind": "synthetic",
+    "contract": "SEFIN NFS-e contributor API",
+    "scenario": "DPS recovery lookup"
+  },
+  "status": 200,
+  "response": {
+    "chaveAcesso": "ACCESS-42"
+  }
+}

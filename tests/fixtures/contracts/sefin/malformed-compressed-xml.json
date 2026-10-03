@@ -1,0 +1,14 @@
+{
+  "_meta": {
+    "kind": "synthetic",
+    "contract": "SEFIN NFS-e contributor API",
+    "scenario": "invalid compressed XML"
+  },
+  "status": 200,
+  "response": {
+    "nNFSe": "42",
+    "chaveAcesso": "ACCESS-42",
+    "dataHoraProcessamento": "2026-10-03T12:00:00-03:00",
+    "nfseXmlGZipB64": "%%%not-base64%%%"
+  }
+}

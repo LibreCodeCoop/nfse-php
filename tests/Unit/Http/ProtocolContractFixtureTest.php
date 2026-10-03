@@ -15,6 +15,7 @@ use LibreCodeCoop\NfsePHP\Contracts\XmlSignerInterface;
 use LibreCodeCoop\NfsePHP\Dto\DpsData;
 use LibreCodeCoop\NfsePHP\Dto\HttpResponseData;
 use LibreCodeCoop\NfsePHP\Exception\GatewayException;
+use LibreCodeCoop\NfsePHP\Exception\NetworkException;
 use LibreCodeCoop\NfsePHP\Http\AdnClient;
 use LibreCodeCoop\NfsePHP\Http\MunicipalParametersClient;
 use LibreCodeCoop\NfsePHP\Http\NfseClient;
@@ -82,6 +83,67 @@ final class ProtocolContractFixtureTest extends TestCase
         }
     }
 
+    public function testDpsRecoveryFixtureReturnsAccessKeyWithoutNetwork(): void
+    {
+        $fixture = $this->fixture('sefin/dps-recovery-success.json');
+        $transport = $this->transport($fixture);
+
+        $client = $this->nfseClient($transport);
+
+        self::assertSame('ACCESS-42', $client->queryDps('DPS112223330001810000000000000000000000000000'));
+    }
+
+    public function testCancellationFixtureUsesSignedEventAndAcceptsSuccessfulResponse(): void
+    {
+        $fixture = $this->fixture('sefin/cancellation-success.json');
+        $transport = $this->transport($fixture);
+
+        $client = $this->nfseClient($transport, $this->passthroughSigner());
+
+        self::assertTrue($client->cancel('ACCESS-42', 'Synthetic cancellation test.'));
+        self::assertCount(1, $transport->requests);
+        self::assertSame('POST', $transport->requests[0]->method);
+        self::assertStringContainsString('/nfse/ACCESS-42/eventos', $transport->requests[0]->url);
+    }
+
+    public function testEventQueryFixtureDecodesCompressedEventXml(): void
+    {
+        $fixture = $this->fixture('sefin/event-query-success.json');
+        $transport = $this->transport($fixture);
+
+        $event = $this->nfseClient($transport)->queryEvent('ACCESS-42', 101101);
+
+        self::assertSame(2, $event->tipoAmbiente);
+        self::assertSame('1.01', $event->versaoAplicativo);
+        self::assertStringContainsString('<chNFSe>ACCESS-42</chNFSe>', $event->rawXml);
+    }
+
+    public function testMalformedCompressedXmlFixtureFailsAsInvalidUpstreamResponse(): void
+    {
+        $fixture = $this->fixture('sefin/malformed-compressed-xml.json');
+        $transport = $this->transport($fixture);
+
+        $this->expectException(NetworkException::class);
+        $this->expectExceptionMessage('Invalid Base64');
+
+        $this->nfseClient($transport)->query('ACCESS-42');
+    }
+
+    public function testMalformedJsonFixtureFailsAsInvalidUpstreamResponse(): void
+    {
+        $body = file_get_contents(
+            dirname(__DIR__, 2) . '/fixtures/contracts/sefin/malformed-json.txt',
+        );
+        self::assertNotFalse($body);
+
+        $transport = new FakeHttpTransport(new HttpResponseData(status: 200, body: $body));
+
+        $this->expectException(NetworkException::class);
+        $this->expectExceptionMessage('Unexpected non-JSON response');
+
+        $this->nfseClient($transport)->query('ACCESS-42');
+    }
+
     public function testAdnDistributionFixtureDecodesDistributedDocument(): void
     {
         $fixture = $this->fixture('adn/distribution-one-document.json');
@@ -126,6 +188,26 @@ final class ProtocolContractFixtureTest extends TestCase
         ], $client->convenio('3303302'));
     }
 
+    public function testMunicipalUtf8FixturePreservesAccentedProtocolText(): void
+    {
+        $fixture = $this->fixture('municipal/utf8-benefit-success.json');
+        $transport = $this->transport($fixture);
+
+        $client = new MunicipalParametersClient(
+            config: new MunicipalParametersConfig(
+                sandboxMode: true,
+                baseUrl: 'https://adn.invalid.test/parametrizacao',
+            ),
+            cert: $this->certificate(),
+            transport: $transport,
+        );
+
+        $result = $client->beneficio('3303302', 'BEN-1', '2026-10-03');
+
+        self::assertSame('Redução de base em São Gonçalo', $result['descricao'] ?? null);
+        self::assertSame('Serviço técnico – homologação', $result['observacao'] ?? null);
+    }
+
     /**
      * @dataProvider fixtureProvider
      */
@@ -148,8 +230,13 @@ final class ProtocolContractFixtureTest extends TestCase
         return [
             'SEFIN issuance success' => ['sefin/issuance-success.json'],
             'SEFIN business rejection' => ['sefin/business-rejection.json'],
+            'SEFIN DPS recovery' => ['sefin/dps-recovery-success.json'],
+            'SEFIN cancellation' => ['sefin/cancellation-success.json'],
+            'SEFIN event query' => ['sefin/event-query-success.json'],
+            'SEFIN malformed compressed XML' => ['sefin/malformed-compressed-xml.json'],
             'ADN distribution' => ['adn/distribution-one-document.json'],
             'municipal agreement' => ['municipal/convenio-success.json'],
+            'municipal UTF-8 benefit' => ['municipal/utf8-benefit-success.json'],
         ];
     }
 
@@ -183,6 +270,32 @@ final class ProtocolContractFixtureTest extends TestCase
             status: $fixture['status'],
             body: json_encode($fixture['response'], JSON_THROW_ON_ERROR),
         ));
+    }
+
+    private function nfseClient(
+        FakeHttpTransport $transport,
+        ?XmlSignerInterface $signer = null,
+    ): NfseClient {
+        return new NfseClient(
+            environment: new EnvironmentConfig(
+                sandboxMode: true,
+                baseUrl: 'https://sefin.invalid.test/SefinNacional',
+            ),
+            cert: $this->certificate(),
+            secretStore: new NoOpSecretStore(),
+            signer: $signer,
+            transport: $transport,
+        );
+    }
+
+    private function passthroughSigner(): XmlSignerInterface
+    {
+        return new class () implements XmlSignerInterface {
+            public function sign(string $xml, string $cnpj): string
+            {
+                return $xml;
+            }
+        };
     }
 
     private function certificate(): CertConfig
