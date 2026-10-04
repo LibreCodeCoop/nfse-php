@@ -48,6 +48,10 @@ class XmlBuilder
         $infDps->appendChild($doc->createElement('tpEmit', (string) $dps->tipoEmissao));
         $infDps->appendChild($doc->createElement('cLocEmi', $dps->municipioIbge));
 
+        if ($dps->substituicao !== null) {
+            $infDps->appendChild($this->buildSubstitution($doc, $dps));
+        }
+
         $prest = $doc->createElement('prest');
         $cnpj  = $doc->createElement('CNPJ', $dps->cnpjPrestador);
         $prest->appendChild($cnpj);
@@ -66,6 +70,30 @@ class XmlBuilder
         }
 
         return $doc->saveXML() ?: '';
+    }
+
+    private function buildSubstitution(\DOMDocument $doc, DpsData $dps): \DOMElement
+    {
+        $substitution = $dps->substituicao;
+
+        if ($substitution === null) {
+            throw new \LogicException('Substitution data is required.');
+        }
+
+        $subst = $doc->createElement('subst');
+        $subst->appendChild($doc->createElement('chSubstda', $substitution->chaveNfseSubstituida));
+        $subst->appendChild($doc->createElement('cMotivo', $substitution->codigoMotivo));
+
+        if ($substitution->descricaoMotivo !== '') {
+            $subst->appendChild(
+                $doc->createElement(
+                    'xMotivo',
+                    htmlspecialchars($substitution->descricaoMotivo, ENT_XML1),
+                ),
+            );
+        }
+
+        return $subst;
     }
 
     private function buildIbsCbs(\DOMDocument $doc, DpsData $dps): \DOMElement

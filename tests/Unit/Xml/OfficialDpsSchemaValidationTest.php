@@ -8,6 +8,7 @@ declare(strict_types=1);
 namespace LibreCodeCoop\NfsePHP\Tests\Unit\Xml;
 
 use LibreCodeCoop\NfsePHP\Dto\DpsData;
+use LibreCodeCoop\NfsePHP\Dto\SubstitutionData;
 use LibreCodeCoop\NfsePHP\Tests\TestCase;
 use LibreCodeCoop\NfsePHP\Xml\DpsSchemaValidator;
 use LibreCodeCoop\NfsePHP\Xml\XmlBuilder;
@@ -147,6 +148,18 @@ final class OfficialDpsSchemaValidationTest extends TestCase
         self::assertSame([], $this->validator->validate($xml));
     }
 
+    public function testSubstitutionDpsMatchesOfficialSchema(): void
+    {
+        $xml = $this->builder->buildDps($this->makeDps(
+            substituicao: new SubstitutionData(
+                chaveNfseSubstituida: str_repeat('1', 50),
+                codigoMotivo: '01',
+            ),
+        ));
+
+        self::assertSame([], $this->validator->validate($xml));
+    }
+
     public function testValidatorRejectsInvalidOfficialEnumEvenWhenXmlIsWellFormed(): void
     {
         $xml = $this->builder->buildDps($this->makeDps());
@@ -189,6 +202,7 @@ final class OfficialDpsSchemaValidationTest extends TestCase
         ?int $issqnTipoSuspensao = null,
         string $issqnNumeroProcessoSuspensao = '',
         int $tipoRetencaoIss = 1,
+        ?SubstitutionData $substituicao = null,
     ): DpsData {
         return new DpsData(
             cnpjPrestador: $cnpjPrestador,
@@ -220,6 +234,7 @@ final class OfficialDpsSchemaValidationTest extends TestCase
             ibsCbsIndDest: $ibsCbsIndDest,
             ibsCbsCst: $ibsCbsCst,
             ibsCbsClassificacaoTributaria: $ibsCbsClassificacaoTributaria,
+            substituicao: $substituicao,
         );
     }
 }

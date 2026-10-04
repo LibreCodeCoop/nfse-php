@@ -201,6 +201,9 @@ final readonly class DpsData
          * An empty string explicitly omits cTribMun.
          */
         public ?string $codigoTributacaoMunicipal = null,
+
+        /** Optional official NFS-e substitution reference for replacement DPS issuance. */
+        public ?SubstitutionData $substituicao = null,
     ) {
     }
 }

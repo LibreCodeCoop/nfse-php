@@ -14,6 +14,7 @@ use LibreCodeCoop\NfsePHP\Config\MunicipalParametersConfig;
 use LibreCodeCoop\NfsePHP\Contracts\XmlSignerInterface;
 use LibreCodeCoop\NfsePHP\Dto\DpsData;
 use LibreCodeCoop\NfsePHP\Dto\HttpResponseData;
+use LibreCodeCoop\NfsePHP\Dto\SubstitutionData;
 use LibreCodeCoop\NfsePHP\Http\AdnClient;
 use LibreCodeCoop\NfsePHP\Http\MunicipalParametersClient;
 use LibreCodeCoop\NfsePHP\Http\NfseClient;
@@ -78,6 +79,61 @@ final class InjectableTransportTest extends TestCase
 
         $payload = json_decode($request->body, true, 512, JSON_THROW_ON_ERROR);
         self::assertArrayHasKey('dpsXmlGZipB64', $payload);
+    }
+
+    public function testSubstitutionUsesNormalIssuanceEndpointWithoutExtraMutationRequest(): void
+    {
+        $transport = new FakeHttpTransport(new HttpResponseData(
+            201,
+            '{"nNFSe":"43","chaveAcesso":"REPLACEMENT-43","dataHoraProcessamento":"2026-10-04T10:00:00-03:00"}',
+        ));
+
+        $client = new NfseClient(
+            environment: new EnvironmentConfig(
+                sandboxMode: true,
+                baseUrl: 'https://sefin.invalid.test/SefinNacional',
+            ),
+            cert: new CertConfig(
+                cnpj: '11222333000181',
+                pfxPath: '/does/not/exist.p12',
+                vaultPath: 'test/no-secret-required',
+            ),
+            secretStore: new NoOpSecretStore(),
+            signer: new class () implements XmlSignerInterface {
+                public function sign(string $xml, string $cnpj): string
+                {
+                    return $xml;
+                }
+            },
+            transport: $transport,
+        );
+
+        $client->emit(new DpsData(
+            cnpjPrestador: '11222333000181',
+            municipioIbge: '3303302',
+            itemListaServico: '0107',
+            valorServico: '100.00',
+            aliquota: '2.00',
+            discriminacao: 'Substituicao deterministica',
+            substituicao: new SubstitutionData(
+                chaveNfseSubstituida: str_repeat('1', 50),
+                codigoMotivo: '01',
+            ),
+        ));
+
+        self::assertCount(1, $transport->requests);
+        $request = $transport->requests[0];
+        self::assertSame('POST', $request->method);
+        self::assertSame('https://sefin.invalid.test/SefinNacional/nfse', $request->url);
+
+        $payload = json_decode((string) $request->body, true, 512, JSON_THROW_ON_ERROR);
+        $compressed = base64_decode((string) ($payload['dpsXmlGZipB64'] ?? ''), true);
+        self::assertNotFalse($compressed);
+        $xml = gzdecode($compressed);
+        self::assertNotFalse($xml);
+        self::assertStringContainsString('<subst>', $xml);
+        self::assertStringContainsString('<chSubstda>' . str_repeat('1', 50) . '</chSubstda>', $xml);
+        self::assertStringContainsString('<cMotivo>01</cMotivo>', $xml);
     }
 
     public function testAdnDistributionUsesFakeTransportWithoutCertificateFiles(): void

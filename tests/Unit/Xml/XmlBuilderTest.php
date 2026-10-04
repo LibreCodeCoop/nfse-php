@@ -8,6 +8,7 @@ declare(strict_types=1);
 namespace LibreCodeCoop\NfsePHP\Tests\Unit\Xml;
 
 use LibreCodeCoop\NfsePHP\Dto\DpsData;
+use LibreCodeCoop\NfsePHP\Dto\SubstitutionData;
 use LibreCodeCoop\NfsePHP\Tests\TestCase;
 use LibreCodeCoop\NfsePHP\Xml\XmlBuilder;
 
@@ -117,6 +118,34 @@ class XmlBuilderTest extends TestCase
         );
         self::assertSame('2', $xpath->query('//n:infDPS/n:tpAmb')->item(0)?->textContent);
         self::assertSame(0, $xpath->query('//n:infDPS/n:cMun')->length);
+    }
+
+    public function testBuildDpsEmitsOfficialSubstitutionGroupBeforeProvider(): void
+    {
+        $xml = $this->builder->buildDps($this->makeDps(
+            substituicao: new SubstitutionData(
+                chaveNfseSubstituida: str_repeat('1', 50),
+                codigoMotivo: '99',
+                descricaoMotivo: 'Correcao dos dados fiscais da nota original.',
+            ),
+        ));
+
+        $normalized = str_replace(["\n", '  '], '', $xml);
+
+        self::assertStringContainsString(
+            '<cLocEmi>3303302</cLocEmi><subst><chSubstda>'
+            . str_repeat('1', 50)
+            . '</chSubstda><cMotivo>99</cMotivo><xMotivo>Correcao dos dados fiscais da nota original.</xMotivo></subst><prest>',
+            $normalized,
+        );
+    }
+
+    public function testBuildDpsOmitsSubstitutionGroupForOrdinaryIssuance(): void
+    {
+        $xml = $this->builder->buildDps($this->makeDps());
+
+        self::assertStringNotContainsString('<subst>', $xml);
+        self::assertStringNotContainsString('<chSubstda>', $xml);
     }
 
     public function testBuildDpsUsesNationalTaxCodeInCtribnac(): void
@@ -762,6 +791,7 @@ class XmlBuilderTest extends TestCase
         string $ibsCbsCst = '',
         string $ibsCbsClassificacaoTributaria = '',
         ?string $codigoTributacaoMunicipal = null,
+        ?SubstitutionData $substituicao = null,
     ): DpsData {
         return new DpsData(
             cnpjPrestador:            $cnpjPrestador,
@@ -815,6 +845,7 @@ class XmlBuilderTest extends TestCase
             ibsCbsCst: $ibsCbsCst,
             ibsCbsClassificacaoTributaria: $ibsCbsClassificacaoTributaria,
             codigoTributacaoMunicipal: $codigoTributacaoMunicipal,
+            substituicao: $substituicao,
         );
     }
 }
