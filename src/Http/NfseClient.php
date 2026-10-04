@@ -17,6 +17,7 @@ use LibreCodeCoop\NfsePHP\Contracts\NfseClientInterface;
 use LibreCodeCoop\NfsePHP\Contracts\SecretStoreInterface;
 use LibreCodeCoop\NfsePHP\Contracts\XmlSignerInterface;
 use LibreCodeCoop\NfsePHP\Danfse\DanfseGenerator;
+use LibreCodeCoop\NfsePHP\Dto\DecisionNfseData;
 use LibreCodeCoop\NfsePHP\Dto\DpsData;
 use LibreCodeCoop\NfsePHP\Dto\EventReceiptData;
 use LibreCodeCoop\NfsePHP\Dto\EventRegistrationData;
@@ -30,6 +31,7 @@ use LibreCodeCoop\NfsePHP\Exception\NfseErrorCode;
 use LibreCodeCoop\NfsePHP\Exception\QueryException;
 use LibreCodeCoop\NfsePHP\Support\DpsIdentifier;
 use LibreCodeCoop\NfsePHP\Support\GzipBase64;
+use LibreCodeCoop\NfsePHP\Xml\DecisionNfseBuilder;
 use LibreCodeCoop\NfsePHP\Xml\DpsSigner;
 use LibreCodeCoop\NfsePHP\Xml\XmlBuilder;
 
@@ -70,6 +72,30 @@ class NfseClient implements NfseClientInterface, DpsLookupInterface, EventLookup
         if ($httpStatus >= 400) {
             throw new IssuanceException(
                 'SEFIN gateway rejected issuance (HTTP ' . $httpStatus . ')',
+                NfseErrorCode::IssuanceRejected,
+                $httpStatus,
+                $body,
+            );
+        }
+
+        return $this->parseReceiptResponse($body);
+    }
+
+    #[\Override]
+    public function emitDecision(DecisionNfseData $nfse): ReceiptData
+    {
+        $xml = (new DecisionNfseBuilder())->build($nfse);
+        $signed = $this->signer->sign($xml, $nfse->dps->cnpjPrestador);
+
+        [$httpStatus, $body] = $this->postCompressedXml(
+            '/decisao-judicial/nfse',
+            'xmlGZipB64',
+            $signed,
+        );
+
+        if ($httpStatus >= 400) {
+            throw new IssuanceException(
+                'SEFIN gateway rejected decision-flow issuance (HTTP ' . $httpStatus . ')',
                 NfseErrorCode::IssuanceRejected,
                 $httpStatus,
                 $body,
@@ -245,14 +271,22 @@ class NfseClient implements NfseClientInterface, DpsLookupInterface, EventLookup
      */
     private function post(string $path, string $xmlPayload): array
     {
+        return $this->postCompressedXml($path, 'dpsXmlGZipB64', $xmlPayload);
+    }
+
+    /**
+     * @return array{int, array<string, mixed>}
+     */
+    private function postCompressedXml(string $path, string $field, string $xmlPayload): array
+    {
         $compressedPayload = gzencode($xmlPayload);
 
         if ($compressedPayload === false) {
-            throw new NetworkException('Failed to compress DPS XML payload before transmission.');
+            throw new NetworkException('Failed to compress fiscal XML payload before transmission.');
         }
 
         $payload = json_encode([
-            'dpsXmlGZipB64' => base64_encode($compressedPayload),
+            $field => base64_encode($compressedPayload),
         ], JSON_THROW_ON_ERROR);
 
         return $this->fetchAndDecode($path, 'POST', $payload);
