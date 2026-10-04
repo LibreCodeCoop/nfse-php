@@ -28,9 +28,16 @@ final class DecisionNfseBuilder
 
         $xpath = new \DOMXPath($dpsDocument);
         $xpath->registerNamespace('n', self::NS);
-        $dhEmi = trim((string) $xpath->evaluate('string(/n:DPS/n:infDPS/n:dhEmi)'));
-        if ($dhEmi === '') {
+        $dhEmiNode = $xpath->query('/n:DPS/n:infDPS/n:dhEmi')?->item(0);
+
+        if (!$dhEmiNode instanceof \DOMNode) {
             throw new \RuntimeException('Generated DPS does not contain dhEmi.');
+        }
+
+        $dhEmi = trim($dhEmiNode->textContent);
+
+        if ($dhEmi === '') {
+            throw new \RuntimeException('Generated DPS contains an empty dhEmi.');
         }
 
         $document = new \DOMDocument('1.0', 'UTF-8');
