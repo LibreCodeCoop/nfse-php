@@ -15,6 +15,7 @@ use LibreCodeCoop\NfsePHP\Contracts\XmlSignerInterface;
 use LibreCodeCoop\NfsePHP\Dto\DpsData;
 use LibreCodeCoop\NfsePHP\Exception\ArtifactException;
 use LibreCodeCoop\NfsePHP\Exception\CancellationException;
+use LibreCodeCoop\NfsePHP\Exception\EventRegistrationException;
 use LibreCodeCoop\NfsePHP\Exception\IssuanceException;
 use LibreCodeCoop\NfsePHP\Exception\NfseErrorCode;
 use LibreCodeCoop\NfsePHP\Exception\QueryException;
@@ -279,6 +280,71 @@ class NfseClientTest extends TestCase
 
         $this->expectException(\LibreCodeCoop\NfsePHP\Exception\NetworkException::class);
         $client->queryEvent('ACCESS-KEY', 101101, 1);
+    }
+
+    public function testRegisterEventXmlSignsAndPostsThroughDocumentedEndpoint(): void
+    {
+        self::$server->setResponseOfPath(
+            '/SefinNacional/nfse/abc-123/eventos',
+            new Response('{"sucesso":true}', ['Content-Type' => 'application/json'], 200),
+        );
+
+        $client = $this->makeClient($this->signer);
+        $result = $client->registerEventXml(
+            'abc-123',
+            '<pedRegEvento><infPedReg><chNFSe>abc-123</chNFSe><e105102><xDesc>Evento sintético</xDesc></e105102></infPedReg></pedRegEvento>',
+        );
+
+        self::assertTrue($result->accepted);
+        self::assertSame(200, $result->httpStatus);
+        self::assertSame(['sucesso' => true], $result->response);
+
+        $request = self::$server->getLastRequest();
+        self::assertNotNull($request);
+        self::assertSame('POST', $request->getRequestMethod());
+        self::assertSame('/SefinNacional/nfse/abc-123/eventos', $request->getRequestUri());
+
+        $payload = json_decode($request->getInput(), true, 512, JSON_THROW_ON_ERROR);
+        $compressed = base64_decode((string) $payload['pedidoRegistroEventoXmlGZipB64'], true);
+        self::assertNotFalse($compressed);
+        $xml = gzdecode($compressed);
+        self::assertNotFalse($xml);
+        self::assertStringContainsString('<e105102>', $xml);
+    }
+
+    public function testRegisterEventXmlRejectsMismatchedAccessKeyBeforeNetwork(): void
+    {
+        $client = $this->makeClient($this->signer);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('access key does not match');
+
+        $client->registerEventXml(
+            'abc-123',
+            '<pedRegEvento><infPedReg><chNFSe>different</chNFSe><e105102/></infPedReg></pedRegEvento>',
+        );
+    }
+
+    public function testRegisterEventXmlExposesTypedGatewayRejection(): void
+    {
+        self::$server->setResponseOfPath(
+            '/SefinNacional/nfse/blocked/eventos',
+            new Response('{"codigo":"EVT001"}', ['Content-Type' => 'application/json'], 422),
+        );
+
+        $client = $this->makeClient($this->signer);
+
+        try {
+            $client->registerEventXml(
+                'blocked',
+                '<pedRegEvento><infPedReg><chNFSe>blocked</chNFSe><e105102/></infPedReg></pedRegEvento>',
+            );
+            self::fail('Expected EventRegistrationException');
+        } catch (EventRegistrationException $e) {
+            self::assertSame(NfseErrorCode::EventRegistrationRejected, $e->errorCode);
+            self::assertSame(422, $e->httpStatus);
+            self::assertSame(['codigo' => 'EVT001'], $e->upstreamPayload);
+        }
     }
 
     public function testCancelReturnsTrueOnSuccess(): void
