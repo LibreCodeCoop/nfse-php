@@ -12,6 +12,8 @@ use LibreCodeCoop\NfsePHP\Config\CertConfig;
 use LibreCodeCoop\NfsePHP\Config\EnvironmentConfig;
 use LibreCodeCoop\NfsePHP\Config\MunicipalParametersConfig;
 use LibreCodeCoop\NfsePHP\Contracts\XmlSignerInterface;
+use LibreCodeCoop\NfsePHP\Dto\DecisionIssuerAddressData;
+use LibreCodeCoop\NfsePHP\Dto\DecisionNfseData;
 use LibreCodeCoop\NfsePHP\Dto\DpsData;
 use LibreCodeCoop\NfsePHP\Dto\HttpResponseData;
 use LibreCodeCoop\NfsePHP\Dto\SubstitutionData;
@@ -79,6 +81,96 @@ final class InjectableTransportTest extends TestCase
 
         $payload = json_decode($request->body, true, 512, JSON_THROW_ON_ERROR);
         self::assertArrayHasKey('dpsXmlGZipB64', $payload);
+    }
+
+    public function testDecisionIssuanceUsesDedicatedBypassEndpointAndPayloadContract(): void
+    {
+        $transport = new FakeHttpTransport(new HttpResponseData(
+            201,
+            '{"nNFSe":"240","chaveAcesso":"DECISION-240","dataHoraProcessamento":"2026-10-04T12:00:00-03:00"}',
+        ));
+
+        $client = new NfseClient(
+            environment: new EnvironmentConfig(
+                sandboxMode: true,
+                baseUrl: 'https://sefin.invalid.test/SefinNacional',
+            ),
+            cert: new CertConfig(
+                cnpj: '11222333000181',
+                pfxPath: '/does/not/exist.p12',
+                vaultPath: 'test/no-secret-required',
+            ),
+            secretStore: new NoOpSecretStore(),
+            signer: new class () implements XmlSignerInterface {
+                public function sign(string $xml, string $cnpj): string
+                {
+                    return $xml;
+                }
+            },
+            transport: $transport,
+        );
+
+        $receipt = $client->emitDecision(new DecisionNfseData(
+            dps: new DpsData(
+                cnpjPrestador: '11222333000181',
+                municipioIbge: '3303302',
+                itemListaServico: '001',
+                valorServico: '1000.00',
+                aliquota: '5.00',
+                discriminacao: 'Consultoria em tecnologia da informacao',
+                tipoAmbiente: 2,
+                serie: '1',
+                numeroDps: '42',
+                dataCompetencia: '2026-10-04',
+                codigoTributacaoNacional: '010701',
+                opcaoSimplesNacional: 1,
+                regimeEspecialTributacao: 0,
+                tipoRetencaoIss: 1,
+                indicadorTributacao: 0,
+            ),
+            numeroNfse: '240',
+            codigoNumerico: '123456789',
+            localEmissao: 'Niteroi',
+            localPrestacao: 'Niteroi',
+            descricaoTributacaoNacional: 'Consultoria em tecnologia da informacao',
+            emitenteNome: 'Prestador de Teste Ltda',
+            emitenteEndereco: new DecisionIssuerAddressData(
+                'Rua de Teste',
+                '100',
+                'Centro',
+                '3303302',
+                'RJ',
+                '24000000',
+            ),
+            valorLiquido: '1000.00',
+            numeroDfse: '1',
+            codigoLocalIncidencia: '3303302',
+            localIncidencia: 'Niteroi',
+            baseCalculo: '1000.00',
+            aliquotaAplicada: '5.00',
+            valorIssqn: '50.00',
+        ));
+
+        self::assertSame('240', $receipt->nfseNumber);
+        self::assertCount(1, $transport->requests);
+
+        $request = $transport->requests[0];
+        self::assertSame('POST', $request->method);
+        self::assertSame(
+            'https://sefin.invalid.test/SefinNacional/decisao-judicial/nfse',
+            $request->url,
+        );
+        self::assertNotNull($request->body);
+
+        $payload = json_decode($request->body, true, 512, JSON_THROW_ON_ERROR);
+        self::assertSame(['xmlGZipB64'], array_keys($payload));
+
+        $compressed = base64_decode((string) $payload['xmlGZipB64'], true);
+        self::assertNotFalse($compressed);
+        $xml = gzdecode($compressed);
+        self::assertNotFalse($xml);
+        self::assertStringContainsString('<NFSe', $xml);
+        self::assertStringContainsString('<cStat>102</cStat>', $xml);
     }
 
     public function testSubstitutionUsesNormalIssuanceEndpointWithoutExtraMutationRequest(): void
