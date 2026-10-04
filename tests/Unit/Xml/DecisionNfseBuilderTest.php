@@ -10,6 +10,7 @@ namespace LibreCodeCoop\NfsePHP\Tests\Unit\Xml;
 use LibreCodeCoop\NfsePHP\Dto\DecisionIssuerAddressData;
 use LibreCodeCoop\NfsePHP\Dto\DecisionNfseData;
 use LibreCodeCoop\NfsePHP\Dto\DpsData;
+use LibreCodeCoop\NfsePHP\Dto\SubstitutionData;
 use LibreCodeCoop\NfsePHP\SecretStore\NoOpSecretStore;
 use LibreCodeCoop\NfsePHP\Tests\TestCase;
 use LibreCodeCoop\NfsePHP\Xml\DecisionNfseBuilder;
@@ -84,6 +85,23 @@ final class DecisionNfseBuilderTest extends TestCase
         self::assertSame(5, DecisionNfseBuilder::accessKeyCheckDigit(substr($key, 0, 49)));
     }
 
+    public function testDecisionFlowPreservesOfficialSubstitutionRelationship(): void
+    {
+        $dps = $this->dps(substitution: new SubstitutionData(
+            chaveNfseSubstituida: str_repeat('1', 50),
+            codigoMotivo: '01',
+        ));
+
+        $xml = (new DecisionNfseBuilder())->build($this->decision(dps: $dps));
+
+        self::assertStringContainsString('<subst>', $xml);
+        self::assertStringContainsString(
+            '<chSubstda>' . str_repeat('1', 50) . '</chSubstda>',
+            $xml,
+        );
+        self::assertStringContainsString('<cMotivo>01</cMotivo>', $xml);
+    }
+
     public function testIbsCbsIsRejectedUntilCompleteNfseCalculatedValuesAreModeled(): void
     {
         $dps = $this->dps(ibs: true);
@@ -113,7 +131,7 @@ final class DecisionNfseBuilderTest extends TestCase
         );
     }
 
-    private function dps(bool $ibs = false): DpsData
+    private function dps(bool $ibs = false, ?SubstitutionData $substitution = null): DpsData
     {
         return new DpsData(
             cnpjPrestador: '11222333000181',
@@ -144,6 +162,7 @@ final class DecisionNfseBuilderTest extends TestCase
             ibsCbsIndDest: $ibs ? 0 : null,
             ibsCbsCst: $ibs ? '000' : '',
             ibsCbsClassificacaoTributaria: $ibs ? '000001' : '',
+            substituicao: $substitution,
         );
     }
 
