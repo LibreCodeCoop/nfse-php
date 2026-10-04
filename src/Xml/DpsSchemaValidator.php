@@ -17,9 +17,21 @@ final class DpsSchemaValidator
 {
     public const SCHEMA_VERSION = '1.01';
 
+    /** @var list<string> */
+    public const SUPPORTED_SCHEMA_VERSIONS = [
+        self::SCHEMA_VERSION,
+    ];
+
     public function __construct(
         private readonly ?string $schemaPath = null,
+        private readonly string $schemaVersion = self::SCHEMA_VERSION,
     ) {
+        if (!in_array($this->schemaVersion, self::SUPPORTED_SCHEMA_VERSIONS, true)) {
+            throw new \InvalidArgumentException(
+                'Unsupported NFS-e schema version: ' . $this->schemaVersion
+                . '. Supported versions: ' . implode(', ', self::SUPPORTED_SCHEMA_VERSIONS),
+            );
+        }
     }
 
     /**
@@ -58,7 +70,12 @@ final class DpsSchemaValidator
     private function resolvedSchemaPath(): string
     {
         return $this->schemaPath
-            ?? dirname(__DIR__, 2) . '/references/schemas/nfse/' . self::SCHEMA_VERSION . '/DPS_v1.01.xsd';
+            ?? dirname(__DIR__, 2)
+                . '/references/schemas/nfse/'
+                . $this->schemaVersion
+                . '/DPS_v'
+                . $this->schemaVersion
+                . '.xsd';
     }
 
     /**
