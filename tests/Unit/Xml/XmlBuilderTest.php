@@ -747,9 +747,11 @@ class XmlBuilderTest extends TestCase
             deducaoReducao: new DeductionReductionData(percentual: '12.50'),
         ));
 
+        $compactXml = preg_replace('/>\s+</', '><', $xml) ?? $xml;
+
         self::assertMatchesRegularExpression(
             '/<vServPrest>.*<\/vServPrest><vDedRed><pDR>12\.50<\/pDR><\/vDedRed><trib>/s',
-            $xml,
+            $compactXml,
         );
     }
 
@@ -759,7 +761,9 @@ class XmlBuilderTest extends TestCase
             deducaoReducao: new DeductionReductionData(valor: '125.00'),
         ));
 
-        self::assertStringContainsString('<vDedRed><vDR>125.00</vDR></vDedRed>', $xml);
+        $compactXml = preg_replace('/>\s+</', '><', $xml) ?? $xml;
+
+        self::assertStringContainsString('<vDedRed><vDR>125.00</vDR></vDedRed>', $compactXml);
     }
 
     public function testBuildDpsRejectsAmbiguousStandardDeduction(): void
@@ -781,9 +785,11 @@ class XmlBuilderTest extends TestCase
             ),
         ));
 
+        $compactXml = preg_replace('/>\s+</', '><', $xml) ?? $xml;
+
         self::assertMatchesRegularExpression(
             '/<BM><nBM>33033020400001<\/nBM><pRedBCBM>20\.00<\/pRedBCBM><\/BM><tpRetISSQN>/',
-            $xml,
+            $compactXml,
         );
     }
 
