@@ -85,10 +85,17 @@ final class InjectableTransportTest extends TestCase
 
     public function testDecisionIssuanceUsesDedicatedBypassEndpointAndPayloadContract(): void
     {
-        $transport = new FakeHttpTransport(new HttpResponseData(
-            201,
-            '{"nNFSe":"240","chaveAcesso":"DECISION-240","dataHoraProcessamento":"2026-10-04T12:00:00-03:00"}',
-        ));
+        $transport = new FakeHttpTransport(
+            new HttpResponseData(
+                201,
+                '{"nNFSe":"240","chaveAcesso":"DECISION-240","dataHoraProcessamento":"2026-10-04T12:00:00-03:00"}',
+            ),
+            new HttpResponseData(
+                200,
+                '{"nNFSe":"240","chaveAcesso":"DECISION-240","dataHoraProcessamento":"2026-10-04T12:01:00-03:00"}',
+            ),
+            new HttpResponseData(200, '{"sucesso":true}'),
+        );
 
         $client = new NfseClient(
             environment: new EnvironmentConfig(
@@ -171,6 +178,20 @@ final class InjectableTransportTest extends TestCase
         self::assertNotFalse($xml);
         self::assertStringContainsString('<NFSe', $xml);
         self::assertStringContainsString('<cStat>102</cStat>', $xml);
+
+        $queried = $client->query($receipt->chaveAcesso);
+        self::assertSame('DECISION-240', $queried->chaveAcesso);
+        self::assertTrue($client->cancel($receipt->chaveAcesso, 'Cancelamento de teste'));
+
+        self::assertCount(3, $transport->requests);
+        self::assertSame(
+            'https://sefin.invalid.test/SefinNacional/nfse/DECISION-240',
+            $transport->requests[1]->url,
+        );
+        self::assertSame(
+            'https://sefin.invalid.test/SefinNacional/nfse/DECISION-240/eventos',
+            $transport->requests[2]->url,
+        );
     }
 
     public function testSubstitutionUsesNormalIssuanceEndpointWithoutExtraMutationRequest(): void

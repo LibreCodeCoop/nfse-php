@@ -9,6 +9,7 @@ namespace LibreCodeCoop\NfsePHP\Http;
 
 use LibreCodeCoop\NfsePHP\Config\CertConfig;
 use LibreCodeCoop\NfsePHP\Config\EnvironmentConfig;
+use LibreCodeCoop\NfsePHP\Contracts\DecisionNfseIssuerInterface;
 use LibreCodeCoop\NfsePHP\Contracts\DpsLookupInterface;
 use LibreCodeCoop\NfsePHP\Contracts\EventLookupInterface;
 use LibreCodeCoop\NfsePHP\Contracts\EventRegistrationInterface;
@@ -41,7 +42,7 @@ use LibreCodeCoop\NfsePHP\Xml\XmlBuilder;
  * Communicates with the SEFIN gateway to issue, query, and cancel NFS-e.
  * All requests carry a signed DPS XML payload.
  */
-class NfseClient implements NfseClientInterface, DpsLookupInterface, EventLookupInterface, EventRegistrationInterface
+class NfseClient implements NfseClientInterface, DecisionNfseIssuerInterface, DpsLookupInterface, EventLookupInterface, EventRegistrationInterface
 {
     private readonly string $baseUrl;
     private readonly XmlSignerInterface $signer;

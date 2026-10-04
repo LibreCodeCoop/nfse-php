@@ -7,7 +7,6 @@ declare(strict_types=1);
 
 namespace LibreCodeCoop\NfsePHP\Contracts;
 
-use LibreCodeCoop\NfsePHP\Dto\DecisionNfseData;
 use LibreCodeCoop\NfsePHP\Dto\DpsData;
 use LibreCodeCoop\NfsePHP\Dto\ReceiptData;
 
@@ -17,11 +16,6 @@ interface NfseClientInterface
      * Emit an NFS-e for the given DPS data.
      */
     public function emit(DpsData $dps): ReceiptData;
-
-    /**
-     * Emit a complete NFS-e through the administrative/judicial decision bypass.
-     */
-    public function emitDecision(DecisionNfseData $nfse): ReceiptData;
 
     /**
      * Query an existing NFS-e by its access key.
