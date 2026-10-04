@@ -38,3 +38,26 @@ When an official annex changes:
 4. update the version constant in `OfficialDomainCatalog`;
 5. update cardinality and representative-code tests;
 6. review downstream mapping changes explicitly instead of silently coercing old values.
+
+
+## Reproducible generation
+
+The snapshots are generated directly from the three official XLSX annexes with only the Python
+standard library:
+
+```bash
+python3 tools/generate_domain_tables.py \
+  --annex-a /path/to/ANEXO_A.xlsx \
+  --annex-b /path/to/ANEXO_B.xlsx \
+  --annex-c /path/to/ANEXO_C.xlsx \
+  --output resources/domains
+```
+
+Use `--check` to compare regenerated output with the committed snapshots. The command validates
+the expected official cardinalities (5,571 municipalities/general localities, 250 countries,
+338 national service codes, 918 nine-digit NBS codes and 26 operation indicators) before writing
+or accepting output.
+
+The generator reads XLSX as ZIP/XML, honors cell references and vertically merged cells, derives
+UF only from the stable IBGE prefix map, and rejects an unexpected cardinality. A network-free CI
+fixture exercises the same parser and proves deterministic output.
