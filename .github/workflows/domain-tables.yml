@@ -1,0 +1,25 @@
+# SPDX-FileCopyrightText: 2026 LibreCode coop and contributors
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+name: Domain Table Generator
+
+on:
+  pull_request:
+    paths:
+      - "tools/generate_domain_tables.py"
+      - "tools/tests/test_generate_domain_tables.py"
+      - "resources/domains/**"
+      - ".github/workflows/domain-tables.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  deterministic-generator:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Test deterministic XLSX normalization
+        run: python3 -m unittest tools/tests/test_generate_domain_tables.py
