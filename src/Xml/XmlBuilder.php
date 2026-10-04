@@ -171,6 +171,10 @@ class XmlBuilder
         $vServPrest->appendChild($doc->createElement('vServ', $dps->valorServico));
         $valores->appendChild($vServPrest);
 
+        if ($dps->deducaoReducao !== null) {
+            $valores->appendChild($this->buildDeductionReduction($doc, $dps));
+        }
+
         $trib = $doc->createElement('trib');
         $trib->appendChild($this->buildTribMun($doc, $dps));
 
@@ -244,6 +248,10 @@ class XmlBuilder
             $tribMun->appendChild($exigSusp);
         }
 
+        if ($dps->beneficioMunicipal !== null) {
+            $tribMun->appendChild($this->buildMunicipalBenefit($doc, $dps));
+        }
+
         $tribMun->appendChild($doc->createElement('tpRetISSQN', (string) $dps->tipoRetencaoIss));
 
         if ($dps->opcaoSimplesNacional !== 1) {
@@ -251,6 +259,85 @@ class XmlBuilder
         }
 
         return $tribMun;
+    }
+
+    private function buildDeductionReduction(\DOMDocument $doc, DpsData $dps): \DOMElement
+    {
+        $deduction = $dps->deducaoReducao;
+
+        if ($deduction === null) {
+            throw new \LogicException('Deduction/reduction data is required.');
+        }
+
+        $hasPercentage = $deduction->percentual !== '';
+        $hasValue = $deduction->valor !== '';
+
+        if ($hasPercentage === $hasValue) {
+            throw new \InvalidArgumentException(
+                'Deduction/reduction must provide exactly one of percentual (pDR) or valor (vDR).',
+            );
+        }
+
+        $vDedRed = $doc->createElement('vDedRed');
+
+        if ($hasPercentage) {
+            $this->assertDecimal($deduction->percentual, 3, 'Deduction/reduction percentage');
+            $vDedRed->appendChild($doc->createElement('pDR', $deduction->percentual));
+        } else {
+            $this->assertDecimal($deduction->valor, 15, 'Deduction/reduction value');
+            $vDedRed->appendChild($doc->createElement('vDR', $deduction->valor));
+        }
+
+        return $vDedRed;
+    }
+
+    private function buildMunicipalBenefit(\DOMDocument $doc, DpsData $dps): \DOMElement
+    {
+        $benefit = $dps->beneficioMunicipal;
+
+        if ($benefit === null) {
+            throw new \LogicException('Municipal benefit data is required.');
+        }
+
+        if (preg_match('/^\d{14}$/', $benefit->identificador) !== 1) {
+            throw new \InvalidArgumentException('Municipal benefit identifier must contain exactly 14 digits.');
+        }
+
+        $hasValue = $benefit->valorReducaoBaseCalculo !== '';
+        $hasPercentage = $benefit->percentualReducaoBaseCalculo !== '';
+
+        if ($hasValue && $hasPercentage) {
+            throw new \InvalidArgumentException(
+                'Municipal benefit may provide either value or percentage base reduction, not both.',
+            );
+        }
+
+        $bm = $doc->createElement('BM');
+        $bm->appendChild($doc->createElement('nBM', $benefit->identificador));
+
+        if ($hasValue) {
+            $this->assertDecimal($benefit->valorReducaoBaseCalculo, 15, 'Municipal benefit value reduction');
+            $bm->appendChild($doc->createElement('vRedBCBM', $benefit->valorReducaoBaseCalculo));
+        }
+
+        if ($hasPercentage) {
+            $this->assertDecimal($benefit->percentualReducaoBaseCalculo, 3, 'Municipal benefit percentage reduction');
+            $bm->appendChild($doc->createElement('pRedBCBM', $benefit->percentualReducaoBaseCalculo));
+        }
+
+        return $bm;
+    }
+
+    private function assertDecimal(string $value, int $integerDigits, string $label): void
+    {
+        $pattern = '/^(?:0|0\.\d{2}|[1-9]\d{0,' . ($integerDigits - 1) . '}(?:\.\d{2})?)$/';
+
+        if (preg_match($pattern, $value) !== 1) {
+            throw new \InvalidArgumentException(
+                $label . ' must follow the official decimal format with up to '
+                . $integerDigits . ' integer digits and optional two decimal places.',
+            );
+        }
     }
 
     private function buildTotTrib(\DOMDocument $doc, DpsData $dps): \DOMElement

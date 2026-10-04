@@ -7,7 +7,9 @@ declare(strict_types=1);
 
 namespace LibreCodeCoop\NfsePHP\Tests\Unit\Xml;
 
+use LibreCodeCoop\NfsePHP\Dto\DeductionReductionData;
 use LibreCodeCoop\NfsePHP\Dto\DpsData;
+use LibreCodeCoop\NfsePHP\Dto\MunicipalBenefitData;
 use LibreCodeCoop\NfsePHP\Dto\SubstitutionData;
 use LibreCodeCoop\NfsePHP\Tests\TestCase;
 use LibreCodeCoop\NfsePHP\Xml\XmlBuilder;
@@ -739,6 +741,76 @@ class XmlBuilderTest extends TestCase
 
     // -------------------------------------------------------------------------
 
+    public function testBuildDpsEmitsPercentageDeductionBeforeTaxGroup(): void
+    {
+        $xml = $this->builder->buildDps($this->makeDps(
+            deducaoReducao: new DeductionReductionData(percentual: '12.50'),
+        ));
+
+        self::assertMatchesRegularExpression(
+            '/<vServPrest>.*<\/vServPrest><vDedRed><pDR>12\.50<\/pDR><\/vDedRed><trib>/s',
+            $xml,
+        );
+    }
+
+    public function testBuildDpsEmitsValueDeductionBeforeTaxGroup(): void
+    {
+        $xml = $this->builder->buildDps($this->makeDps(
+            deducaoReducao: new DeductionReductionData(valor: '125.00'),
+        ));
+
+        self::assertStringContainsString('<vDedRed><vDR>125.00</vDR></vDedRed>', $xml);
+    }
+
+    public function testBuildDpsRejectsAmbiguousStandardDeduction(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('exactly one');
+
+        $this->builder->buildDps($this->makeDps(
+            deducaoReducao: new DeductionReductionData(percentual: '10.00', valor: '100.00'),
+        ));
+    }
+
+    public function testBuildDpsEmitsMunicipalBenefitBeforeRetention(): void
+    {
+        $xml = $this->builder->buildDps($this->makeDps(
+            beneficioMunicipal: new MunicipalBenefitData(
+                identificador: '33033020400001',
+                percentualReducaoBaseCalculo: '20.00',
+            ),
+        ));
+
+        self::assertMatchesRegularExpression(
+            '/<BM><nBM>33033020400001<\/nBM><pRedBCBM>20\.00<\/pRedBCBM><\/BM><tpRetISSQN>/',
+            $xml,
+        );
+    }
+
+    public function testBuildDpsRejectsAmbiguousMunicipalBenefitReduction(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('not both');
+
+        $this->builder->buildDps($this->makeDps(
+            beneficioMunicipal: new MunicipalBenefitData(
+                identificador: '33033020400001',
+                valorReducaoBaseCalculo: '100.00',
+                percentualReducaoBaseCalculo: '20.00',
+            ),
+        ));
+    }
+
+    public function testBuildDpsRejectsInvalidMunicipalBenefitIdentifier(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('14 digits');
+
+        $this->builder->buildDps($this->makeDps(
+            beneficioMunicipal: new MunicipalBenefitData(identificador: '3303302'),
+        ));
+    }
+
     private function makeDps(
         string $cnpjPrestador = '11222333000181',
         string $municipioIbge = '3303302',
@@ -792,6 +864,8 @@ class XmlBuilderTest extends TestCase
         string $ibsCbsClassificacaoTributaria = '',
         ?string $codigoTributacaoMunicipal = null,
         ?SubstitutionData $substituicao = null,
+        ?DeductionReductionData $deducaoReducao = null,
+        ?MunicipalBenefitData $beneficioMunicipal = null,
     ): DpsData {
         return new DpsData(
             cnpjPrestador:            $cnpjPrestador,
@@ -846,6 +920,8 @@ class XmlBuilderTest extends TestCase
             ibsCbsClassificacaoTributaria: $ibsCbsClassificacaoTributaria,
             codigoTributacaoMunicipal: $codigoTributacaoMunicipal,
             substituicao: $substituicao,
+            deducaoReducao: $deducaoReducao,
+            beneficioMunicipal: $beneficioMunicipal,
         );
     }
 }

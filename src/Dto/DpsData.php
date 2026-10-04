@@ -204,6 +204,12 @@ final readonly class DpsData
 
         /** Optional official NFS-e substitution reference for replacement DPS issuance. */
         public ?SubstitutionData $substituicao = null,
+
+        /** Optional standard DPS deduction/reduction (pDR or vDR). */
+        public ?DeductionReductionData $deducaoReducao = null,
+
+        /** Optional municipal benefit identified by the official municipal parameter id. */
+        public ?MunicipalBenefitData $beneficioMunicipal = null,
     ) {
     }
 }
