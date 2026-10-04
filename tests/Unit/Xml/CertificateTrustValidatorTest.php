@@ -259,25 +259,25 @@ final class CertificateTrustValidatorTest extends TestCase
     private function opensslConfig(): string
     {
         return <<<'INI'
-[ req ]
-distinguished_name = req_distinguished_name
-prompt = no
+            [ req ]
+            distinguished_name = req_distinguished_name
+            prompt = no
 
-[ req_distinguished_name ]
-CN = placeholder
+            [ req_distinguished_name ]
+            CN = placeholder
 
-[ v3_ca ]
-basicConstraints = critical,CA:TRUE
-keyUsage = critical,keyCertSign,cRLSign
-subjectKeyIdentifier = hash
-authorityKeyIdentifier = keyid:always,issuer
+            [ v3_ca ]
+            basicConstraints = critical,CA:TRUE
+            keyUsage = critical,keyCertSign,cRLSign
+            subjectKeyIdentifier = hash
+            authorityKeyIdentifier = keyid:always,issuer
 
-[ v3_leaf ]
-basicConstraints = critical,CA:FALSE
-keyUsage = critical,digitalSignature
-extendedKeyUsage = clientAuth
-subjectKeyIdentifier = hash
-authorityKeyIdentifier = keyid,issuer
-INI;
+            [ v3_leaf ]
+            basicConstraints = critical,CA:FALSE
+            keyUsage = critical,digitalSignature
+            extendedKeyUsage = clientAuth
+            subjectKeyIdentifier = hash
+            authorityKeyIdentifier = keyid,issuer
+            INI;
     }
 }
