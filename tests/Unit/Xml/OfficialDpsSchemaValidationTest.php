@@ -38,6 +38,26 @@ final class OfficialDpsSchemaValidationTest extends TestCase
         self::assertSame([], $this->validator->validate($xml));
     }
 
+    public function testValidatorRejectsUnsupportedSchemaVersionExplicitly(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Unsupported NFS-e schema version: 9.99');
+
+        new DpsSchemaValidator(schemaVersion: '9.99');
+    }
+
+    public function testSupportedSchemaVersionResolvesVersionedOfficialBundle(): void
+    {
+        self::assertContains(
+            DpsSchemaValidator::SCHEMA_VERSION,
+            DpsSchemaValidator::SUPPORTED_SCHEMA_VERSIONS,
+        );
+
+        self::assertSame([], (new DpsSchemaValidator(
+            schemaVersion: DpsSchemaValidator::SCHEMA_VERSION,
+        ))->validate($this->builder->buildDps($this->makeDps())));
+    }
+
     public function testFebruarySchemaSnapshotDocumentsPreAlphanumericCnpjContract(): void
     {
         $xml = $this->builder->buildDps($this->makeDps(
