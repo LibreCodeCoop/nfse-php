@@ -271,10 +271,12 @@ class XmlBuilder
 
         $hasPercentage = $deduction->percentual !== '';
         $hasValue = $deduction->valor !== '';
+        $hasDocuments = $deduction->documentos !== [];
+        $modeCount = (int) $hasPercentage + (int) $hasValue + (int) $hasDocuments;
 
-        if ($hasPercentage === $hasValue) {
+        if ($modeCount !== 1) {
             throw new \InvalidArgumentException(
-                'Deduction/reduction must provide exactly one of percentual (pDR) or valor (vDR).',
+                'Deduction/reduction must provide exactly one of percentual (pDR), valor (vDR) or documentos.',
             );
         }
 
@@ -283,12 +285,182 @@ class XmlBuilder
         if ($hasPercentage) {
             $this->assertDecimal($deduction->percentual, 3, 'Deduction/reduction percentage');
             $vDedRed->appendChild($doc->createElement('pDR', $deduction->percentual));
-        } else {
-            $this->assertDecimal($deduction->valor, 15, 'Deduction/reduction value');
-            $vDedRed->appendChild($doc->createElement('vDR', $deduction->valor));
+
+            return $vDedRed;
         }
 
+        if ($hasValue) {
+            $this->assertDecimal($deduction->valor, 15, 'Deduction/reduction value');
+            $vDedRed->appendChild($doc->createElement('vDR', $deduction->valor));
+
+            return $vDedRed;
+        }
+
+        if (count($deduction->documentos) > 1000) {
+            throw new \InvalidArgumentException('Deduction/reduction supports at most 1000 documents.');
+        }
+
+        $documents = $doc->createElement('documentos');
+
+        foreach ($deduction->documentos as $document) {
+            $documents->appendChild($this->buildDeductionDocument($doc, $document));
+        }
+
+        $vDedRed->appendChild($documents);
+
         return $vDedRed;
+    }
+
+    private function buildDeductionDocument(
+        \DOMDocument $doc,
+        \LibreCodeCoop\NfsePHP\Dto\DeductionDocumentData $document,
+    ): \DOMElement {
+        if (!in_array($document->type, [1, 2, 3, 4, 5, 6, 7, 8, 9, 99], true)) {
+            throw new \InvalidArgumentException('Deduction document type must be 1-9 or 99.');
+        }
+
+        if ($document->type === 99 && trim($document->otherDescription) === '') {
+            throw new \InvalidArgumentException('Other deduction type (99) requires a description.');
+        }
+
+        if ($document->type !== 99 && $document->otherDescription !== '') {
+            throw new \InvalidArgumentException('Other deduction description is only allowed for type 99.');
+        }
+
+        $date = \DateTimeImmutable::createFromFormat('!Y-m-d', $document->issuedAt);
+        if ($date === false || $date->format('Y-m-d') !== $document->issuedAt) {
+            throw new \InvalidArgumentException('Deduction document issue date must use YYYY-MM-DD.');
+        }
+
+        $this->assertDecimal($document->deductibleValue, 15, 'Deductible/reducible document value');
+        $this->assertDecimal($document->deductionValue, 15, 'Applied deduction/reduction value');
+
+        if ((float) $document->deductionValue > (float) $document->deductibleValue) {
+            throw new \InvalidArgumentException(
+                'Applied deduction/reduction value cannot exceed the deductible/reducible document value.',
+            );
+        }
+
+        $element = $doc->createElement('docDedRed');
+        $element->appendChild($this->buildDeductionDocumentReference($doc, $document->reference));
+        $element->appendChild($doc->createElement('tpDedRed', (string) $document->type));
+
+        if ($document->otherDescription !== '') {
+            $element->appendChild(
+                $doc->createElement('xDescOutDed', htmlspecialchars($document->otherDescription, ENT_XML1)),
+            );
+        }
+
+        $element->appendChild($doc->createElement('dtEmiDoc', $document->issuedAt));
+        $element->appendChild($doc->createElement('vDedutivelRedutivel', $document->deductibleValue));
+        $element->appendChild($doc->createElement('vDeducaoReducao', $document->deductionValue));
+
+        if ($document->supplier !== null) {
+            $element->appendChild($this->buildDeductionSupplier($doc, $document->supplier));
+        }
+
+        return $element;
+    }
+
+    private function buildDeductionDocumentReference(
+        \DOMDocument $doc,
+        \LibreCodeCoop\NfsePHP\Dto\DeductionDocumentReferenceData $reference,
+    ): \DOMElement {
+        return match ($reference->type) {
+            'nfse' => $doc->createElement('chNFSe', (string) ($reference->values['access_key'] ?? '')),
+            'nfe' => $doc->createElement('chNFe', (string) ($reference->values['access_key'] ?? '')),
+            'legacy_nfse' => $this->buildLegacyNfseReference($doc, $reference->values),
+            'legacy_nf_nfs' => $this->buildLegacyNfNfsReference($doc, $reference->values),
+            'fiscal_document' => $doc->createElement('nDocFisc', (string) ($reference->values['numero'] ?? '')),
+            'document' => $doc->createElement('nDoc', (string) ($reference->values['numero'] ?? '')),
+            default => throw new \InvalidArgumentException('Unsupported deduction document reference type.'),
+        };
+    }
+
+    /**
+     * @param array<string, mixed> $values
+     */
+    private function buildLegacyNfseReference(\DOMDocument $doc, array $values): \DOMElement
+    {
+        $group = $doc->createElement('NFSeMun');
+        $group->appendChild($doc->createElement('cMunNFSeMun', (string) ($values['municipio_ibge'] ?? '')));
+        $group->appendChild($doc->createElement('nNFSeMun', (string) ($values['numero'] ?? '')));
+        $group->appendChild($doc->createElement('cVerifNFSeMun', (string) ($values['codigo_verificacao'] ?? '')));
+
+        return $group;
+    }
+
+    /**
+     * @param array<string, mixed> $values
+     */
+    private function buildLegacyNfNfsReference(\DOMDocument $doc, array $values): \DOMElement
+    {
+        $group = $doc->createElement('NFNFS');
+        $group->appendChild($doc->createElement('nNFS', (string) ($values['numero'] ?? '')));
+        $group->appendChild($doc->createElement('modNFS', (string) ($values['modelo'] ?? '')));
+        $group->appendChild($doc->createElement('serieNFS', (string) ($values['serie'] ?? '')));
+
+        return $group;
+    }
+
+    private function buildDeductionSupplier(
+        \DOMDocument $doc,
+        \LibreCodeCoop\NfsePHP\Dto\DeductionSupplierData $supplier,
+    ): \DOMElement {
+        if (trim($supplier->name) === '') {
+            throw new \InvalidArgumentException('Deduction supplier name is required.');
+        }
+
+        $element = $doc->createElement('fornec');
+
+        switch ($supplier->identityType) {
+            case 'cnpj':
+                if (preg_match('/^[A-Z0-9]{12}\d{2}$/', strtoupper($supplier->identity)) !== 1) {
+                    throw new \InvalidArgumentException('Deduction supplier CNPJ must contain 14 valid-format characters.');
+                }
+                $element->appendChild($doc->createElement('CNPJ', strtoupper($supplier->identity)));
+                break;
+            case 'cpf':
+                if (preg_match('/^\d{11}$/', $supplier->identity) !== 1) {
+                    throw new \InvalidArgumentException('Deduction supplier CPF must contain 11 digits.');
+                }
+                $element->appendChild($doc->createElement('CPF', $supplier->identity));
+                break;
+            case 'nif':
+                if ($supplier->identity === '') {
+                    throw new \InvalidArgumentException('Deduction supplier NIF cannot be empty.');
+                }
+                $element->appendChild($doc->createElement('NIF', $supplier->identity));
+                break;
+            case 'no_nif':
+                if (!in_array($supplier->identity, ['0', '1', '2'], true)) {
+                    throw new \InvalidArgumentException('Deduction supplier cNaoNIF must be 0, 1 or 2.');
+                }
+                $element->appendChild($doc->createElement('cNaoNIF', $supplier->identity));
+                break;
+            default:
+                throw new \InvalidArgumentException('Unsupported deduction supplier identity type.');
+        }
+
+        if ($supplier->caepf !== '') {
+            $element->appendChild($doc->createElement('CAEPF', $supplier->caepf));
+        }
+
+        if ($supplier->municipalRegistration !== '') {
+            $element->appendChild($doc->createElement('IM', $supplier->municipalRegistration));
+        }
+
+        $element->appendChild($doc->createElement('xNome', htmlspecialchars($supplier->name, ENT_XML1)));
+
+        if ($supplier->phone !== '') {
+            $element->appendChild($doc->createElement('fone', $supplier->phone));
+        }
+
+        if ($supplier->email !== '') {
+            $element->appendChild($doc->createElement('email', htmlspecialchars($supplier->email, ENT_XML1)));
+        }
+
+        return $element;
     }
 
     private function buildMunicipalBenefit(\DOMDocument $doc, DpsData $dps): \DOMElement

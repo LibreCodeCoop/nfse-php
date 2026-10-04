@@ -7,7 +7,10 @@ declare(strict_types=1);
 
 namespace LibreCodeCoop\NfsePHP\Tests\Unit\Xml;
 
+use LibreCodeCoop\NfsePHP\Dto\DeductionDocumentData;
+use LibreCodeCoop\NfsePHP\Dto\DeductionDocumentReferenceData;
 use LibreCodeCoop\NfsePHP\Dto\DeductionReductionData;
+use LibreCodeCoop\NfsePHP\Dto\DeductionSupplierData;
 use LibreCodeCoop\NfsePHP\Dto\DpsData;
 use LibreCodeCoop\NfsePHP\Dto\MunicipalBenefitData;
 use LibreCodeCoop\NfsePHP\Dto\SubstitutionData;
@@ -814,6 +817,74 @@ class XmlBuilderTest extends TestCase
 
         $this->builder->buildDps($this->makeDps(
             beneficioMunicipal: new MunicipalBenefitData(identificador: '3303302'),
+        ));
+    }
+
+    public function testBuildDpsEmitsDocumentBackedDeductionWithSupplier(): void
+    {
+        $document = new DeductionDocumentData(
+            reference: DeductionDocumentReferenceData::document('DOC-2026-001'),
+            type: 99,
+            issuedAt: '2026-09-30',
+            deductibleValue: '500.00',
+            deductionValue: '125.00',
+            otherDescription: 'Despesa comprovada',
+            supplier: new DeductionSupplierData(
+                identityType: 'cnpj',
+                identity: '11222333000181',
+                name: 'Fornecedor Exemplo',
+            ),
+        );
+
+        $xml = $this->builder->buildDps($this->makeDps(
+            deducaoReducao: new DeductionReductionData(documentos: [$document]),
+        ));
+        $compactXml = preg_replace('/>\s+</', '><', $xml) ?? $xml;
+
+        self::assertStringContainsString(
+            '<documentos><docDedRed><nDoc>DOC-2026-001</nDoc><tpDedRed>99</tpDedRed>'
+            . '<xDescOutDed>Despesa comprovada</xDescOutDed><dtEmiDoc>2026-09-30</dtEmiDoc>'
+            . '<vDedutivelRedutivel>500.00</vDedutivelRedutivel>'
+            . '<vDeducaoReducao>125.00</vDeducaoReducao><fornec>'
+            . '<CNPJ>11222333000181</CNPJ><xNome>Fornecedor Exemplo</xNome></fornec>'
+            . '</docDedRed></documentos>',
+            $compactXml,
+        );
+    }
+
+    public function testBuildDpsRejectsAppliedDeductionAboveDocumentValue(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('cannot exceed');
+
+        $this->builder->buildDps($this->makeDps(
+            deducaoReducao: new DeductionReductionData(documentos: [
+                new DeductionDocumentData(
+                    reference: DeductionDocumentReferenceData::fiscalDocument('NF-123'),
+                    type: 2,
+                    issuedAt: '2026-09-30',
+                    deductibleValue: '100.00',
+                    deductionValue: '101.00',
+                ),
+            ]),
+        ));
+    }
+
+    public function testBuildDpsRejectsOtherDeductionWithoutDescription(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('requires a description');
+
+        $this->builder->buildDps($this->makeDps(
+            deducaoReducao: new DeductionReductionData(documentos: [
+                new DeductionDocumentData(
+                    reference: DeductionDocumentReferenceData::document('DOC-1'),
+                    type: 99,
+                    issuedAt: '2026-09-30',
+                    deductibleValue: '100.00',
+                    deductionValue: '50.00',
+                ),
+            ]),
         ));
     }
 
