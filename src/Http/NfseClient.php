@@ -81,6 +81,7 @@ class NfseClient implements NfseClientInterface, DpsLookupInterface, EventLookup
         return $this->parseReceiptResponse($body);
     }
 
+    #[\Override]
     public function emitDecision(DecisionNfseData $nfse): ReceiptData
     {
         $xml = (new DecisionNfseBuilder())->build($nfse);
