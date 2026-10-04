@@ -63,6 +63,21 @@ final class DecisionNfseBuilderTest extends TestCase
         self::assertTrue((bool) array_filter($errors, static fn (string $e): bool => str_contains($e, 'nDFSe')));
     }
 
+    public function testCompleteNfseValidatorRejectsUnsupportedSchemaVersionExplicitly(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Unsupported complete NFS-e schema version: 9.99');
+
+        new NfseSchemaValidator(schemaVersion: '9.99');
+    }
+
+    public function testCompleteNfseValidatorDoesNotResolveExternalEntities(): void
+    {
+        $xml = '<?xml version="1.0"?><!DOCTYPE NFSe SYSTEM "https://example.invalid/nfse.dtd"><NFSe/>';
+
+        self::assertNotSame([], (new NfseSchemaValidator())->validate($xml));
+    }
+
     public function testKnownAccessKeyCheckDigit(): void
     {
         $key = '35503081206169966000133000000000023726079719343785';
