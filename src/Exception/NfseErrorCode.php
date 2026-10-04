@@ -27,6 +27,9 @@ enum NfseErrorCode: string
     /** Gateway rejected the NFS-e cancellation request (HTTP 4xx/5xx). */
     case CancellationRejected = 'CANCELLATION_REJECTED';
 
+    /** Gateway rejected a generic NFS-e event registration request. */
+    case EventRegistrationRejected = 'EVENT_REGISTRATION_REJECTED';
+
     /** Gateway returned an error when querying an NFS-e (HTTP 4xx/5xx). */
     case QueryFailed = 'QUERY_FAILED';
 

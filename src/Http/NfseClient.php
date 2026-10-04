@@ -11,6 +11,7 @@ use LibreCodeCoop\NfsePHP\Config\CertConfig;
 use LibreCodeCoop\NfsePHP\Config\EnvironmentConfig;
 use LibreCodeCoop\NfsePHP\Contracts\DpsLookupInterface;
 use LibreCodeCoop\NfsePHP\Contracts\EventLookupInterface;
+use LibreCodeCoop\NfsePHP\Contracts\EventRegistrationInterface;
 use LibreCodeCoop\NfsePHP\Contracts\HttpTransportInterface;
 use LibreCodeCoop\NfsePHP\Contracts\NfseClientInterface;
 use LibreCodeCoop\NfsePHP\Contracts\SecretStoreInterface;
@@ -18,9 +19,11 @@ use LibreCodeCoop\NfsePHP\Contracts\XmlSignerInterface;
 use LibreCodeCoop\NfsePHP\Danfse\DanfseGenerator;
 use LibreCodeCoop\NfsePHP\Dto\DpsData;
 use LibreCodeCoop\NfsePHP\Dto\EventReceiptData;
+use LibreCodeCoop\NfsePHP\Dto\EventRegistrationData;
 use LibreCodeCoop\NfsePHP\Dto\HttpRequestData;
 use LibreCodeCoop\NfsePHP\Dto\ReceiptData;
 use LibreCodeCoop\NfsePHP\Exception\CancellationException;
+use LibreCodeCoop\NfsePHP\Exception\EventRegistrationException;
 use LibreCodeCoop\NfsePHP\Exception\IssuanceException;
 use LibreCodeCoop\NfsePHP\Exception\NetworkException;
 use LibreCodeCoop\NfsePHP\Exception\NfseErrorCode;
@@ -36,7 +39,7 @@ use LibreCodeCoop\NfsePHP\Xml\XmlBuilder;
  * Communicates with the SEFIN gateway to issue, query, and cancel NFS-e.
  * All requests carry a signed DPS XML payload.
  */
-class NfseClient implements NfseClientInterface, DpsLookupInterface, EventLookupInterface
+class NfseClient implements NfseClientInterface, DpsLookupInterface, EventLookupInterface, EventRegistrationInterface
 {
     private readonly string $baseUrl;
     private readonly XmlSignerInterface $signer;
@@ -171,28 +174,56 @@ class NfseClient implements NfseClientInterface, DpsLookupInterface, EventLookup
         return $this->parseEventResponse($body);
     }
 
-    public function cancel(string $chaveAcesso, string $motivo): bool
+    #[\Override]
+    public function registerEventXml(string $chaveAcesso, string $eventXml): EventRegistrationData
     {
-        $eventoXml       = $this->buildCancelEventXml($chaveAcesso, $motivo);
-        $signedEventoXml = $this->signer->sign($eventoXml, $this->cert->cnpj);
+        $chaveAcesso = trim($chaveAcesso);
+        if ($chaveAcesso === '') {
+            throw new \InvalidArgumentException('NFS-e access key cannot be empty.');
+        }
 
-        $compressedEventoXml = gzencode($signedEventoXml);
+        $this->assertEventXmlMatchesAccessKey($eventXml, $chaveAcesso);
+        $signedEventXml = $this->signer->sign($eventXml, $this->cert->cnpj);
 
-        if ($compressedEventoXml === false) {
-            throw new NetworkException('Failed to compress cancellation event XML payload before transmission.');
+        $compressedEventXml = gzencode($signedEventXml);
+        if ($compressedEventXml === false) {
+            throw new NetworkException('Failed to compress event XML payload before transmission.');
         }
 
         [$httpStatus, $body] = $this->postEvento(
-            '/nfse/' . $chaveAcesso . '/eventos',
-            base64_encode($compressedEventoXml),
+            '/nfse/' . rawurlencode($chaveAcesso) . '/eventos',
+            base64_encode($compressedEventXml),
         );
 
         if ($httpStatus >= 400) {
-            throw new CancellationException(
-                'SEFIN gateway rejected cancellation (HTTP ' . $httpStatus . ')',
-                NfseErrorCode::CancellationRejected,
+            throw new EventRegistrationException(
+                'SEFIN gateway rejected event registration (HTTP ' . $httpStatus . ')',
+                NfseErrorCode::EventRegistrationRejected,
                 $httpStatus,
                 $body,
+            );
+        }
+
+        return new EventRegistrationData(
+            accepted: (bool) ($body['sucesso'] ?? true),
+            httpStatus: $httpStatus,
+            response: $body,
+        );
+    }
+
+    public function cancel(string $chaveAcesso, string $motivo): bool
+    {
+        $eventoXml = $this->buildCancelEventXml($chaveAcesso, $motivo);
+
+        try {
+            $this->registerEventXml($chaveAcesso, $eventoXml);
+        } catch (EventRegistrationException $e) {
+            throw new CancellationException(
+                'SEFIN gateway rejected cancellation (HTTP ' . $e->httpStatus . ')',
+                NfseErrorCode::CancellationRejected,
+                $e->httpStatus,
+                $e->upstreamPayload,
+                $e,
             );
         }
 
@@ -299,6 +330,48 @@ class NfseClient implements NfseClientInterface, DpsLookupInterface, EventLookup
         }
 
         return [$response->status, $decoded];
+    }
+
+    private function assertEventXmlMatchesAccessKey(string $eventXml, string $chaveAcesso): void
+    {
+        $document = new \DOMDocument('1.0', 'UTF-8');
+        $previous = libxml_use_internal_errors(true);
+
+        try {
+            if (!$document->loadXML($eventXml, LIBXML_NONET)) {
+                throw new \InvalidArgumentException('Event XML must be well formed.');
+            }
+        } finally {
+            libxml_clear_errors();
+            libxml_use_internal_errors($previous);
+        }
+
+        $root = $document->documentElement;
+        if (!$root instanceof \DOMElement || $root->localName !== 'pedRegEvento') {
+            throw new \InvalidArgumentException('Event XML root element must be pedRegEvento.');
+        }
+
+        $xpath = new \DOMXPath($document);
+        $accessKeyNode = $xpath->query('//*[local-name()="chNFSe"]')->item(0);
+        if (!$accessKeyNode instanceof \DOMElement || trim($accessKeyNode->textContent) !== $chaveAcesso) {
+            throw new \InvalidArgumentException('Event XML access key does not match the target NFS-e.');
+        }
+
+        $eventNodes = $xpath->query('//*[starts-with(local-name(), "e")]');
+        $hasTypedEvent = false;
+
+        if ($eventNodes !== false) {
+            foreach ($eventNodes as $eventNode) {
+                if ($eventNode instanceof \DOMElement && preg_match('/^e\d{6}$/', $eventNode->localName) === 1) {
+                    $hasTypedEvent = true;
+                    break;
+                }
+            }
+        }
+
+        if (!$hasTypedEvent) {
+            throw new \InvalidArgumentException('Event XML must contain a six-digit typed event element.');
+        }
     }
 
     private function buildCancelEventXml(string $chaveAcesso, string $motivo): string
