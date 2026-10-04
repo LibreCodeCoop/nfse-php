@@ -33,6 +33,20 @@ GitHub stores file contents as content-addressed Git blobs. The blob IDs below p
 | `tiposComplexos_v1.01.xsd` | `91f44b804ddcba93c65f7dea923ca4621c1dcd6a` |
 | `tiposSimples_v1.01.xsd` | `6cf3dcb9c085e284a9b78b9a6a4c2688a95df5e9` |
 | `xmldsig-core-schema.xsd` | `8a9c9139d0cb2c3497ce67942ba7d1e8528241d0` |
+| `pedRegEvento_v1.01.xsd` | `d8d3db9afdb2b79d6c32dd6d2ed727dcc6e22a6a` |
+| `tiposEventos_v1.01.xsd` | `1a568683f6cb5e1ca65b5827477d50884409bd43` |
+
+`OfficialSchemaBundleIntegrityTest` recomputes these Git blob identifiers locally in CI. Any byte change to an official schema therefore requires an explicit manifest update and review.
+
+## Updating the official schema bundle
+
+1. Download the new production XSD package from the documented Sistema Nacional NFS-e production documentation page.
+2. Create a new version directory; never overwrite an existing supported snapshot in place.
+3. Copy the official XSD files byte-for-byte. Do not fix upstream schema defects in the reference files.
+4. Add or update validators and representative contract tests for every XML document the library generates for that schema release.
+5. Record the package name, publication date, source URL and Git blob identifiers in the new directory README.
+6. Update the integrity-test manifest and run PHPUnit, static analysis, minimum-dependency and REUSE checks.
+7. Document any deliberate compatibility caveat in the version README and in public migration notes.
 
 When refreshing the official bundle, add a new version directory and update its own manifest instead of replacing this v1.01 snapshot in place.
 
