@@ -92,3 +92,17 @@ It helps other developers discover the project and motivates the team to keep im
 ## ADN contributor distribution
 
 Use `Http\\AdnClient` for the contributor ADN API. It is intentionally separate from `NfseClient`: SEFIN handles issuance/query/cancellation, while ADN distributes NFS-e, DPS and event documents by NSU or access key.
+
+
+### XML signature integrity vs certificate trust
+
+`XmlSignatureVerifier` answers only whether XMLDSig references and the signature
+are cryptographically consistent with the certificate embedded in `KeyInfo`.
+It does **not** establish ICP-Brasil trust.
+
+Use `CertificateTrustValidator` separately when consuming signed documents. The
+caller supplies its trust-anchor files and may inject a bounded
+`CertificateRevocationCheckerInterface` implementation. The structured result
+keeps signature integrity, certificate validity dates, chain trust and
+revocation status separate. Deterministic tests can therefore use generated
+certificates without claiming ICP-Brasil trust.
