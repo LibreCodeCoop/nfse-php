@@ -136,7 +136,7 @@ class DomainGeneratorTest(unittest.TestCase):
             self.assertIn("BR\tBrasil", first["paises-iso2-v1.00.tsv"])
             self.assertIn("010101\tAnálise e desenvolvimento de sistemas.", first["servicos-nacionais-v1.01.tsv"])
             self.assertNotIn("0101\t", first["servicos-nacionais-v1.01.tsv"])
-            self.assertIn("10101100", first["nbs-v2.0.tsv"]) is False
+            self.assertNotIn("10101100\\t", first["nbs-v2.0.tsv"])
             self.assertIn("020101\tExecução sobre bem imóvel\tLocalidade do imóvel (1)", first["indicadores-operacao-ibscbs-v1.01.tsv"])
 
     def test_cardinality_guard_rejects_partial_annexes(self) -> None:
