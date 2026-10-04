@@ -15,7 +15,7 @@ The stable contract covered by tests is:
 - provider, taker and intermediary identity fields;
 - retained ISS labels and totals as authorized in the XML;
 - foreign taker NIF without inventing a Brazilian CPF/CNPJ;
-- 60-character summaries for national/municipal taxation descriptions;
+- 60-character taxation-description content with an ellipsis suffix when truncated;
 - IBS/CBS block rendered only when the authorized XML contains it;
 - IBS/CBS values displayed from authorized totals without recalculation;
 - legacy authorized XML without IBS/CBS remains renderable;

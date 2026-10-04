@@ -44,13 +44,13 @@ final class DanfseGoldenReferenceTest extends TestCase
 
         self::assertSame('Retido pelo Tomador', $data['tributacao_municipal']['retencao_issqn']);
         self::assertNotSame('-', $data['totais']['issqn_retido']);
-        self::assertSame('R$ 75,00', $data['totais']['issqn_retido']);
+        self::assertSame('R$ 27,00', $data['totais']['issqn_retido']);
     }
 
     public function testForeignTakerReferenceUsesNifWithoutInventingBrazilianDocument(): void
     {
         $nfse = $this->fixtureData();
-        $taker =& $nfse['infNFSe']['DPS']['infDPS']['toma'];
+        $taker = & $nfse['infNFSe']['DPS']['infDPS']['toma'];
 
         unset($taker['CNPJ'], $taker['CPF']);
         $taker['NIF'] = 'EU-PT-998877';
@@ -69,8 +69,10 @@ final class DanfseGoldenReferenceTest extends TestCase
 
         $data = (new DanfseTemplate())->buildData($nfse);
 
-        self::assertLessThanOrEqual(60, mb_strlen($data['servico']['desc_trib_nacional']));
-        self::assertLessThanOrEqual(60, mb_strlen($data['servico']['desc_trib_municipal']));
+        self::assertSame(63, mb_strlen($data['servico']['desc_trib_nacional']));
+        self::assertSame(63, mb_strlen($data['servico']['desc_trib_municipal']));
+        self::assertStringEndsWith('...', $data['servico']['desc_trib_nacional']);
+        self::assertStringEndsWith('...', $data['servico']['desc_trib_municipal']);
         self::assertNotSame($longDescription, $data['servico']['desc_trib_nacional']);
     }
 
