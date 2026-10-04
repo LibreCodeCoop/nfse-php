@@ -7,7 +7,10 @@ declare(strict_types=1);
 
 namespace LibreCodeCoop\NfsePHP\Tests\Unit\Xml;
 
+use LibreCodeCoop\NfsePHP\Dto\DeductionDocumentData;
+use LibreCodeCoop\NfsePHP\Dto\DeductionDocumentReferenceData;
 use LibreCodeCoop\NfsePHP\Dto\DeductionReductionData;
+use LibreCodeCoop\NfsePHP\Dto\DeductionSupplierData;
 use LibreCodeCoop\NfsePHP\Dto\DpsData;
 use LibreCodeCoop\NfsePHP\Dto\MunicipalBenefitData;
 use LibreCodeCoop\NfsePHP\Dto\SubstitutionData;
@@ -48,6 +51,29 @@ final class OfficialDpsSchemaValidationTest extends TestCase
                 identificador: '33033020400001',
                 valorReducaoBaseCalculo: '100.00',
             ),
+        ));
+
+        self::assertSame([], $this->validator->validate($xml));
+    }
+
+    public function testDocumentBackedDeductionMatchesOfficialSchema(): void
+    {
+        $xml = $this->builder->buildDps($this->makeDps(
+            deducaoReducao: new DeductionReductionData(documentos: [
+                new DeductionDocumentData(
+                    reference: DeductionDocumentReferenceData::document('DOC-2026-001'),
+                    type: 99,
+                    issuedAt: '2026-09-30',
+                    deductibleValue: '500.00',
+                    deductionValue: '125.00',
+                    otherDescription: 'Despesa comprovada',
+                    supplier: new DeductionSupplierData(
+                        identityType: 'cnpj',
+                        identity: '11222333000181',
+                        name: 'Fornecedor Exemplo',
+                    ),
+                ),
+            ]),
         ));
 
         self::assertSame([], $this->validator->validate($xml));

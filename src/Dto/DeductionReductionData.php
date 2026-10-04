@@ -15,9 +15,13 @@ namespace LibreCodeCoop\NfsePHP\Dto;
  */
 final readonly class DeductionReductionData
 {
+    /**
+     * @param list<DeductionDocumentData> $documentos
+     */
     public function __construct(
         public string $percentual = '',
         public string $valor = '',
+        public array $documentos = [],
     ) {
     }
 }
