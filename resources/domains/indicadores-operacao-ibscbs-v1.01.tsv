@@ -1,0 +1,28 @@
+# Indicadores de operação IBS/CBS — ANEXO_C-INDOP_IBSCBS-SNNFSe-v1.01-20260122
+# Formato: cIndOp<TAB>característica do fornecimento<TAB>local a identificar no DF-e
+020101	Execução de operações com bem imóvel, bem imaterial, inclusive direito, relacionado a bem imóvel	Localidade do imóvel (1)
+020201	Execução de serviços sobre bem imóvel	Localidade do imóvel (1)
+020301	Execução dos serviços de administração e intermediação de bens imóveis	Localidade do imóvel (1)
+030101	Execução de serviços diversos exclusivamente prestados fisicamente sobre a pessoa ou integralmente fruídos presencialmente por pessoa física (2)	Estabelecimento do fornecedor
+030102	Execução de serviços diversos exclusivamente prestados fisicamente sobre a pessoa ou integralmente fruídos presencialmente por pessoa física (2)	Endereço do adquirente
+030103	Execução de serviços diversos exclusivamente prestados fisicamente sobre a pessoa ou integralmente fruídos presencialmente por pessoa física (2)	Endereço do destinatário
+030104	Execução de serviços diversos exclusivamente prestados fisicamente sobre a pessoa ou integralmente fruídos presencialmente por pessoa física (2)	Endereço diverso do fornecedor, adquirente ou destinatário
+040101	Execução de serviços de planejamento, organização e administração de feiras, exposições, congressos, espetáculos, exibições e congêneres	Local do Evento
+050101	Execução de serviços diversos fisicamente prestados sobre bem móvel material	Estabelecimento do fornecedor
+050102	Execução de serviços diversos fisicamente prestados sobre bem móvel material	Endereço do adquirente
+050103	Execução de serviços diversos fisicamente prestados sobre bem móvel material	Endereço do destinatário
+050104	Execução de serviços diversos fisicamente prestados sobre bem móvel material	Endereço diverso do fornecedor, adquirente ou destinatário
+050201	Execução de serviços portuários	Local da prestação
+060101	Execução de serviços de transporte de passageiros	Local de início do transporte
+070101	Execução de serviços de transporte de carga	Endereço fornecido para entrega
+070102	Execução de serviços de transporte de carga	Local da retirada
+080101	Execução de serviços de exploração de via	Local da prestação, correspondente à extensão da via explorada e proporcional ao território dos entes tributantes
+100101	Execução de operações de cessão de espaço para prestação de serviços publicitários	Local do domicílio principal do adquirente (3)
+100102	Execução de operações de cessão de espaço para prestação de serviços publicitários	Local do domicílio do destinatário, nos casos de adquirente residente ou domiciliado no exterior (5)(6)
+100201	Execução de operações de cessão de espaço para prestação de serviços publicitários	Local do domicílio principal do destinatário (6)
+100301	Execução dos demais serviços em operações não especificadas anteriormente ou, nos serviços de que trata o inc. III, estes sejam, ainda que parcialmente, prestados à distância (2)	Local do domicílio principal do adquirente (3)
+100302	Execução dos demais serviços em operações não especificadas anteriormente ou, nos serviços de que trata o inc. III, estes sejam, ainda que parcialmente, prestados à distância (2)	Local do domicílio do destinatário, nos casos de adquirente residente ou domiciliado no exterior (5)(6)
+100401	Execução dos demais serviços em operações não especificadas anteriormente ou, nos serviços de que tratam o inc. III, estes sejam, ainda que parcialmente, prestados à distância	Local do domicílio principal do destinatário (6)
+100501	Execução de demais operações não especificadas anteriormente com bens móveis imateriais, inclusive direitos	Local do domicílio principal do adquirente (3)
+100502	Execução de demais operações não especificadas anteriormente com bens móveis imateriais, inclusive direitos	Local do domicílio do destinatário, nos casos de adquirente residente ou domiciliado no exterior (5)(6)
+100601	Execução de demais operações não especificadas anteriormente com bens móveis imateriais, inclusive direitos	Local do domicílio principal do destinatário (6)
