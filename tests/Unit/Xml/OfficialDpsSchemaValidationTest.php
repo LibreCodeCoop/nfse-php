@@ -7,7 +7,9 @@ declare(strict_types=1);
 
 namespace LibreCodeCoop\NfsePHP\Tests\Unit\Xml;
 
+use LibreCodeCoop\NfsePHP\Dto\DeductionReductionData;
 use LibreCodeCoop\NfsePHP\Dto\DpsData;
+use LibreCodeCoop\NfsePHP\Dto\MunicipalBenefitData;
 use LibreCodeCoop\NfsePHP\Dto\SubstitutionData;
 use LibreCodeCoop\NfsePHP\Tests\TestCase;
 use LibreCodeCoop\NfsePHP\Xml\DpsSchemaValidator;
@@ -34,6 +36,19 @@ final class OfficialDpsSchemaValidationTest extends TestCase
     public function testRepresentativeDpsMatchesOfficialSchema(): void
     {
         $xml = $this->builder->buildDps($this->makeDps());
+
+        self::assertSame([], $this->validator->validate($xml));
+    }
+
+    public function testStandardDeductionAndMunicipalBenefitMatchOfficialSchema(): void
+    {
+        $xml = $this->builder->buildDps($this->makeDps(
+            deducaoReducao: new DeductionReductionData(percentual: '10.00'),
+            beneficioMunicipal: new MunicipalBenefitData(
+                identificador: '33033020400001',
+                valorReducaoBaseCalculo: '100.00',
+            ),
+        ));
 
         self::assertSame([], $this->validator->validate($xml));
     }
@@ -223,6 +238,8 @@ final class OfficialDpsSchemaValidationTest extends TestCase
         string $issqnNumeroProcessoSuspensao = '',
         int $tipoRetencaoIss = 1,
         ?SubstitutionData $substituicao = null,
+        ?DeductionReductionData $deducaoReducao = null,
+        ?MunicipalBenefitData $beneficioMunicipal = null,
     ): DpsData {
         return new DpsData(
             cnpjPrestador: $cnpjPrestador,
@@ -255,6 +272,8 @@ final class OfficialDpsSchemaValidationTest extends TestCase
             ibsCbsCst: $ibsCbsCst,
             ibsCbsClassificacaoTributaria: $ibsCbsClassificacaoTributaria,
             substituicao: $substituicao,
+            deducaoReducao: $deducaoReducao,
+            beneficioMunicipal: $beneficioMunicipal,
         );
     }
 }

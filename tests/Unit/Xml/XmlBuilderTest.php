@@ -7,7 +7,9 @@ declare(strict_types=1);
 
 namespace LibreCodeCoop\NfsePHP\Tests\Unit\Xml;
 
+use LibreCodeCoop\NfsePHP\Dto\DeductionReductionData;
 use LibreCodeCoop\NfsePHP\Dto\DpsData;
+use LibreCodeCoop\NfsePHP\Dto\MunicipalBenefitData;
 use LibreCodeCoop\NfsePHP\Dto\SubstitutionData;
 use LibreCodeCoop\NfsePHP\Tests\TestCase;
 use LibreCodeCoop\NfsePHP\Xml\XmlBuilder;
@@ -739,6 +741,82 @@ class XmlBuilderTest extends TestCase
 
     // -------------------------------------------------------------------------
 
+    public function testBuildDpsEmitsPercentageDeductionBeforeTaxGroup(): void
+    {
+        $xml = $this->builder->buildDps($this->makeDps(
+            deducaoReducao: new DeductionReductionData(percentual: '12.50'),
+        ));
+
+        $compactXml = preg_replace('/>\s+</', '><', $xml) ?? $xml;
+
+        self::assertMatchesRegularExpression(
+            '/<vServPrest>.*<\/vServPrest><vDedRed><pDR>12\.50<\/pDR><\/vDedRed><trib>/s',
+            $compactXml,
+        );
+    }
+
+    public function testBuildDpsEmitsValueDeductionBeforeTaxGroup(): void
+    {
+        $xml = $this->builder->buildDps($this->makeDps(
+            deducaoReducao: new DeductionReductionData(valor: '125.00'),
+        ));
+
+        $compactXml = preg_replace('/>\s+</', '><', $xml) ?? $xml;
+
+        self::assertStringContainsString('<vDedRed><vDR>125.00</vDR></vDedRed>', $compactXml);
+    }
+
+    public function testBuildDpsRejectsAmbiguousStandardDeduction(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('exactly one');
+
+        $this->builder->buildDps($this->makeDps(
+            deducaoReducao: new DeductionReductionData(percentual: '10.00', valor: '100.00'),
+        ));
+    }
+
+    public function testBuildDpsEmitsMunicipalBenefitBeforeRetention(): void
+    {
+        $xml = $this->builder->buildDps($this->makeDps(
+            beneficioMunicipal: new MunicipalBenefitData(
+                identificador: '33033020400001',
+                percentualReducaoBaseCalculo: '20.00',
+            ),
+        ));
+
+        $compactXml = preg_replace('/>\s+</', '><', $xml) ?? $xml;
+
+        self::assertMatchesRegularExpression(
+            '/<BM><nBM>33033020400001<\/nBM><pRedBCBM>20\.00<\/pRedBCBM><\/BM><tpRetISSQN>/',
+            $compactXml,
+        );
+    }
+
+    public function testBuildDpsRejectsAmbiguousMunicipalBenefitReduction(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('not both');
+
+        $this->builder->buildDps($this->makeDps(
+            beneficioMunicipal: new MunicipalBenefitData(
+                identificador: '33033020400001',
+                valorReducaoBaseCalculo: '100.00',
+                percentualReducaoBaseCalculo: '20.00',
+            ),
+        ));
+    }
+
+    public function testBuildDpsRejectsInvalidMunicipalBenefitIdentifier(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('14 digits');
+
+        $this->builder->buildDps($this->makeDps(
+            beneficioMunicipal: new MunicipalBenefitData(identificador: '3303302'),
+        ));
+    }
+
     private function makeDps(
         string $cnpjPrestador = '11222333000181',
         string $municipioIbge = '3303302',
@@ -792,6 +870,8 @@ class XmlBuilderTest extends TestCase
         string $ibsCbsClassificacaoTributaria = '',
         ?string $codigoTributacaoMunicipal = null,
         ?SubstitutionData $substituicao = null,
+        ?DeductionReductionData $deducaoReducao = null,
+        ?MunicipalBenefitData $beneficioMunicipal = null,
     ): DpsData {
         return new DpsData(
             cnpjPrestador:            $cnpjPrestador,
@@ -846,6 +926,8 @@ class XmlBuilderTest extends TestCase
             ibsCbsClassificacaoTributaria: $ibsCbsClassificacaoTributaria,
             codigoTributacaoMunicipal: $codigoTributacaoMunicipal,
             substituicao: $substituicao,
+            deducaoReducao: $deducaoReducao,
+            beneficioMunicipal: $beneficioMunicipal,
         );
     }
 }
