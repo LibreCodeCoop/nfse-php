@@ -35,6 +35,7 @@ GitHub stores file contents as content-addressed Git blobs. The blob IDs below p
 | `xmldsig-core-schema.xsd` | `8a9c9139d0cb2c3497ce67942ba7d1e8528241d0` |
 | `pedRegEvento_v1.01.xsd` | `d8d3db9afdb2b79d6c32dd6d2ed727dcc6e22a6a` |
 | `tiposEventos_v1.01.xsd` | `1a568683f6cb5e1ca65b5827477d50884409bd43` |
+| `NFSe_v1.01.xsd` | `d7bf8578b8fd17883a9b9feffe80b2b4c370466b` |
 
 `OfficialSchemaBundleIntegrityTest` recomputes these Git blob identifiers locally in CI. Any byte change to an official schema therefore requires an explicit manifest update and review.
 
