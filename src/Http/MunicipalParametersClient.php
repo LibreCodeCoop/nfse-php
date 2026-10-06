@@ -146,8 +146,10 @@ final class MunicipalParametersClient
     {
         $value = preg_replace('/[^0-9]/', '', $codigoServico) ?? '';
 
-        if ($value === '') {
-            throw new \InvalidArgumentException('Service code cannot be empty.');
+        if (preg_match('/^\\d{9}$/', $value) !== 1) {
+            throw new \InvalidArgumentException(
+                'Municipal parameters service code must be a 9-digit NBS code.',
+            );
         }
 
         return $value;
