@@ -87,6 +87,21 @@ class XmlBuilderTest extends TestCase
         self::assertStringContainsString('11222333000181', $xml);
     }
 
+    public function testBuildDpsPublishesOptionalProviderContact(): void
+    {
+        $xml = $this->builder->buildDps($this->makeDps(
+            prestadorTelefone: '21969203370',
+            prestadorEmail: 'adm@librecode.coop',
+        ));
+
+        $normalized = str_replace(["\n", '  '], '', $xml);
+
+        self::assertStringContainsString(
+            '<prest><CNPJ>11222333000181</CNPJ><fone>21969203370</fone><email>adm@librecode.coop</email><regTrib>',
+            $normalized,
+        );
+    }
+
     public function testBuildDpsContainsMunicipioIbge(): void
     {
         $dps = $this->makeDps(municipioIbge: '3303302');
@@ -896,6 +911,8 @@ class XmlBuilderTest extends TestCase
         string $valorServico = '1000.00',
         string $aliquota = '5.00',
         string $discriminacao = 'Consultoria em TI',
+        string $prestadorTelefone = '',
+        string $prestadorEmail = '',
         string $serie = '00001',
         string $numeroDps = '1',
         bool $issRetido = false,
@@ -951,6 +968,8 @@ class XmlBuilderTest extends TestCase
             valorServico:             $valorServico,
             aliquota:                 $aliquota,
             discriminacao:            $discriminacao,
+            prestadorTelefone:         $prestadorTelefone,
+            prestadorEmail:            $prestadorEmail,
             serie:                    $serie,
             numeroDps:                $numeroDps,
             codigoTributacaoNacional: $codigoTributacaoNacional,

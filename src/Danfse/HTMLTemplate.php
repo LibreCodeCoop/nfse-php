@@ -544,6 +544,10 @@
                     <span class="label">Alíquota IBS Município</span>
                     <span class="value"><?= $data['ibs_cbs']['aliquota_ibs_municipal'] ?></span>
                 </td>
+                <td style="width: 25%;">
+                    <span class="label">Reduções de Alíquota IBS/CBS</span>
+                    <span class="value">-</span>
+                </td>
             </tr>
             <tr>
                 <td>
