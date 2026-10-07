@@ -50,15 +50,15 @@ final class MunicipalParametersClientTest extends TestCase
     public function testAliquotaNormalizesServiceCodeAndPreservesCompetence(): void
     {
         self::$server->setResponseOfPath(
-            '/parametrizacao/3303302/115022000/2026-10-03/aliquota',
+            '/parametrizacao/3303302/010101000/2026-10-03/aliquota',
             new Response('{"aliquotas":[{"Aliq":5.0}]}', ['Content-Type' => 'application/json'], 200),
         );
 
-        $result = $this->client()->aliquota('3303302', '1.1502.20.00', '2026-10-03');
+        $result = $this->client()->aliquota('3303302', '01.01.01.000', '2026-10-03');
 
         self::assertSame(5.0, $result['aliquotas'][0]['Aliq'] ?? null);
         self::assertSame(
-            '/parametrizacao/3303302/115022000/2026-10-03/aliquota',
+            '/parametrizacao/3303302/010101000/2026-10-03/aliquota',
             self::$server->getLastRequest()?->getRequestUri(),
         );
     }
@@ -66,12 +66,12 @@ final class MunicipalParametersClientTest extends TestCase
     public function testRegimesRetencoesAndBenefitUseOfficialPaths(): void
     {
         self::$server->setResponseOfPath(
-            '/parametrizacao/3303302/115022000/2026-10-03/regimes_especiais',
+            '/parametrizacao/3303302/010101000/2026-10-03/regimes_especiais',
             new Response('{"regimes":[]}', ['Content-Type' => 'application/json'], 200),
         );
-        $this->client()->regimesEspeciais('3303302', '115022000', '2026-10-03');
+        $this->client()->regimesEspeciais('3303302', '010101000', '2026-10-03');
         self::assertSame(
-            '/parametrizacao/3303302/115022000/2026-10-03/regimes_especiais',
+            '/parametrizacao/3303302/010101000/2026-10-03/regimes_especiais',
             self::$server->getLastRequest()?->getRequestUri(),
         );
 
