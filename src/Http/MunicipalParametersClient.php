@@ -148,7 +148,7 @@ final class MunicipalParametersClient
 
         if (preg_match('/^\\d{9}$/', $value) !== 1) {
             throw new \InvalidArgumentException(
-                'Municipal parameters service code must be a 9-digit NBS code.',
+                'Municipal parameters service code must contain exactly 9 digits (6-digit national service code plus 3-digit municipal subdivision, or 000 when there is no subdivision).',
             );
         }
 
