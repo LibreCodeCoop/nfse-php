@@ -55,6 +55,15 @@ class XmlBuilder
         $prest = $doc->createElement('prest');
         $cnpj  = $doc->createElement('CNPJ', $dps->cnpjPrestador);
         $prest->appendChild($cnpj);
+
+        if ($dps->prestadorTelefone !== '') {
+            $prest->appendChild($doc->createElement('fone', $dps->prestadorTelefone));
+        }
+
+        if ($dps->prestadorEmail !== '') {
+            $prest->appendChild($doc->createElement('email', htmlspecialchars($dps->prestadorEmail, ENT_XML1)));
+        }
+
         $prest->appendChild($this->buildRegTrib($doc, $dps));
         $infDps->appendChild($prest);
 

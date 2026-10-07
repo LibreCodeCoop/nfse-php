@@ -151,24 +151,12 @@
                 <?php endif; ?>
             </td>
             <td class="municipality-cell">
-                <?php if ($municipality): ?>
-                <table>
-                    <tr>
-                        <?php if ($municipality->logoDataUri): ?>
-                        <td><img style="height: 30pt; width: auto" src="<?= htmlspecialchars($municipality->logoDataUri) ?>" alt="Prefeitura" /></td>
-                        <?php endif; ?>
-                        <td style="font-size: 7pt;">
-                            <?= htmlspecialchars($municipality->name) ?><br>
-                            <?php if ($municipality->department): ?>
-                            <?= htmlspecialchars($municipality->department) ?><br>
-                            <?php endif; ?>
-                            <?php if ($municipality->email): ?>
-                            <?= htmlspecialchars($municipality->email) ?>
-                            <?php endif; ?>
-                        </td>
-                    </tr>
-                </table>
+                <?php if ($municipality && $municipality->logoDataUri): ?>
+                    <img style="height: 22pt; width: auto" src="<?= htmlspecialchars($municipality->logoDataUri) ?>" alt="Prefeitura" /><br>
                 <?php endif; ?>
+                Município: <?= $data['municipio_emissao'] ?><br>
+                Ambiente Gerador: <?= $data['ambiente_gerador'] ?><br>
+                Tipo de Ambiente: <?= $data['ambiente'] ?>
             </td>
         </tr>
     </table>
@@ -216,6 +204,22 @@
                 <td>
                     <span class="label">Data e Hora da emissão da DPS</span>
                     <span class="value"><?= $data['emissao_dps'] ?></span>
+                </td>
+            </tr>
+        </table>
+        <table>
+            <tr>
+                <td style="width: 33.33%;">
+                    <span class="label">Emitente da NFS-e</span>
+                    <span class="value"><?= $data['emitente_nfse'] ?></span>
+                </td>
+                <td style="width: 33.33%;">
+                    <span class="label">Situação da NFS-e</span>
+                    <span class="value"><?= $data['situacao_nfse'] ?></span>
+                </td>
+                <td style="width: 33.33%;">
+                    <span class="label">Finalidade</span>
+                    <span class="value"><?= $data['finalidade_nfse'] ?></span>
                 </td>
             </tr>
         </table>
@@ -479,26 +483,29 @@
                     <span class="value"><?= $data['tributacao_federal']['cp'] ?? '-' ?></span>
                 </td>
                 <td style="width: 25%;">
-                    <span class="label">CSLL - Retida</span>
-                    <span class="value"><?= $data['tributacao_federal']['csll'] ?? '-' ?></span>
+                    <span class="label">Contribuições Sociais - Retidas</span>
+                    <span class="value"><?= $data['tributacao_federal']['contribuicoes_sociais'] ?? '-' ?></span>
                 </td>
                 <td style="width: 25%;"></td>
             </tr>
             <tr>
-                <td colspan="2">
+                <td>
                     <span class="label">PIS - Débito Apuração Própria</span>
                     <span class="value"><?= $data['tributacao_federal']['pis'] ?? '-' ?></span>
                 </td>
-                <td colspan="2">
+                <td>
                     <span class="label">COFINS - Débito Apuração Própria</span>
                     <span class="value"><?= $data['tributacao_federal']['cofins'] ?? '-' ?></span>
+                </td>
+                <td colspan="2">
+                    <span class="label">Descrição Contrib. Sociais - Retidas</span>
+                    <span class="value"><?= $data['tributacao_federal']['descricao_retencao'] ?? '-' ?></span>
                 </td>
             </tr>
         </table>
     </div>
 
     <!-- Tributação IBS / CBS (NT 008 v1.02) -->
-    <?php if ($data['ibs_cbs'] !== null): ?>
     <div class="bordered-section">
         <table>
             <tr>
@@ -508,9 +515,23 @@
             </tr>
             <tr>
                 <td style="width: 25%;">
+                    <span class="label">CST / cClassTrib</span>
+                    <span class="value"><?= $data['ibs_cbs']['cst_classificacao'] ?></span>
+                </td>
+                <td style="width: 25%;">
+                    <span class="label">Indicador de Operação</span>
+                    <span class="value"><?= $data['ibs_cbs']['indicador_operacao'] ?></span>
+                </td>
+                <td style="width: 25%;">
                     <span class="label">Localidade de Incidência</span>
                     <span class="value"><?= $data['ibs_cbs']['localidade_incidencia'] ?></span>
                 </td>
+                <td style="width: 25%;">
+                    <span class="label">Exclusões e Reduções da Base de Cálculo</span>
+                    <span class="value"><?= $data['ibs_cbs']['exclusoes_reducoes'] ?></span>
+                </td>
+            </tr>
+            <tr>
                 <td style="width: 25%;">
                     <span class="label">Base de Cálculo</span>
                     <span class="value"><?= $data['ibs_cbs']['base_calculo'] ?></span>
@@ -544,7 +565,6 @@
             </tr>
         </table>
     </div>
-    <?php endif; ?>
 
     <!-- Valor Total -->
     <div class="bordered-section">
@@ -577,38 +597,17 @@
                     <span class="label">Total das Retenções Federais</span>
                     <span class="value"><?= $data['totais']['retencoes_federais'] ?? '-' ?></span>
                 </td>
-                <td colspan="2">
-                    <span class="label">PIS/COFINS - Débito Apur. Própria</span>
-                    <span class="value"><?= $data['totais']['pis_cofins'] ?? '-' ?></span>
-                </td>
                 <td>
                     <span class="label">Valor Líquido da NFS-e</span>
                     <span class="value" style="font-weight: bold;"><?= $data['totais']['valor_liquido'] ?></span>
                 </td>
-            </tr>
-        </table>
-    </div>
-
-    <!-- Totais Aproximados de Tributos -->
-    <div class="bordered-section">
-        <table>
-            <tr>
-                <td colspan="3" class="section-header">
-                  <span class="section-title">TOTAIS APROXIMADOS DOS TRIBUTOS</span>
+                <td>
+                    <span class="label">Total do IBS/CBS</span>
+                    <span class="value"><?= $data['ibs_cbs']['total_ibs_cbs'] ?></span>
                 </td>
-            </tr>
-            <tr>
-                <td style="width: 33.33%; text-align: center;">
-                    <span class="label">Federais</span>
-                    <span class="value"><?= $data['totais_tributos']['federais'] ?? '-' ?></span>
-                </td>
-                <td style="width: 33.33%; text-align: center;">
-                    <span class="label">Estaduais</span>
-                    <span class="value"><?= $data['totais_tributos']['estaduais'] ?? '-' ?></span>
-                </td>
-                <td style="width: 33.33%; text-align: center;">
-                    <span class="label">Municipais</span>
-                    <span class="value"><?= $data['totais_tributos']['municipais'] ?? '-' ?></span>
+                <td>
+                    <span class="label">Valor Líquido da NFS-e + IBS/CBS</span>
+                    <span class="value"><?= $data['ibs_cbs']['valor_total_nfse'] ?></span>
                 </td>
             </tr>
         </table>

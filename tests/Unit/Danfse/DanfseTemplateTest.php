@@ -95,6 +95,11 @@ class DanfseTemplateTest extends TestCase
 
         self::assertStringContainsString('<!DOCTYPE html>', $html);
         self::assertStringContainsString('DANFSe v2.0', $html);
+        self::assertStringContainsString('Município:', $html);
+        self::assertStringContainsString('Ambiente Gerador:', $html);
+        self::assertStringContainsString('Tipo de Ambiente:', $html);
+        self::assertStringContainsString('Situação da NFS-e', $html);
+        self::assertStringContainsString('Finalidade', $html);
         self::assertStringContainsString('3303302112233450000195000000000000100000000001', $html);
         self::assertStringContainsString('data:image/svg+xml;base64,', $html);
         // Production environment: no homologação watermark
@@ -133,11 +138,12 @@ class DanfseTemplateTest extends TestCase
         self::assertSame('R$ 1.515,75', $data['ibs_cbs']['valor_total_nfse']);
     }
 
-    public function testRenderShowsIbsCbsSectionOnlyWhenAuthorizedXmlContainsIt(): void
+    public function testRenderShowsRequiredIbsCbsSectionEvenWithoutAuthorizedIbsCbsGroup(): void
     {
         $withoutIbsCbs = (new DanfseTemplate())->render($this->fixtureNfseData(), new DanfseConfig());
 
-        self::assertStringNotContainsString('TRIBUTAÇÃO IBS / CBS', $withoutIbsCbs);
+        self::assertStringContainsString('TRIBUTAÇÃO IBS / CBS', $withoutIbsCbs);
+        self::assertStringContainsString('Exclusões e Reduções da Base de Cálculo', $withoutIbsCbs);
 
         $nfseData = $this->fixtureNfseData();
         $nfseData['infNFSe']['IBSCBS'] = [
