@@ -104,7 +104,7 @@ final class DanfseGoldenReferenceTest extends TestCase
         self::assertStringContainsString('TRIBUTAÇÃO IBS / CBS', $html);
     }
 
-    public function testLegacyAuthorizedXmlWithoutIbsCbsKeepsLegacyLayout(): void
+    public function testAuthorizedXmlWithoutIbsCbsStillRendersRequiredV2Section(): void
     {
         $nfse = $this->fixtureData();
         unset($nfse['infNFSe']['IBSCBS']);
@@ -113,9 +113,30 @@ final class DanfseGoldenReferenceTest extends TestCase
         $data = $template->buildData($nfse);
         $html = $template->render($nfse, new DanfseConfig());
 
-        self::assertNull($data['ibs_cbs']);
-        self::assertStringNotContainsString('TRIBUTAÇÃO IBS / CBS', $html);
+        self::assertIsArray($data['ibs_cbs']);
+        self::assertSame('-', $data['ibs_cbs']['base_calculo']);
+        self::assertSame('-', $data['ibs_cbs']['total_ibs_cbs']);
+        self::assertStringContainsString('TRIBUTAÇÃO IBS / CBS', $html);
         self::assertStringContainsString('DANFSe v2.0', $html);
+    }
+
+    public function testFederalRetentionUsesOfficialV2Semantics(): void
+    {
+        $nfse = $this->fixtureData();
+        $nfse['infNFSe']['DPS']['infDPS']['valores']['trib']['tribFed']['piscofins']['tpRetPisCofins'] = '4';
+        $nfse['infNFSe']['DPS']['infDPS']['valores']['trib']['tribFed']['vRetCSLL'] = '1149.75';
+
+        $template = new DanfseTemplate();
+        $data = $template->buildData($nfse);
+        $html = $template->render($nfse, new DanfseConfig());
+
+        self::assertSame('R$ 1.149,75', $data['tributacao_federal']['contribuicoes_sociais']);
+        self::assertSame(
+            '4 - PIS/COFINS Retidos, CSLL Não Retido',
+            $data['tributacao_federal']['descricao_retencao'],
+        );
+        self::assertStringContainsString('Contribuições Sociais - Retidas', $html);
+        self::assertStringContainsString('Descrição Contrib. Sociais - Retidas', $html);
     }
 
     public function testHomologationReferenceCarriesVisibleMarker(): void

@@ -33,6 +33,12 @@ final readonly class DpsData
         /** Descrição do serviço prestado. */
         public string $discriminacao,
 
+        /** Optional provider phone published in the DPS. */
+        public string $prestadorTelefone = '',
+
+        /** Optional provider e-mail published in the DPS. */
+        public string $prestadorEmail = '',
+
         /** Tipo de ambiente (1-Produção | 2-Homologação). */
         public int $tipoAmbiente = 2,
 

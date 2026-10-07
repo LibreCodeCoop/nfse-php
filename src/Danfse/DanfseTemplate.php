@@ -103,7 +103,12 @@ final class DanfseTemplate
             'numero_dps'   => $this->val($infDps, 'nDPS') ?: '-',
             'serie_dps'    => $this->val($infDps, 'serie') ?: '-',
             'emissao_dps'  => $this->formatter->dateTime($this->val($infDps, 'dhEmi')),
-            'ambiente'     => Ambiente::fromValue($this->val($infDps, 'tpAmb'))->value,
+            'ambiente'      => Ambiente::fromValue($this->val($infDps, 'tpAmb'))->value,
+            'ambiente_gerador' => $this->val($infNfse, 'ambGer') ?: '-',
+            'municipio_emissao' => $this->val($infNfse, 'xLocEmi') ?: '-',
+            'emitente_nfse' => $this->emitterLabel($this->val($infDps, 'tpEmit')),
+            'situacao_nfse' => $this->statusLabel($this->val($infNfse, 'cStat')),
+            'finalidade_nfse' => $this->purposeLabel($this->val($infDps, 'IBSCBS', 'finNFSe')),
 
             'emitente' => [
                 'nome'            => $this->val($emit, 'xNome') ?: '-',
@@ -164,9 +169,12 @@ final class DanfseTemplate
             'tributacao_federal' => [
                 'irrf'   => $this->currencyOrDash($this->val($tribFed, 'vRetIRRF')),
                 'cp'     => $this->currencyOrDash($this->val($tribFed, 'vRetCP')),
-                'csll'   => $this->currencyOrDash($this->val($tribFed, 'vRetCSLL')),
+                'contribuicoes_sociais' => $this->currencyOrDash($this->val($tribFed, 'vRetCSLL')),
                 'pis'    => $this->currencyOrDash($this->val($tribFed, 'piscofins', 'vPis')),
                 'cofins' => $this->currencyOrDash($this->val($tribFed, 'piscofins', 'vCofins')),
+                'descricao_retencao' => $this->pisCofinsRetentionLabel(
+                    $this->val($tribFed, 'piscofins', 'tpRetPisCofins'),
+                ),
             ],
 
             'totais' => [
@@ -194,20 +202,39 @@ final class DanfseTemplate
                 'municipais' => $this->percentOrDash($this->val($totTrib, 'pTotTribMun')),
             ],
 
-            'ibs_cbs' => $ibsCbs === [] ? null : [
+            'ibs_cbs' => [
+                'cst_classificacao' => $this->joinedOrDash(
+                    $this->val($infDps, 'IBSCBS', 'valores', 'trib', 'gIBSCBS', 'CST'),
+                    $this->val($infDps, 'IBSCBS', 'valores', 'trib', 'gIBSCBS', 'cClassTrib'),
+                ),
+                'indicador_operacao' => $this->val($infDps, 'IBSCBS', 'cIndOp') ?: '-',
                 'localidade_incidencia' => $this->val($ibsCbs, 'xLocalidadeIncid')
                     ?: $this->val($ibsCbs, 'cLocalidadeIncid')
                     ?: '-',
+                'exclusoes_reducoes' => $this->sumCurrency(
+                    $this->val($infNfse, 'valores', 'vISSQN'),
+                    $this->val($tribFed, 'piscofins', 'vPis'),
+                    $this->val($tribFed, 'piscofins', 'vCofins'),
+                ),
                 'base_calculo' => $this->currencyOrDash($this->val($ibsCbsValores, 'vBC')),
                 'aliquota_ibs_uf' => $this->percentOrDash($this->val($ibsCbsValores, 'uf', 'pIBSUF')),
                 'aliquota_ibs_municipal' => $this->percentOrDash($this->val($ibsCbsValores, 'mun', 'pIBSMun')),
                 'aliquota_cbs' => $this->percentOrDash($this->val($ibsCbsValores, 'fed', 'pCBS')),
                 'total_ibs' => $this->currencyOrDash($this->val($ibsCbsTotais, 'gIBS', 'vIBSTot')),
                 'total_cbs' => $this->currencyOrDash($this->val($ibsCbsTotais, 'gCBS', 'vCBS')),
+                'total_ibs_cbs' => $ibsCbs === [] ? '-' : $this->sumCurrency(
+                    $this->val($ibsCbsTotais, 'gIBS', 'vIBSTot'),
+                    $this->val($ibsCbsTotais, 'gCBS', 'vCBS'),
+                ),
                 'valor_total_nfse' => $this->currencyOrDash($this->val($ibsCbsTotais, 'vTotNF')),
             ],
 
-            'informacoes_complementares' => $this->val($serv, 'infoCompl', 'xInfComp'),
+            'informacoes_complementares' => $this->complementaryInformation(
+                $this->val($serv, 'infoCompl', 'xInfComp'),
+                $this->percentOrDash($this->val($totTrib, 'pTotTribFed')),
+                $this->percentOrDash($this->val($totTrib, 'pTotTribEst')),
+                $this->percentOrDash($this->val($totTrib, 'pTotTribMun')),
+            ),
         ];
     }
 
@@ -316,6 +343,69 @@ final class DanfseTemplate
         }
 
         return $hasValue ? $this->formatter->currency((string) $total) : '-';
+    }
+
+    private function emitterLabel(string $value): string
+    {
+        return match ($value) {
+            '1' => 'Prestador',
+            '2' => 'Tomador',
+            '3' => 'Intermediário',
+            default => '-',
+        };
+    }
+
+    private function statusLabel(string $value): string
+    {
+        return $value === '100' ? 'NFS-e Gerada' : ($value !== '' ? $value : '-');
+    }
+
+    private function purposeLabel(string $value): string
+    {
+        return match ($value) {
+            '0' => 'NFS-e regular',
+            '1' => 'NFS-e de crédito',
+            '2' => 'NFS-e de débito',
+            default => '-',
+        };
+    }
+
+    private function pisCofinsRetentionLabel(string $value): string
+    {
+        return match ($value) {
+            '0' => '0 - PIS/COFINS/CSLL Não Retidos',
+            '1' => '1 - PIS/COFINS Retidos',
+            '2' => '2 - PIS/COFINS Não Retidos',
+            '3' => '3 - PIS/COFINS/CSLL Retidos',
+            '4' => '4 - PIS/COFINS Retidos, CSLL Não Retido',
+            '5' => '5 - PIS Retido, COFINS/CSLL Não Retido',
+            default => '-',
+        };
+    }
+
+    private function joinedOrDash(string ...$values): string
+    {
+        if (array_filter($values, static fn (string $value): bool => $value !== '') === []) {
+            return '-';
+        }
+
+        return implode(' / ', array_map(static fn (string $value): string => $value !== '' ? $value : '-', $values));
+    }
+
+    private function complementaryInformation(
+        string $existing,
+        string $federal,
+        string $state,
+        string $municipal,
+    ): string {
+        $taxes = sprintf(
+            'Totais aproximados dos Tributos cfe. Lei n° 12.741/2012: Federais: %s; Estaduais: %s; Municipais: %s;',
+            $federal,
+            $state,
+            $municipal,
+        );
+
+        return trim($existing) === '' ? $taxes : trim($existing) . "\n" . $taxes;
     }
 
     private function generateQrCode(string $chaveAcesso, Ambiente $ambiente): string
