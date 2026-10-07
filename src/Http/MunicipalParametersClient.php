@@ -152,7 +152,10 @@ final class MunicipalParametersClient
             );
         }
 
-        return $value;
+        return substr($value, 0, 2)
+            . '.' . substr($value, 2, 2)
+            . '.' . substr($value, 4, 2)
+            . '.' . substr($value, 6, 3);
     }
 
     private function competence(string $competencia): string
