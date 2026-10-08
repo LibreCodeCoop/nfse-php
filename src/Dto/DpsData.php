@@ -176,7 +176,7 @@ final readonly class DpsData
         /** Valor do IRRF. */
         public string $federalValorIrrf = '',
 
-        /** Valor das contribuições sociais retidas (CSLL). */
+        /** Valor da CSLL retida. */
         public string $federalValorCsll = '',
 
         /** Valor da contribuição previdenciária retida. */

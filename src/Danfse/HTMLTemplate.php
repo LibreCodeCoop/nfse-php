@@ -483,8 +483,8 @@
                     <span class="value"><?= $data['tributacao_federal']['cp'] ?? '-' ?></span>
                 </td>
                 <td style="width: 25%;">
-                    <span class="label">Contribuições Sociais - Retidas</span>
-                    <span class="value"><?= $data['tributacao_federal']['contribuicoes_sociais'] ?? '-' ?></span>
+                    <span class="label">CSLL - Retida</span>
+                    <span class="value"><?= $data['tributacao_federal']['csll'] ?? '-' ?></span>
                 </td>
                 <td style="width: 25%;"></td>
             </tr>
@@ -498,7 +498,7 @@
                     <span class="value"><?= $data['tributacao_federal']['cofins'] ?? '-' ?></span>
                 </td>
                 <td colspan="2">
-                    <span class="label">Descrição Contrib. Sociais - Retidas</span>
+                    <span class="label">Tipo de retenção PIS/COFINS/CSLL</span>
                     <span class="value"><?= $data['tributacao_federal']['descricao_retencao'] ?? '-' ?></span>
                 </td>
             </tr>

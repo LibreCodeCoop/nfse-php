@@ -169,7 +169,7 @@ final class DanfseTemplate
             'tributacao_federal' => [
                 'irrf'   => $this->currencyOrDash($this->val($tribFed, 'vRetIRRF')),
                 'cp'     => $this->currencyOrDash($this->val($tribFed, 'vRetCP')),
-                'contribuicoes_sociais' => $this->currencyOrDash($this->val($tribFed, 'vRetCSLL')),
+                'csll'   => $this->currencyOrDash($this->val($tribFed, 'vRetCSLL')),
                 'pis'    => $this->currencyOrDash($this->val($tribFed, 'piscofins', 'vPis')),
                 'cofins' => $this->currencyOrDash($this->val($tribFed, 'piscofins', 'vCofins')),
                 'descricao_retencao' => $this->pisCofinsRetentionLabel(
