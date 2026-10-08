@@ -67,8 +67,8 @@ official workbook. The new file is written under its own versioned filename; no
 existing production catalog or XSD is silently replaced.
 
 The generator preserves the existing headers and row order of the current TSVs.
-For the official INDOP sheet the mapping is explicit: F = supply characteristic,
-G = cIndOp, H = location. If an annex changes its physical columns, the generator
+For the official Anexo C INDOP sheet the mapping is explicit: D = supply
+characteristic, G = cIndOp and H = location. If an annex changes its physical columns, the generator
 must fail pending manual examination; never guess which description belongs to a code.
 
 ## Government source monitoring

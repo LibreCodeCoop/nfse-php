@@ -248,8 +248,8 @@ final class DomainTableGenerator
     }
 
     /**
-     * For the official Anexo C and VII "INDOP" sheet, column F is the supply
-     * characteristic, G is cIndOp and H is the location. Never rank free-text
+     * For the official production Anexo C "INDOP" sheet, D is the supply
+     * characteristic, G is cIndOp, H is the location. Never rank free-text
      * fields by length: that can silently misassign tax information.
      *
      * @return list<list<string>>
@@ -264,10 +264,10 @@ final class DomainTableGenerator
             if (strlen($code) !== 6 || !preg_match('/^[0-9.]+$/D', $rawCode)) {
                 continue;
             }
-            $characteristic = $row['F'] ?? '';
+            $characteristic = $row['D'] ?? '';
             $location = $row['H'] ?? '';
             if ($characteristic === '' || $location === '') {
-                throw new \UnexpectedValueException("Incomplete operation indicator {$code} in INDOP F/G/H");
+                throw new \UnexpectedValueException("Incomplete operation indicator {$code} in INDOP D/G/H");
             }
             $this->appendCode($rows, $seen, [$code, $characteristic, $location]);
         }
