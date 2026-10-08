@@ -43,7 +43,7 @@ jobs:
             require "vendor-bin/domains/vendor/autoload.php";
             $file = getenv("RUNNER_TEMP") . "/nt009/annex-vii-nt009.xlsx";
             if (!is_file($file)) { exit(0); }
-            $r = new LibreCodeCoop\\NfsePHP\\Tools\\AnnexReader($file);
+            $r = new LibreCodeCoop\NfsePHP\Tools\AnnexReader($file);
             foreach (array_slice($r->rows("cIndOp Public"), 0, 32) as $i => $row) {
                 echo ($i + 1) . ": " . json_encode($row, JSON_UNESCAPED_UNICODE) . PHP_EOL;
             }
