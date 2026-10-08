@@ -46,6 +46,25 @@ final class OfficialDomainCatalogTest extends TestCase
         self::assertFalse($this->catalog->hasNbs('000000000'));
     }
 
+    public function testNationalServicesCanBeSearchedByCodeOrDescription(): void
+    {
+        $byCode = $this->catalog->searchNationalServices('010101', 10);
+        self::assertSame('010101', $byCode[0]['code'] ?? null);
+        self::assertSame('Análise e desenvolvimento de sistemas.', $byCode[0]['description'] ?? null);
+
+        $byDescription = $this->catalog->searchNationalServices('desenvolvimento de sistemas', 10);
+        self::assertSame('010101', $byDescription[0]['code'] ?? null);
+    }
+
+    public function testNationalServicesSearchIsBoundedAndCanListTheCatalog(): void
+    {
+        $firstTwo = $this->catalog->searchNationalServices(null, 2);
+
+        self::assertCount(2, $firstTwo);
+        self::assertSame('010101', $firstTwo[0]['code']);
+        self::assertCount(338, $this->catalog->searchNationalServices(null, 500));
+    }
+
     public function testKnownIbsCbsOperationIndicatorIsAvailableOffline(): void
     {
         $indicator = $this->catalog->operationIndicator('020101');
