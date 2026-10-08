@@ -147,12 +147,12 @@ final class DomainTableGeneratorTest extends TestCase
             ],
         ]);
         $c = $this->workbook('c.xlsx', [
-            'INDOP' => [
+            'IndOp' => [
                 ['', '', '', 'Característica', '', '', 'Código', 'Local'],
                 ['', '', '', 'Execução sobre bem imóvel', '', '01', '020101', 'Localidade do imóvel'],
                 ['', '', '', '', '', '02', '030101', 'Estabelecimento do fornecedor'],
             ],
-        ], ['indop' => ['D2:D3']]);
+        ], ['IndOp' => ['D2:D3']]);
 
         return [$a, $b, $c];
     }
