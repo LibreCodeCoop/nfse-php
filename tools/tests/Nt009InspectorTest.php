@@ -60,6 +60,29 @@ final class Nt009InspectorTest extends TestCase
         self::assertSame('0-1', $result['layout_rows'][1]['raw_columns']['B']);
     }
 
+    public function testFrozenIndicatorSnapshotIsCheckedAgainstAllOriginalTriplets(): void
+    {
+        $vii = $this->workbook('vii-verify.xlsx', 'cIndOp Public', [
+            ['Código indOp', 'Tipo de operação', 'Característica do fornecimento', 'Local no DFe'],
+            ['020101', 'Imóvel', 'Operação com imóvel', 'Endereço do imóvel'],
+            ['040101', 'Evento', 'Evento presencial', 'Local do evento'],
+        ]);
+        $snapshot = $this->directory . '/vii.tsv';
+        file_put_contents($snapshot, "# Official Annex VII\n"
+            . "020101\tOperação com imóvel\tEndereço do imóvel\n"
+            . "040101\tEvento presencial\tLocal do evento\n");
+
+        $inspector = new Nt009Inspector();
+        self::assertSame(2, $inspector->verifyIndicatorSnapshot($vii, $snapshot, 2));
+        file_put_contents($snapshot, "# Official Annex VII\n"
+            . "020101\tOperação com imóvel\tEndereço do imóvel\n"
+            . "040101\tEvento presencial\tWrong location\n");
+
+        $this->expectException(\UnexpectedValueException::class);
+        $this->expectExceptionMessage('does not match original XLSX triplets');
+        $inspector->verifyIndicatorSnapshot($vii, $snapshot, 2);
+    }
+
     /**
      * @param list<list<string>> $rows
      */

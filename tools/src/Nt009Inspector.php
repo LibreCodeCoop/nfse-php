@@ -98,6 +98,32 @@ final class Nt009Inspector
     }
 
     /**
+     * Verify every code, characteristic and location in the frozen Annex VII
+     * snapshot against an original XLSX file, preserving the official row order.
+     */
+    public function verifyIndicatorSnapshot(string $workbook, string $snapshot, int $expectedCount): int
+    {
+        if ($expectedCount < 1) {
+            throw new \InvalidArgumentException('Expected indicator cardinality must be positive');
+        }
+        $rows = (new DomainTableGenerator())->indicatorRows($workbook);
+        $published = [];
+        foreach ($rows as $row) {
+            if (isset($published[$row[0]])) {
+                throw new \UnexpectedValueException('Duplicate indicator in official Annex VII: ' . $row[0]);
+            }
+            $published[$row[0]] = [$row[1], $row[2]];
+        }
+        $committed = $this->readTsv($snapshot);
+        if (count($published) !== $expectedCount || count($committed) !== $expectedCount
+            || $published !== $committed) {
+            throw new \UnexpectedValueException('Versioned Annex VII does not match original XLSX triplets');
+        }
+
+        return count($published);
+    }
+
+    /**
      * @return array<string, list<string>>
      */
     private function readTsv(string $filename): array
