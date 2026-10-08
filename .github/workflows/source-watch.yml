@@ -1,23 +1,18 @@
 # SPDX-FileCopyrightText: 2026 LibreCode coop and contributors
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
-name: Domain Table Generator
+name: Official NFS-e Source Watch
 
 on:
-  pull_request:
-    paths:
-      - "tools/**"
-      - "vendor-bin/domains/**"
-      - "resources/domains/**"
-      - "composer.json"
-      - ".github/workflows/domain-tables.yml"
+  schedule:
+    - cron: "17 9 * * 1-5"
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  deterministic-generator:
+  check-published-files:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -31,12 +26,13 @@ jobs:
           coverage: none
       - name: Install isolated domain tooling
         run: composer --working-dir=vendor-bin/domains install --prefer-dist --no-progress --no-interaction
-      - name: Run offline deterministic PHPUnit cases
-        run: composer --working-dir=vendor-bin/domains run test
-      - name: Lint PHP domain tools
-        run: find tools -type f -name '*.php' -print0 | xargs -0 -n 1 php -l
-      - name: Export initial lockfile for signed commit
-        run: |
-          echo DOMAIN_LOCK_BEGIN
-          cat vendor-bin/domains/composer.lock
-          echo DOMAIN_LOCK_END
+      - name: Compare official source checksums
+        run: php tools/bin/domains.php watch --report="${{ runner.temp }}/nfse-sources-report.json"
+      - name: Retain diff evidence without modifying the repository
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: official-nfse-source-check
+          path: ${{ runner.temp }}/nfse-sources-report.json
+          if-no-files-found: warn
+          retention-days: 30

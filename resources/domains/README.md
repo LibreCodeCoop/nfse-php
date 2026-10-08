@@ -40,24 +40,55 @@ When an official annex changes:
 6. review downstream mapping changes explicitly instead of silently coercing old values.
 
 
-## Reproducible generation
+## PHP tooling (isolated)
 
-The snapshots are generated directly from the three official XLSX annexes with only the Python
-standard library:
+The PHP SDK loads committed TSV files only; it never needs to read XLSX or access government
+websites at runtime. The annex parser, PHPUnit suite and PhpSpreadsheet live in
+`vendor-bin/domains/`, with a separate Composer manifest and lockfile. The root
+`composer.json` contains *commands*, not a PhpSpreadsheet dependency.
 
-```bash
-python3 tools/generate_domain_tables.py \
-  --annex-a /path/to/ANEXO_A.xlsx \
-  --annex-b /path/to/ANEXO_B.xlsx \
-  --annex-c /path/to/ANEXO_C.xlsx \
-  --output resources/domains
+Install the isolated tooling (PHP 8.2+, plus PhpSpreadsheet's extensions including zip and gd):
+
+```sh
+composer domains:install
 ```
 
-Use `--check` to compare regenerated output with the committed snapshots. The command validates
-the expected official cardinalities (5,571 municipalities/general localities, 250 countries,
-338 national service codes, 918 nine-digit NBS codes and 26 operation indicators) before writing
-or accepting output.
+Generate from exact, reviewed official workbooks:
 
-The generator reads XLSX as ZIP/XML, honors cell references and vertically merged cells, derives
-UF only from the stable IBGE prefix map, and rejects an unexpected cardinality. A network-free CI
-fixture exercises the same parser and proves deterministic output.
+```sh
+composer domains:generate -- --annex-a=/path/to/ANEXO_A.xlsx --annex-b=/path/to/ANEXO_B.xlsx --annex-c=/path/to/ANEXO_C.xlsx
+composer domains:check -- --annex-a=/path/to/ANEXO_A.xlsx --annex-b=/path/to/ANEXO_B.xlsx --annex-c=/path/to/ANEXO_C.xlsx
+composer domains:test
+```
+
+For Annex VII v1.03.00, also pass `--annex-vii=/path/to/ANEXO_VII.xlsx` and
+`--expected-vii=N`, where N is an **independently verified** cardinality from the
+official workbook. The new file is written under its own versioned filename; no
+existing production catalog or XSD is silently replaced.
+
+The generator preserves the existing headers and row order of the current TSVs.
+For the official INDOP sheet the mapping is explicit: F = supply characteristic,
+G = cIndOp, H = location. If an annex changes its physical columns, the generator
+must fail pending manual examination; never guess which description belongs to a code.
+
+## Government source monitoring
+
+`resources/domains/sources.json` records official portal URLs, version, reported environment
+and the available **observed** SHA-256 values. They are not official digital signatures.
+Two older source baselines have not yet been verified and are intentionally null.
+The scheduled source-watch GitHub workflow downloads these exact public URLs, rejects
+HTML masquerading as an XLSX and reports byte-level differences. A changed hash
+is **not** proof of changed fiscal semantics or production activation.
+
+```sh
+composer domains:watch
+composer domains:audit -- --annex-vi=/path/to/ANEXO_VI.xlsx --annex-vii=/path/to/ANEXO_VII.xlsx
+```
+
+The audit command checks source bytes against the recorded Annex VI/VII October 2026
+observations. A changed source must be manually reviewed and the manifest updated.
+The monitor never commits, opens issues, or modifies production data. The advisory
+Annex VIII correlation remains non-enforcing.
+
+No runtime or CI test reaches out to government sources; monitoring is a separate,
+scheduled workflow. The `tools/` directory is written in PHP only.
