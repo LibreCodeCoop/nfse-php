@@ -28,9 +28,17 @@ final class PhpVersionPolicyTest extends TestCase
     public function testRepositoryPolicyUsesRootComposerConstraint(): void
     {
         $policy = PhpVersionPolicy::fromFile(dirname(__DIR__, 2) . '/composer.json');
-        self::assertSame('8.2', $policy->minimum());
-        self::assertSame(['8.2', '8.3', '8.4'], $policy->matrix());
-        self::assertSame('8.3', $policy->primary());
+        $composer = json_decode(
+            (string) file_get_contents(dirname(__DIR__, 2) . '/composer.json'),
+            true,
+            512,
+            JSON_THROW_ON_ERROR
+        );
+        self::assertSame('^' . $policy->minimum(), $composer['require']['php']);
+        self::assertSame($composer['extra']['ci']['php-matrix'], $policy->matrix());
+        self::assertSame($composer['extra']['ci']['php-default'], $policy->primary());
+        self::assertSame($policy->minimum(), $policy->matrix()[0]);
+        self::assertContains($policy->primary(), $policy->matrix());
     }
 
     public function testRequirementChangeMustNotSilentlyLeaveOldMatrix(): void
@@ -58,6 +66,21 @@ final class PhpVersionPolicyTest extends TestCase
         $this->expectException(\UnexpectedValueException::class);
         $this->expectExceptionMessage('unique ascending');
         new PhpVersionPolicy($composer);
+    }
+
+    public function testIsolatedToolingRuntimeMustRespectRootPhpConstraint(): void
+    {
+        $policy = new PhpVersionPolicy(self::example());
+        $policy->assertRuntime('8.2.0');
+        $policy->assertRuntime('8.4.24');
+        try {
+            $policy->assertRuntime('8.1.33');
+            self::fail('Runtime below the root requirement must be rejected');
+        } catch (\UnexpectedValueException $error) {
+            self::assertStringContainsString('not supported', $error->getMessage());
+        }
+        $this->expectException(\UnexpectedValueException::class);
+        $policy->assertRuntime('9.0.0');
     }
 
     public function testPrimaryVersionMustBelongToCompatibilityMatrix(): void

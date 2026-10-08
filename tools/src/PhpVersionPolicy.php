@@ -92,4 +92,19 @@ final class PhpVersionPolicy
     {
         return $this->primary;
     }
+
+    /**
+     * Isolated tooling may be installed separately, but must still run on a
+     * PHP interpreter supported by this repository's Composer constraint.
+     */
+    public function assertRuntime(string $version): void
+    {
+        $major = (int) explode('.', $this->minimum)[0];
+        if (version_compare($version, $this->minimum, '<')
+            || (int) explode('.', $version)[0] !== $major) {
+            throw new \UnexpectedValueException(
+                "PHP {$version} is not supported by root composer.json (requires ^{$this->minimum})",
+            );
+        }
+    }
 }

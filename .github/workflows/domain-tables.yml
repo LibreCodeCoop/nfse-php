@@ -30,6 +30,12 @@ jobs:
           extensions: dom, mbstring, zip, gd, xml, xmlreader, xmlwriter, simplexml, fileinfo
       - name: Install isolated domain tooling
         run: composer --working-dir=vendor-bin/domains install --prefer-dist --no-progress --no-interaction
+      - name: Refresh isolated Composer lock for reproducible review
+        run: |
+          composer --working-dir=vendor-bin/domains update --lock --no-install --no-progress --no-interaction
+          echo "DOMAIN_LOCK_BEGIN"
+          cat vendor-bin/domains/composer.lock
+          echo "DOMAIN_LOCK_END"
       - name: Run offline deterministic PHPUnit cases
         run: composer --working-dir=vendor-bin/domains run test
       - name: Lint PHP domain tools

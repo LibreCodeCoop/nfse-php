@@ -4,7 +4,6 @@
     "type": "project",
     "license": "AGPL-3.0-or-later",
     "require": {
-        "php": "^8.2",
         "phpoffice/phpspreadsheet": "^5.10"
     },
     "require-dev": {
@@ -16,6 +15,8 @@
         }
     },
     "scripts": {
+        "pre-install-cmd": "@php ../../tools/bin/ci-php.php assert-runtime",
+        "pre-update-cmd": "@php ../../tools/bin/ci-php.php assert-runtime",
         "test": "vendor/bin/phpunit -c phpunit.xml"
     },
     "config": {

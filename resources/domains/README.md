@@ -44,8 +44,10 @@ When an official annex changes:
 
 The PHP SDK loads committed TSV files only; it never needs to read XLSX or access government
 websites at runtime. The annex parser, PHPUnit suite and PhpSpreadsheet live in
-`vendor-bin/domains/`, with a separate Composer manifest and lockfile. The root
-`composer.json` contains *commands*, not a PhpSpreadsheet dependency.
+`vendor-bin/domains/`, with a separate Composer manifest and lockfile. The nested manifest deliberately
+does not repeat the PHP version: its Composer install/update hooks validate the
+runtime against `require.php` in the **root** `composer.json`. The root manifest
+contains *commands*, not a PhpSpreadsheet dependency.
 
 Install the isolated tooling (PHP 8.2+, plus PhpSpreadsheet's extensions including zip and gd):
 

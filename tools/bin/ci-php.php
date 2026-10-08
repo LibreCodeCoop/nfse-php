@@ -17,8 +17,13 @@ try {
         'matrix' => json_encode($policy->matrix(), JSON_THROW_ON_ERROR),
         'primary' => $policy->primary(),
         'validate' => 'PHP CI policy is consistent with root composer.json',
+        'assert-runtime' => (function () use ($policy): string {
+            $policy->assertRuntime(PHP_VERSION);
+
+            return 'PHP runtime satisfies the root Composer requirement';
+        })(),
         default => throw new \InvalidArgumentException(
-            'Usage: php tools/bin/ci-php.php {minimum|matrix|primary|validate}',
+            'Usage: php tools/bin/ci-php.php {minimum|matrix|primary|validate|assert-runtime}',
         ),
     };
     fwrite(STDOUT, $result . "\n");
