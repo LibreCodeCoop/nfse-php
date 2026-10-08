@@ -106,6 +106,40 @@ final class OfficialDomainCatalog
         return $this->country($iso2) !== null;
     }
 
+    /**
+     * @return list<array{code:string,description:string}>
+     */
+    public function searchNationalServices(?string $query = null, int $limit = 200): array
+    {
+        $normalizedQuery = mb_strtolower(trim((string) $query), 'UTF-8');
+        $limit = max(1, min($limit, 500));
+        $results = [];
+
+        foreach ($this->table('servicos-nacionais-v1.01.tsv', 2) as $row) {
+            $code = $row[0];
+            $description = $row[1];
+
+            if (
+                $normalizedQuery !== ''
+                && !str_contains(mb_strtolower($code, 'UTF-8'), $normalizedQuery)
+                && !str_contains(mb_strtolower($description, 'UTF-8'), $normalizedQuery)
+            ) {
+                continue;
+            }
+
+            $results[] = [
+                'code' => $code,
+                'description' => $description,
+            ];
+
+            if (count($results) >= $limit) {
+                break;
+            }
+        }
+
+        return $results;
+    }
+
     public function hasNationalService(string $code): bool
     {
         return $this->nationalService($code) !== null;
