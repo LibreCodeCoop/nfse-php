@@ -120,23 +120,23 @@ final class DanfseGoldenReferenceTest extends TestCase
         self::assertStringContainsString('DANFSe v2.0', $html);
     }
 
-    public function testFederalRetentionUsesOfficialV2Semantics(): void
+    public function testFederalRetentionKeepsCsllSeparateFromPisAndCofins(): void
     {
         $nfse = $this->fixtureData();
         $nfse['infNFSe']['DPS']['infDPS']['valores']['trib']['tribFed']['piscofins']['tpRetPisCofins'] = '4';
-        $nfse['infNFSe']['DPS']['infDPS']['valores']['trib']['tribFed']['vRetCSLL'] = '1149.75';
+        unset($nfse['infNFSe']['DPS']['infDPS']['valores']['trib']['tribFed']['vRetCSLL']);
 
         $template = new DanfseTemplate();
         $data = $template->buildData($nfse);
         $html = $template->render($nfse, new DanfseConfig());
 
-        self::assertSame('R$ 1.149,75', $data['tributacao_federal']['contribuicoes_sociais']);
+        self::assertSame('-', $data['tributacao_federal']['csll']);
         self::assertSame(
             '4 - PIS/COFINS Retidos, CSLL Não Retido',
             $data['tributacao_federal']['descricao_retencao'],
         );
-        self::assertStringContainsString('Contribuições Sociais - Retidas', $html);
-        self::assertStringContainsString('Descrição Contrib. Sociais - Retidas', $html);
+        self::assertStringContainsString('CSLL - Retida', $html);
+        self::assertStringContainsString('Tipo de retenção PIS/COFINS/CSLL', $html);
     }
 
     public function testHomologationReferenceCarriesVisibleMarker(): void
