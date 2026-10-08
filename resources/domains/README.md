@@ -77,7 +77,9 @@ must fail pending manual examination; never guess which description belongs to a
 and the available **observed** SHA-256 values. They are not official digital signatures.
 Two older source baselines have not yet been verified and are intentionally null.
 The scheduled source-watch GitHub workflow downloads these exact public URLs, rejects
-HTML masquerading as an XLSX and reports byte-level differences. A changed hash
+HTML masquerading as an XLSX and reports byte-level differences. It also inspects
+the production and RTC index pages for newer versioned annex links, because simply
+hashing known URLs would never detect a newly named workbook. A changed hash
 is **not** proof of changed fiscal semantics or production activation.
 
 ```sh

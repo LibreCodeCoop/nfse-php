@@ -8,7 +8,9 @@
       "environment": "production",
       "type": "xlsx",
       "url": "https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/documentacao-atual/anexo_a-municipio_ibge-paises_iso2-v1-00-snnfse-20251210.xlsx",
-      "observed_sha256": null
+      "observed_sha256": null,
+      "index_url": "https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/documentacao-atual",
+      "file_pattern": "anexo[_-]a[-_]"
     },
     {
       "id": "annex-b",
@@ -16,7 +18,9 @@
       "environment": "production",
       "type": "xlsx",
       "url": "https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/documentacao-atual/anexo_b-nbs2-lista_servico_nacional-snnfse-v1-01-20260122.xlsx",
-      "observed_sha256": null
+      "observed_sha256": null,
+      "index_url": "https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/documentacao-atual",
+      "file_pattern": "anexo[_-]b[-_]"
     },
     {
       "id": "annex-c",
@@ -24,7 +28,9 @@
       "environment": "production",
       "type": "xlsx",
       "url": "https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/documentacao-atual/anexo-c-indop-ibscbs-snnfse-v1-01.xlsx",
-      "observed_sha256": "f59f066c5c3584ac26cc07d9b23f9fb6713e4bc9212b5e37fededf9244f29d15"
+      "observed_sha256": "f59f066c5c3584ac26cc07d9b23f9fb6713e4bc9212b5e37fededf9244f29d15",
+      "index_url": "https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/documentacao-atual",
+      "file_pattern": "anexo[-_]c[-_].*indop"
     },
     {
       "id": "annex-vi-nt009",
@@ -32,7 +38,9 @@
       "environment": "RTC documentation (activation not established)",
       "type": "xlsx",
       "url": "https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/rtc/anexovi-leiautesrn_rtc_ibscbs-v1-04-01-nt009.xlsx",
-      "observed_sha256": "103a150dd6f56ec8edcaa3a453b59a1b0e096d7cd5025d7bd06a387f141ddf39"
+      "observed_sha256": "103a150dd6f56ec8edcaa3a453b59a1b0e096d7cd5025d7bd06a387f141ddf39",
+      "index_url": "https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/rtc",
+      "file_pattern": "anexovi[-_]leiautesrn"
     },
     {
       "id": "annex-vii-nt009",
@@ -40,7 +48,9 @@
       "environment": "RTC documentation (activation not established)",
       "type": "xlsx",
       "url": "https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/rtc/anexovii-indop_ibscbs_v1-03-00-nt009.xlsx",
-      "observed_sha256": "95f30a44ee94adeea57fb92f3a0337b1e62fdc106f393e73894087889be9e5aa"
+      "observed_sha256": "95f30a44ee94adeea57fb92f3a0337b1e62fdc106f393e73894087889be9e5aa",
+      "index_url": "https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/rtc",
+      "file_pattern": "anexovii[-_]indop"
     }
   ],
   "checksum_provenance": "The 2026-10-05 observed SHA-256 values for Annex C, VI and VII were recorded by an independent downloader, not digitally signed by the Brazilian government. A/B baselines remain unverified pending direct retrieval."

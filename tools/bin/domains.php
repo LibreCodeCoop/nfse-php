@@ -8,6 +8,7 @@ declare(strict_types=1);
 
 use LibreCodeCoop\NfsePHP\Tools\AnnexReader;
 use LibreCodeCoop\NfsePHP\Tools\DomainTableGenerator;
+use LibreCodeCoop\NfsePHP\Tools\PortalIndexDiscovery;
 use LibreCodeCoop\NfsePHP\Tools\SourceVerifier;
 
 $root = dirname(__DIR__, 2);
@@ -85,15 +86,18 @@ try {
             $reader->close();
         }
     } elseif ($command === 'watch') {
+        $manifest = $options['manifest'] ?? $root . '/resources/domains/sources.json';
         $verifier = new SourceVerifier();
-        $results = $verifier->inspect(
-            $options['manifest'] ?? $root . '/resources/domains/sources.json',
+        $results = $verifier->inspect($manifest, SourceVerifier::fetchOfficial(...));
+        $newVersions = (new PortalIndexDiscovery())->findNewer(
+            $manifest,
             SourceVerifier::fetchOfficial(...)
         );
         $report = [
             'checked_at_utc' => gmdate('c'),
             'notice' => 'Published bytes are not evidence of production activation.',
             'sources' => $results,
+            'new_versions' => $newVersions,
         ];
         $json = json_encode($report, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR) . "\n";
         if (isset($options['report'])) {
@@ -110,10 +114,18 @@ try {
                     . $entry['environment'] . ' | ' . $entry['status'] . ' | `'
                     . $entry['sha256'] . "` |\n";
             }
+            $body .= "\nNew official document versions detected: " . count($newVersions) . "\n";
+            foreach ($newVersions as $candidate) {
+                $body .= '- ' . $candidate['id'] . ': ' . $candidate['version']
+                    . ' (' . $candidate['url'] . ")\n";
+            }
             $body .= "\nNo published data or XSD was activated automatically.\n";
             file_put_contents($summary, $body, FILE_APPEND);
         }
-        if (count(array_filter($results, static fn (array $entry): bool => $entry['status'] === 'changed')) > 0) {
+        if ($newVersions !== [] || count(array_filter(
+            $results,
+            static fn (array $entry): bool => $entry['status'] === 'changed'
+        )) > 0) {
             fwrite(STDERR, "Official files changed: review before updating any fiscal contract\n");
             exit(3);
         }
