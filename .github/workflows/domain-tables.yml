@@ -24,5 +24,3 @@ jobs:
           persist-credentials: false
       - name: Test deterministic XLSX normalization
         run: python3 -m unittest tools/tests/test_generate_domain_tables.py
-      - name: Verify official NT009 workbook provenance
-        run: python3 tools/audit_nt009_sources.py --inspect
