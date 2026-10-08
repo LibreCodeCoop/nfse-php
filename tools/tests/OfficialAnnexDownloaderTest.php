@@ -113,6 +113,29 @@ final class OfficialAnnexDownloaderTest extends TestCase
         $downloader->sources($manifest, ['annex-x']);
     }
 
+    public function testRejectsDuplicateRequestedIdsBeforeFetching(): void
+    {
+        $manifest = $this->manifest([$this->entry('annex-a', "PK\x03\x04official")]);
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('distinct official annex IDs');
+        (new OfficialAnnexDownloader())->download(
+            $manifest,
+            ['annex-a', 'annex-a'],
+            $this->directory . '/annexes',
+            static fn (string $url): string => 'should not download'
+        );
+    }
+
+    public function testRequiresObservedSourceChecksumInTheManifest(): void
+    {
+        $source = $this->entry('annex-a', "PK\x03\x04official");
+        $source['observed_sha256'] = '';
+        $manifest = $this->manifest([$source]);
+        $this->expectException(\UnexpectedValueException::class);
+        $this->expectExceptionMessage('Missing valid XLSX URL or SHA-256');
+        (new OfficialAnnexDownloader())->sources($manifest, ['annex-a']);
+    }
+
     /**
      * @return array{id:string,url:string,type:string,observed_sha256:string}
      */

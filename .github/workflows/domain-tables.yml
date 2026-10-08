@@ -30,6 +30,10 @@ jobs:
           extensions: dom, mbstring, zip, gd, xml, xmlreader, xmlwriter, simplexml, fileinfo
       - name: Install isolated domain tooling
         run: composer --working-dir=vendor-bin/domains install --prefer-dist --no-progress --no-interaction
+      - name: Validate root and isolated Composer manifests
+        run: |
+          composer validate --strict
+          composer --working-dir=vendor-bin/domains validate --strict
       - name: Run offline deterministic PHPUnit cases
         run: composer --working-dir=vendor-bin/domains run test
       - name: Lint PHP domain tools
