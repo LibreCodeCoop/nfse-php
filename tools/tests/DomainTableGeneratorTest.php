@@ -100,7 +100,7 @@ final class DomainTableGeneratorTest extends TestCase
     public function testSpreadsheetFormulaIsRejectedInsteadOfExecuted(): void
     {
         $path = $this->workbook('formula.xlsx', [
-            'INDOP' => [
+            'indop' => [
                 ['', '', '', '', '', 'Característica', 'Código', 'Local'],
                 ['', '', '', '', '', 'Serviço', '=SUM(1,2)', 'Localidade'],
             ],
@@ -152,7 +152,7 @@ final class DomainTableGeneratorTest extends TestCase
                 ['', '', '', 'Execução sobre bem imóvel', '', '01', '020101', 'Localidade do imóvel'],
                 ['', '', '', '', '', '02', '030101', 'Estabelecimento do fornecedor'],
             ],
-        ], ['INDOP' => ['D2:D3']]);
+        ], ['indop' => ['D2:D3']]);
 
         return [$a, $b, $c];
     }

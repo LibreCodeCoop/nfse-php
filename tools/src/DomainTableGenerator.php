@@ -271,18 +271,27 @@ final class DomainTableGenerator
     {
         $rows = [];
         $seen = [];
-        $names = $book->sheetNames();
-        if (in_array('INDOP', $names, true)) {
-            $sheet = 'INDOP';
-            $columns = ['code' => 'G', 'characteristic' => 'D', 'location' => 'H'];
-        } elseif (in_array('cIndOp Public', $names, true)) {
-            $sheet = 'cIndOp Public';
-            // Official NT009 v1.03.00: A=Código indOp, C=Característica,
-            // D=Local do fornecimento a ser identificado no DFe.
-            // J is NFSeLocIncidIBS (an additional classification), NOT the local description.
-            $columns = ['code' => 'A', 'characteristic' => 'C', 'location' => 'D'];
-        } else {
-            throw new \UnexpectedValueException('Missing indicator worksheet INDOP or cIndOp Public');
+        $sheet = null;
+        $columns = null;
+        foreach ($book->sheetNames() as $name) {
+            $normalized = mb_strtoupper(trim($name), 'UTF-8');
+            if ($normalized === 'INDOP') {
+                $sheet = $name;
+                $columns = ['code' => 'G', 'characteristic' => 'D', 'location' => 'H'];
+                break;
+            }
+            if ($normalized === 'CINDOP PUBLIC') {
+                $sheet = $name;
+                // Official NT009 v1.03.00: A=code, C=characteristic,
+                // D=DFe location; J is a separate NFS-e incidence hint.
+                $columns = ['code' => 'A', 'characteristic' => 'C', 'location' => 'D'];
+                break;
+            }
+        }
+        if ($sheet === null || $columns === null) {
+            throw new \UnexpectedValueException(
+                'Missing official indicator sheet; found: ' . implode(', ', $book->sheetNames()),
+            );
         }
         foreach ($book->rows($sheet) as $row) {
             $rawCode = $row[$columns['code']] ?? '';
