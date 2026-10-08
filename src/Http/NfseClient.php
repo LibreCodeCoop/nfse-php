@@ -9,6 +9,7 @@ namespace LibreCodeCoop\NfsePHP\Http;
 
 use LibreCodeCoop\NfsePHP\Config\CertConfig;
 use LibreCodeCoop\NfsePHP\Config\EnvironmentConfig;
+use LibreCodeCoop\NfsePHP\Contracts\CancellationClientInterface;
 use LibreCodeCoop\NfsePHP\Contracts\DecisionNfseIssuerInterface;
 use LibreCodeCoop\NfsePHP\Contracts\DpsLookupInterface;
 use LibreCodeCoop\NfsePHP\Contracts\EventLookupInterface;
@@ -42,7 +43,7 @@ use LibreCodeCoop\NfsePHP\Xml\XmlBuilder;
  * Communicates with the SEFIN gateway to issue, query, and cancel NFS-e.
  * All requests carry a signed DPS XML payload.
  */
-class NfseClient implements NfseClientInterface, DecisionNfseIssuerInterface, DpsLookupInterface, EventLookupInterface, EventRegistrationInterface
+class NfseClient implements NfseClientInterface, CancellationClientInterface, DecisionNfseIssuerInterface, DpsLookupInterface, EventLookupInterface, EventRegistrationInterface
 {
     private readonly string $baseUrl;
     private readonly XmlSignerInterface $signer;
@@ -240,7 +241,17 @@ class NfseClient implements NfseClientInterface, DecisionNfseIssuerInterface, Dp
 
     public function cancel(string $chaveAcesso, string $motivo): bool
     {
-        $eventoXml = $this->buildCancelEventXml($chaveAcesso, $motivo);
+        return $this->cancelWithReason($chaveAcesso, '1', $motivo);
+    }
+
+    #[\Override]
+    public function cancelWithReason(string $chaveAcesso, string $codigoMotivo, string $motivo): bool
+    {
+        $codigoMotivo = trim($codigoMotivo);
+        $motivo = trim($motivo);
+        $this->assertCancellationReason($codigoMotivo, $motivo);
+
+        $eventoXml = $this->buildCancelEventXml($chaveAcesso, $codigoMotivo, $motivo);
 
         try {
             $this->registerEventXml($chaveAcesso, $eventoXml);
@@ -409,7 +420,7 @@ class NfseClient implements NfseClientInterface, DecisionNfseIssuerInterface, Dp
         }
     }
 
-    private function buildCancelEventXml(string $chaveAcesso, string $motivo): string
+    private function buildCancelEventXml(string $chaveAcesso, string $codigoMotivo, string $motivo): string
     {
         $doc = new \DOMDocument('1.0', 'UTF-8');
         $doc->formatOutput = false;
@@ -430,11 +441,27 @@ class NfseClient implements NfseClientInterface, DecisionNfseIssuerInterface, Dp
 
         $e101101 = $doc->createElement('e101101');
         $e101101->appendChild($doc->createElement('xDesc', 'Cancelamento de NFS-e'));
-        $e101101->appendChild($doc->createElement('cMotivo', '1'));
+        $e101101->appendChild($doc->createElement('cMotivo', $codigoMotivo));
         $e101101->appendChild($doc->createElement('xMotivo', $motivo));
         $infPedReg->appendChild($e101101);
 
         return $doc->saveXML($doc->documentElement) ?: '';
+    }
+
+    private function assertCancellationReason(string $codigoMotivo, string $motivo): void
+    {
+        if (!in_array($codigoMotivo, ['1', '2', '9'], true)) {
+            throw new \InvalidArgumentException('Cancellation reason code must be one of: 1, 2, 9.');
+        }
+
+        $length = preg_match_all('/./us', $motivo, $characters);
+        if ($length === false) {
+            throw new \InvalidArgumentException('Cancellation reason description must be valid UTF-8.');
+        }
+
+        if ($length < 15 || $length > 255) {
+            throw new \InvalidArgumentException('Cancellation reason description must contain between 15 and 255 characters.');
+        }
     }
 
     /**

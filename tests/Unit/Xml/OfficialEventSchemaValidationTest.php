@@ -46,6 +46,35 @@ final class OfficialEventSchemaValidationTest extends TestCase
         self::assertNotSame([], $this->validator->validate($invalidXml));
     }
 
+    /**
+     * @dataProvider cancellationReasonLengthCases
+     */
+    public function testCancellationReasonLengthMatchesOfficialSchema(int $length, bool $valid): void
+    {
+        $xml = str_replace(
+            'Erro de emissao confirmado pelo prestador',
+            str_repeat('a', $length),
+            $this->cancellationXml(),
+        );
+
+        $errors = $this->validator->validate($xml);
+
+        $valid ? self::assertSame([], $errors) : self::assertNotSame([], $errors);
+    }
+
+    /**
+     * @return array<string, array{int, bool}>
+     */
+    public static function cancellationReasonLengthCases(): array
+    {
+        return [
+            '14 rejected' => [14, false],
+            '15 accepted' => [15, true],
+            '255 accepted' => [255, true],
+            '256 rejected' => [256, false],
+        ];
+    }
+
     public function testValidatorRejectsWrongEventElementOrder(): void
     {
         $invalidXml = str_replace(
