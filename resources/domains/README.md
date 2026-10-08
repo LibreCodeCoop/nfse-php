@@ -92,5 +92,7 @@ observations. A changed source must be manually reviewed and the manifest update
 The monitor never commits, opens issues, or modifies production data. The advisory
 Annex VIII correlation remains non-enforcing.
 
-No runtime or CI test reaches out to government sources; monitoring is a separate,
-scheduled workflow. The `tools/` directory is written in PHP only.
+All required PHPUnit and formatting tests are offline. An optional source-reproduction
+workflow separately downloads the public production annexes and compares generated
+TSVs byte-for-byte with the committed snapshots. Government downtime must not
+break the deterministic test suite. The `tools/` directory is written in PHP only.

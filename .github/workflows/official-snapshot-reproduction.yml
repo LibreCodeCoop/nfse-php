@@ -1,0 +1,68 @@
+# SPDX-FileCopyrightText: 2026 LibreCode coop and contributors
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+name: Official Snapshot Reproduction
+
+on:
+  pull_request:
+    paths:
+      - "tools/**"
+      - "resources/domains/**"
+      - ".github/workflows/official-snapshot-reproduction.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  advisory-production-snapshot-reproduction:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up PHP 8.2
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2.37.2
+        with:
+          php-version: "8.2"
+          extensions: dom, mbstring, zip, gd, xml, xmlreader, xmlwriter, simplexml, fileinfo
+          coverage: none
+      - name: Install isolated domain tooling
+        run: composer --working-dir=vendor-bin/domains install --prefer-dist --no-progress --no-interaction
+      - name: Download exact public production annexes A, B and C
+        run: |
+          mkdir -p "${{ runner.temp }}/official"
+          php -r '
+            $sources = json_decode(file_get_contents("resources/domains/sources.json"), true, 512, JSON_THROW_ON_ERROR);
+            foreach ($sources["sources"] as $source) {
+                if (!in_array($source["id"], ["annex-a", "annex-b", "annex-c"], true)) {
+                    continue;
+                }
+                $url = $source["url"];
+                if (!str_starts_with($url, "https://www.gov.br/nfse/")) {
+                    throw new RuntimeException("Non-official source");
+                }
+                $bytes = file_get_contents($url);
+                if ($bytes === false || !str_starts_with($bytes, "PK")) {
+                    throw new RuntimeException("Invalid download of " . $source["id"]);
+                }
+                $filename = getenv("RUNNER_TEMP") . "/official/" . $source["id"] . ".xlsx";
+                file_put_contents($filename, $bytes);
+                echo $source["id"] . " sha256=" . hash("sha256", $bytes) . " bytes=" . strlen($bytes) . PHP_EOL;
+            }
+          '
+      - name: Compare regenerated output byte-for-byte with versioned snapshots
+        run: |
+          php tools/bin/domains.php check \
+            --annex-a="${{ runner.temp }}/official/annex-a.xlsx" \
+            --annex-b="${{ runner.temp }}/official/annex-b.xlsx" \
+            --annex-c="${{ runner.temp }}/official/annex-c.xlsx"
+      - name: Preserve source workbooks for manual review
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: official-production-domain-sources
+          path: ${{ runner.temp }}/official/*.xlsx
+          if-no-files-found: warn
+          retention-days: 14
