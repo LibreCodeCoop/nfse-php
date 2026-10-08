@@ -119,6 +119,19 @@ final class DomainTableGenerator
     }
 
     /**
+     * @return list<list<string>>
+     */
+    public function indicatorRows(string $workbookPath): array
+    {
+        $book = new AnnexReader($workbookPath);
+        try {
+            return $this->indicators($book);
+        } finally {
+            $book->close();
+        }
+    }
+
+    /**
      * @param array<string, string> $outputs
      */
     public function validateCounts(array $outputs, ?int $expectedVII = null): void
