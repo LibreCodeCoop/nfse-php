@@ -49,7 +49,7 @@ does not repeat the PHP version: its Composer install/update hooks validate the
 runtime against `require.php` in the **root** `composer.json`. The root manifest
 contains *commands*, not a PhpSpreadsheet dependency.
 
-Install the isolated tooling (PHP 8.2+, plus PhpSpreadsheet's extensions including zip and gd):
+Install the isolated tooling (the root Composer PHP requirement, plus PhpSpreadsheet's extensions including zip and gd):
 
 ```sh
 composer domains:install
