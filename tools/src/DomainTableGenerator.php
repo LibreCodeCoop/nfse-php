@@ -271,7 +271,13 @@ final class DomainTableGenerator
     {
         $rows = [];
         $seen = [];
-        foreach ($book->rows('INDOP') as $row) {
+        $names = $book->sheetNames();
+        $sheet = in_array('INDOP', $names, true) ? 'INDOP'
+            : (in_array('cIndOp Public', $names, true) ? 'cIndOp Public' : null);
+        if ($sheet === null) {
+            throw new \UnexpectedValueException('Missing indicator worksheet INDOP or cIndOp Public');
+        }
+        foreach ($book->rows($sheet) as $row) {
             $rawCode = $row['G'] ?? '';
             $code = self::digits($rawCode);
             if (strlen($code) !== 6 || !preg_match('/^[0-9.]+$/D', $rawCode)) {

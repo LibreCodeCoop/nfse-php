@@ -89,8 +89,10 @@ try {
                         break;
                     }
                 }
-                if ($source === null || !str_starts_with($source['url'],
-                    'https://www.gov.br/nfse/')) {
+                if ($source === null || !str_starts_with(
+                    $source['url'],
+                    'https://www.gov.br/nfse/'
+                )) {
                     throw new RuntimeException('Missing or non-official source: ' . $id);
                 }
                 $file = $destination . '/' . $id . '.xlsx';
@@ -133,14 +135,16 @@ try {
             . ', changed=' . count($comparison['changed_codes'])
             . ', removed=' . count($comparison['removed_codes']) . "\n";
         if (getenv('GITHUB_STEP_SUMMARY') !== false) {
-            file_put_contents((string) getenv('GITHUB_STEP_SUMMARY'),
+            file_put_contents(
+                (string) getenv('GITHUB_STEP_SUMMARY'),
                 "## NT009 source comparison\n\n" . 'Annex VII: '
                 . $comparison['annex_vii_count'] . ' indicators, added: '
                 . count($comparison['added_codes']) . ', changed: '
                 . count($comparison['changed_codes']) . ', removed: '
                 . count($comparison['removed_codes'])
                 . "\n\nA published annex does not establish production applicability.\n",
-                FILE_APPEND);
+                FILE_APPEND
+            );
         }
     } elseif ($command === 'watch') {
         $manifest = $options['manifest'] ?? $root . '/resources/domains/sources.json';

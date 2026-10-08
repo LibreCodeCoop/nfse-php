@@ -33,7 +33,7 @@ final class Nt009Inspector
         }
         try {
             $matches = [];
-            foreach ($reader->rows($layout) as $index => $columns) {
+            foreach ($reader->rows($layout, true) as $index => $columns) {
                 foreach ($columns as $value) {
                     if (in_array($value, [
                         'IBSCBS', 'cIndOp', 'CST', 'cClassTrib', 'gIBSCBS',

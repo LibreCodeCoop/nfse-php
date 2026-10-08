@@ -22,9 +22,11 @@ composer domains:audit -- --annex-vi=/path/to/VI.xlsx --annex-vii=/path/to/VII.x
 
 The audit first validates both workbook bytes against SHA-256 values independently
 observed on **2026-10-05**, not government-issued signatures. It then reads
-the layout worksheet rows with literal field names and compares the complete
+the layout worksheet rows with literal field names (ignoring, not evaluating,
+spreadsheet helper formulas) and compares the complete
 indicator-code/description/location triplets with the existing Anexo C v1.01
-snapshot. The JSON report lists additions, removals and text changes, as well
+snapshot. Both known official indicator worksheet names (`INDOP` and `cIndOp Public`) are
+supported; unknown sheet names fail explicitly. The JSON report lists additions, removals and text changes, as well
 as original cell coordinates for relevant NT009 layout entries.
 
 **Interpretation boundary:** exported raw layout rows do *not* automatically
