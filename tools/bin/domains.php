@@ -8,6 +8,7 @@ declare(strict_types=1);
 
 use LibreCodeCoop\NfsePHP\Tools\AnnexReader;
 use LibreCodeCoop\NfsePHP\Tools\DomainTableGenerator;
+use LibreCodeCoop\NfsePHP\Tools\Nt009Inspector;
 use LibreCodeCoop\NfsePHP\Tools\PortalIndexDiscovery;
 use LibreCodeCoop\NfsePHP\Tools\SourceVerifier;
 
@@ -69,6 +70,38 @@ try {
         }
         echo "Verified " . count($outputs) . " deterministic snapshots\n";
     } elseif ($command === 'audit') {
+        if (isset($options['download-dir'])) {
+            $destination = $options['download-dir'];
+            if (!is_dir($destination) && !mkdir($destination, 0o700, true)) {
+                throw new RuntimeException('Cannot create official document download directory');
+            }
+            $manifest = json_decode(
+                (string) file_get_contents($root . '/resources/domains/sources.json'),
+                true,
+                512,
+                JSON_THROW_ON_ERROR
+            );
+            foreach (['annex-vi-nt009' => 'annex-vi', 'annex-vii-nt009' => 'annex-vii'] as $id => $name) {
+                $source = null;
+                foreach ($manifest['sources'] as $entry) {
+                    if ($entry['id'] === $id) {
+                        $source = $entry;
+                        break;
+                    }
+                }
+                if ($source === null || !str_starts_with(
+                    $source['url'],
+                    'https://www.gov.br/nfse/'
+                )) {
+                    throw new RuntimeException('Missing or non-official source: ' . $id);
+                }
+                $file = $destination . '/' . $id . '.xlsx';
+                if (file_put_contents($file, SourceVerifier::fetchOfficial($source['url'])) === false) {
+                    throw new RuntimeException('Failed to save official source: ' . $id);
+                }
+                $options[$name] = $file;
+            }
+        }
         foreach (['annex-vi', 'annex-vii'] as $name) {
             if (!isset($options[$name])) {
                 throw new InvalidArgumentException("Missing --{$name}=PATH");
@@ -84,6 +117,34 @@ try {
             $reader = new AnnexReader($options[$name]);
             echo "{$name}: {$hash}; sheets: " . implode(', ', $reader->sheetNames()) . "\n";
             $reader->close();
+        }
+        $comparison = (new Nt009Inspector())->inspect(
+            $options['annex-vi'],
+            $options['annex-vii'],
+            $root . '/resources/domains/indicadores-operacao-ibscbs-v1.01.tsv'
+        );
+        $json = json_encode($comparison, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE
+            | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR) . "\n";
+        if (isset($options['report'])) {
+            if (file_put_contents($options['report'], $json) === false) {
+                throw new RuntimeException('Unable to save NT009 comparison');
+            }
+        }
+        echo 'NT009 Anexo VII: ' . $comparison['annex_vii_count']
+            . ' indicators; added=' . count($comparison['added_codes'])
+            . ', changed=' . count($comparison['changed_codes'])
+            . ', removed=' . count($comparison['removed_codes']) . "\n";
+        if (getenv('GITHUB_STEP_SUMMARY') !== false) {
+            file_put_contents(
+                (string) getenv('GITHUB_STEP_SUMMARY'),
+                "## NT009 source comparison\n\n" . 'Annex VII: '
+                . $comparison['annex_vii_count'] . ' indicators, added: '
+                . count($comparison['added_codes']) . ', changed: '
+                . count($comparison['changed_codes']) . ', removed: '
+                . count($comparison['removed_codes'])
+                . "\n\nA published annex does not establish production applicability.\n",
+                FILE_APPEND
+            );
         }
     } elseif ($command === 'watch') {
         $manifest = $options['manifest'] ?? $root . '/resources/domains/sources.json';
@@ -133,7 +194,7 @@ try {
         throw new InvalidArgumentException(
             "Usage: php tools/bin/domains.php {generate|check|audit|watch} --name=PATH\n"
             . "generate/check: --annex-a= --annex-b= --annex-c= --output= [--annex-vii= --expected-vii=N]\n"
-            . "audit: --annex-vi= --annex-vii=\nwatch: [--manifest= --report=]\n",
+            . "audit: --annex-vi= --annex-vii= [--report=] OR --download-dir= [--report=]\nwatch: [--manifest= --report=]\n",
         );
     }
 } catch (Throwable $error) {
