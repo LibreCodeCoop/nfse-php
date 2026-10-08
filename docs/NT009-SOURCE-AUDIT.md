@@ -43,3 +43,16 @@ normative conditions and deployment dates.
 
 If official sources cannot be downloaded, the auxiliary evidence GitHub
 workflow may be inconclusive; the offline PHPUnit suite remains deterministic.
+
+## Frozen Annex VII versioned snapshot
+
+`resources/domains/indicadores-operacao-ibscbs-v1.03.00.tsv` records **all 40**
+rows read directly from the official `cIndOp Public` sheet (A/C/D) on
+2026-10-08, sourced from the immutable XLSX with SHA-256
+`95f30a44ee94adeea57fb92f3a0337b1e62fdc106f393e73894087889be9e5aa`.
+The auxiliary CI audit compares all 40 triplets byte-for-byte against the
+live official workbook. It is a **separate** snapshot: the existing production
+`OfficialDomainCatalog::operationIndicator()` deliberately continues to read
+Anexo C v1.01 until the new fiscal contract's effective date and schema are
+confirmed. The Annex VII table contains codes applicable to multiple fiscal
+document types; no unverified `indNFSe` restrictions have been added.
