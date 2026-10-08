@@ -152,7 +152,7 @@ final class DomainTableGeneratorTest extends TestCase
                 ['', '', '', 'Execução sobre bem imóvel', '', '01', '020101', 'Localidade do imóvel'],
                 ['', '', '', '', '', '02', '030101', 'Estabelecimento do fornecedor'],
             ],
-        ], ['INDOP' => ['F2:F3']]);
+        ], ['INDOP' => ['D2:D3']]);
 
         return [$a, $b, $c];
     }
