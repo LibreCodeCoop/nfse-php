@@ -1,0 +1,57 @@
+{
+  "format_version": 1,
+  "policy": "Official Sistema Nacional NFS-e annexes are authoritative for the library. A new publication does not establish production effective date.",
+  "sources": [
+    {
+      "id": "annex-a",
+      "version": "ANEXO_A v1.00 (20251210)",
+      "environment": "production",
+      "type": "xlsx",
+      "url": "https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/documentacao-atual/anexo_a-municipio_ibge-paises_iso2-v1-00-snnfse-20251210.xlsx",
+      "observed_sha256": "238b715ab2dcc2c9e0857c44d69048e0af806b45ec8499568342de4a37f4419d",
+      "index_url": "https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/documentacao-atual",
+      "file_pattern": "anexo[_-]a[-_]"
+    },
+    {
+      "id": "annex-b",
+      "version": "ANEXO_B v1.01 (20260122)",
+      "environment": "production",
+      "type": "xlsx",
+      "url": "https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/documentacao-atual/anexo_b-nbs2-lista_servico_nacional-snnfse-v1-01-20260122.xlsx",
+      "observed_sha256": "e74b0be8ad204e458932efb1716225a3fb5703a84e5475ce5c4c6789d1c61b1a",
+      "index_url": "https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/documentacao-atual",
+      "file_pattern": "anexo[_-]b[-_]"
+    },
+    {
+      "id": "annex-c",
+      "version": "ANEXO_C v1.01",
+      "environment": "production",
+      "type": "xlsx",
+      "url": "https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/documentacao-atual/anexo-c-indop-ibscbs-snnfse-v1-01.xlsx",
+      "observed_sha256": "f59f066c5c3584ac26cc07d9b23f9fb6713e4bc9212b5e37fededf9244f29d15",
+      "index_url": "https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/documentacao-atual",
+      "file_pattern": "anexo[-_]c[-_].*indop"
+    },
+    {
+      "id": "annex-vi-nt009",
+      "version": "ANEXO_VI v1.04.01",
+      "environment": "RTC documentation (activation not established)",
+      "type": "xlsx",
+      "url": "https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/rtc/anexovi-leiautesrn_rtc_ibscbs-v1-04-01-nt009.xlsx",
+      "observed_sha256": "103a150dd6f56ec8edcaa3a453b59a1b0e096d7cd5025d7bd06a387f141ddf39",
+      "index_url": "https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/rtc",
+      "file_pattern": "anexovi[-_]leiautesrn"
+    },
+    {
+      "id": "annex-vii-nt009",
+      "version": "ANEXO_VII v1.03.00",
+      "environment": "RTC documentation (activation not established)",
+      "type": "xlsx",
+      "url": "https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/rtc/anexovii-indop_ibscbs_v1-03-00-nt009.xlsx",
+      "observed_sha256": "95f30a44ee94adeea57fb92f3a0337b1e62fdc106f393e73894087889be9e5aa",
+      "index_url": "https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/rtc",
+      "file_pattern": "anexovii[-_]indop"
+    }
+  ],
+  "checksum_provenance": "Anexo A, B and C SHA-256 verified by direct downloads from the official NFS-e portal in GitHub Actions on 2026-10-08; Anexo VI and VII observed on 2026-10-05 independently and verified against direct official downloads on 2026-10-08. These are not government-issued digital signatures."
+}

@@ -40,24 +40,83 @@ When an official annex changes:
 6. review downstream mapping changes explicitly instead of silently coercing old values.
 
 
-## Reproducible generation
+## PHP tooling (isolated)
 
-The snapshots are generated directly from the three official XLSX annexes with only the Python
-standard library:
+The PHP SDK loads committed TSV files only; it never needs to read XLSX or access government
+websites at runtime. The annex parser, PHPUnit suite and PhpSpreadsheet live in
+`vendor-bin/domains/`, with a separate Composer manifest and lockfile. The nested manifest deliberately
+does not repeat the PHP version: its Composer install/update hooks validate the
+runtime against `require.php` in the **root** `composer.json`. The root manifest
+contains *commands*, not a PhpSpreadsheet dependency.
 
-```bash
-python3 tools/generate_domain_tables.py \
-  --annex-a /path/to/ANEXO_A.xlsx \
-  --annex-b /path/to/ANEXO_B.xlsx \
-  --annex-c /path/to/ANEXO_C.xlsx \
-  --output resources/domains
+Install the isolated tooling (the root Composer PHP requirement, plus PhpSpreadsheet's extensions including zip and gd):
+
+```sh
+composer domains:install
 ```
 
-Use `--check` to compare regenerated output with the committed snapshots. The command validates
-the expected official cardinalities (5,571 municipalities/general localities, 250 countries,
-338 national service codes, 918 nine-digit NBS codes and 26 operation indicators) before writing
-or accepting output.
+Generate from exact, reviewed official workbooks:
 
-The generator reads XLSX as ZIP/XML, honors cell references and vertically merged cells, derives
-UF only from the stable IBGE prefix map, and rejects an unexpected cardinality. A network-free CI
-fixture exercises the same parser and proves deterministic output.
+```sh
+composer domains:generate -- --annex-a=/path/to/ANEXO_A.xlsx --annex-b=/path/to/ANEXO_B.xlsx --annex-c=/path/to/ANEXO_C.xlsx
+composer domains:check -- --annex-a=/path/to/ANEXO_A.xlsx --annex-b=/path/to/ANEXO_B.xlsx --annex-c=/path/to/ANEXO_C.xlsx
+composer domains:test
+```
+
+For Annex VII v1.03.00, also pass `--annex-vii=/path/to/ANEXO_VII.xlsx` and
+`--expected-vii=N`, where N is an **independently verified** cardinality from the
+official workbook. The new file is written under its own versioned filename; no
+existing production catalog or XSD is silently replaced.
+
+The generator preserves the existing headers and row order of the current TSVs.
+For the official Anexo C INDOP sheet the mapping is explicit: D = supply
+characteristic, G = cIndOp and H = location. If an annex changes its physical columns, the generator
+must fail pending manual examination; never guess which description belongs to a code.
+
+## Government source monitoring
+
+`resources/domains/sources.json` records official portal URLs, version, reported environment
+and the available **observed** SHA-256 values. They are not official digital signatures.
+All currently tracked XLSX baselines were directly downloaded and SHA-256 checked
+on 2026-10-08. SHA-256 detects byte changes; it is not a government signature.
+The scheduled source-watch GitHub workflow downloads these exact public URLs, rejects
+HTML masquerading as an XLSX and reports byte-level differences. It also inspects
+the production and RTC index pages for newer versioned annex links, because simply
+hashing known URLs would never detect a newly named workbook. A changed hash
+is **not** proof of changed fiscal semantics or production activation.
+
+```sh
+composer domains:watch
+composer domains:download -- --ids=annex-a,annex-b,annex-c --output=/tmp/nfse-official
+composer domains:check -- --annex-a=/tmp/nfse-official/annex-a.xlsx --annex-b=/tmp/nfse-official/annex-b.xlsx --annex-c=/tmp/nfse-official/annex-c.xlsx
+composer domains:audit -- --annex-vi=/path/to/ANEXO_VI.xlsx --annex-vii=/path/to/ANEXO_VII.xlsx
+composer domains:verify-indicators -- --annex-vii=/path/to/ANEXO_VII.xlsx
+```
+
+The audit command checks source bytes against the recorded Annex VI/VII October 2026
+observations. A changed source must be manually reviewed and the manifest updated.
+The monitor never commits, opens issues, or modifies production data. The advisory
+Annex VIII correlation remains non-enforcing.
+
+All required PHPUnit and formatting tests are offline. An optional source-reproduction
+workflow separately downloads the public production annexes and compares generated
+TSVs byte-for-byte with the committed snapshots. Government downtime must not
+break the deterministic test suite. The `tools/` directory is written in PHP only.
+
+## CI PHP version policy
+
+The **root** `composer.json` owns the minimum PHP version in `require.php` and the
+additional test matrix/primary version in `extra.ci`. The standalone
+`tools/bin/ci-php.php` validates consistency and outputs the minimum, matrix
+(JSON) or primary version without loading vendor dependencies. The local
+`.github/actions/setup-project-php` composite action reads that policy before
+installing PHP. The compatibility matrix is intentionally broader than the
+minimum library requirement; neither a Composer constraint nor a CLI default
+fixes a single runtime patch version.
+
+The repository workflows invoke testable PHP commands rather than embedding
+PHP implementations in YAML. `OfficialAnnexDownloader` checks URLs, content
+types and manifest SHA-256 before saving anything; `Nt009Inspector` verifies
+the frozen indicator table against the official workbook. Both have isolated
+network-free PHPUnit coverage. Advisory download jobs still need network access
+when run, but the regular unit tests do not.

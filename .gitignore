@@ -6,3 +6,4 @@
 /.env
 /.env.local
 /.secrets/
+/vendor-bin/domains/vendor/

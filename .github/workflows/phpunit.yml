@@ -13,13 +13,32 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  php-policy:
+    name: PHP versions from root Composer
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.policy.outputs.matrix }}
+      primary: ${{ steps.policy.outputs.primary }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Read CI PHP matrix and primary from composer.json
+        id: policy
+        run: |
+          php tools/bin/ci-php.php validate
+          echo "matrix=$(php tools/bin/ci-php.php matrix)" >> "$GITHUB_OUTPUT"
+          echo "primary=$(php tools/bin/ci-php.php primary)" >> "$GITHUB_OUTPUT"
+
   compatibility:
     name: PHP ${{ matrix.php-version }}
     runs-on: ubuntu-latest
+    needs: php-policy
 
     strategy:
       matrix:
-        php-version: ["8.2", "8.3", "8.4"]
+        php-version: ${{ fromJSON(needs.php-policy.outputs.matrix) }}
 
     steps:
       - name: Checkout
@@ -27,12 +46,11 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Set up PHP ${{ matrix.php-version }}
-        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2.37.2
+      - name: Set up PHP from Composer matrix
+        uses: ./.github/actions/setup-project-php
         with:
           php-version: ${{ matrix.php-version }}
           extensions: openssl, dom, soap
-          coverage: none
           ini-file: development
           ini-values: disable_functions=
         env:
@@ -48,7 +66,7 @@ jobs:
         run: composer run test:unit
 
       - name: Run integration tests when certificate secrets are present
-        if: ${{ matrix.php-version == '8.3' }}
+        if: ${{ matrix.php-version == needs.php-policy.outputs.primary }}
         env:
           NFSE_CLIENT_CERT_B64: ${{ secrets.NFSE_CLIENT_CERT_B64 }}
           NFSE_CLIENT_KEY_B64: ${{ secrets.NFSE_CLIENT_KEY_B64 }}
@@ -64,6 +82,7 @@ jobs:
   coverage:
     name: Coverage
     runs-on: ubuntu-latest
+    needs: php-policy
 
     steps:
       - name: Checkout
@@ -71,10 +90,10 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Set up PHP 8.3
-        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2.37.2
+      - name: Set up PHP from Composer primary
+        uses: ./.github/actions/setup-project-php
         with:
-          php-version: "8.3"
+          php-version: ${{ needs.php-policy.outputs.primary }}
           extensions: openssl, dom, soap
           coverage: xdebug
           ini-file: development

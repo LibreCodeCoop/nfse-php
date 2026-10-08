@@ -1,0 +1,42 @@
+# Indicadores de operação IBS/CBS — ANEXO_VII v1.03.00 (NT009 v1.01)
+# Formato: cIndOp<TAB>característica do fornecimento<TAB>local a identificar no DF-e
+010101	Presencial, com retirada no estabelecimento do fornecedor	Estabelecimento do fornecedor como o local da entrega ou disponibilização do bem ao destinatário
+010102	Presencial, com retirada fora do estabelecimento do fornecedor	Local da realização da operação e sua retirada
+010103	Não presencial, com entrega ou disponibilização em endereço fornecido	Endereço do destinatário fornecido para entrega ou disponibilização (assim considerado o destino final indicado pelo adquirente)
+010104	Licitação promovida pelo poder público de bem apreendido ou abandonado ou leilão judicial	Local onde se encontra o bem móvel material
+010105	Constatação de irregularidade pela falta de documentação fiscal ou pelo acobertamento por documentação inidôneo	Local onde se encontra o bem móvel material (Local da retirada)
+010106	Locação de bem móvel material em aquisições realizadas de forma centralizada por contribuinte sujeito ao regime regular do IBS e da CBS que possui mais de um estabelecimento e que não estejam sujeitas a vedação à apropriação de créditos	Local do domicílio principal do adquirente (estabelecimento matriz)
+010201	Entrega ou disponibilização do bem	Domicílio principal do destinatário
+010202	Entrega ou disponibilização do bem	Domicílio principal do destinatário
+020101	Realização de operações com bem imóvel, bem imaterial, inclusive direito, relacionado a bem imóvel	Localidade do imóvel
+020102	Realização de operações com bem imóvel, bem imaterial, inclusive direito, relacionado a bem imóvel de Características Especiais (BICE)	Localidade do imóvel (BICE)
+020201	Execução de serviços diversos prestados fisicamente sobre bem imóvel	Localidade do imóvel
+020202	Execução de serviços sobre Bens Imóveis de Características Especiais (BICE)	Localidade do imóvel (BICE)
+020301	Execução dos serviços de administração e intermediação de bens imóveis	Localidade do imóvel
+020401	Execução de serviços sobre Bens Imóveis de Características Especiais (BICE)	Localidade do imóvel (BICE)
+030101	Execução de serviços diversos exclusivamente prestados fisicamente sobre a pessoa ou integralmente fruídos presencialmente por pessoa física	Estabelecimento do fornecedor como local da prestação
+030102	Execução de serviços diversos exclusivamente prestados fisicamente sobre a pessoa ou integralmente fruídos presencialmente por pessoa física	Local da prestação do serviço diverso do estabelecimento do fornecedor
+040101	Execução de serviços de planejamento, organização e administração de feiras, exposições, congressos, espetáculos, exibições e congêneres	Local do evento a que se refere o serviço
+050101	Execução de serviços diversos prestados fisicamente sobre bem móvel material	Estabelecimento do fornecedor como local da prestação
+050102	Execução de serviços diversos prestados fisicamente sobre bem móvel material	Local da prestação do serviço diverso do estabelecimento do fornecedor
+050201	Execução de serviços portuários	Local do porto como local da prestação
+060101	Execução de serviços de transporte de passageiros	Local de início do transporte
+070101	Execução de serviço de transporte de carga	Endereço fornecido para entrega do bem
+070102	Execução de serviço de transporte de carga	Local da retirada do bem
+080101	Execução de serviços de exploração de via	Local da prestação correspondente à extensão da via explorada, proporcionalmente ao território dos entes tributantes
+090101	Execução de serviços de telefonia fixa e demais serviços de comunicação prestados por meio de cabos, fios, fibras e meios similares	Local de instalação do terminal
+090102	Execução de serviços de telefonia fixa e demais serviços de comunicação prestados por meio de cabos, fios, fibras e meios similares	Local do domicílio principal do adquirente (assim considerada a matriz), nas aquisições realizadas de forma centralizada por contribuinte sujeito ao regime regular do IBS e da CBS que possui mais de um estabelecimento e que não estejam sujeitas a vedação à apropriação de créditos
+100101	Realização de operações de cessão de espaço para prestação de serviços publicitários	Local do domicílio principal do adquirente residente ou domiciliado no País. Nas aquisições indicadas no art. 11, §4º, II, considera-se domicílio principal do adquirente o estabelecimento matriz
+100102	Realização de operações de cessão de espaço para prestação de serviços publicitários	Local do domicílio principal do destinatário residente ou domiciliado no País, caso o adquirente não seja residente ou domiciliado no País
+100201	Realização de operações de cessão de espaço para prestação de serviços publicitários	local do domicílio principal do destinatário residente ou domiciliado no País
+100301	Execução dos demais serviços em operações não especificadas em outros indicadores ou, nos serviços de que trata o inc. III do art. 11, esses sejam, ainda que parcialmente, prestados à distância	Local do domicílio principal do adquirente residente ou domiciliado no País. Nas aquisições indicadas no art. 11, §4º, II, considera-se domicílio principal do adquirente o estabelecimento matriz
+100302	Execução dos demais serviços em operações não especificadas em outros indicadores ou, nos serviços de que trata o inc. III do art. 11, esses sejam, ainda que parcialmente, prestados à distância	Local do domicílio principal do destinatário residente ou domiciliado no País, caso o adquirente não seja residente ou domiciliado no País
+100401	Execução dos demais serviços em operações não especificadas em outros indicadores ou, nos serviços de que tratam o inc. III, estes sejam, ainda que parcialmente, prestados à distância	local do domicílio principal do destinatário residente ou domiciliado no País
+100501	Realização de demais operações com bens não especificadas em outros indicadores	Local do domicílio principal do adquirente residente ou domiciliado no País. Nas aquisições indicadas no art. 11, §4º, II, considera-se domicílio principal do adquirente o estabelecimento matriz
+100502	Realização de demais operações com bens não especificadas em outros indicadores	Local do domicílio principal do destinatário residente ou domiciliado no País, caso o adquirente não seja residente ou domiciliado no País
+100601	Realização de demais operações com bens não especificadas em outros indicadores	local do domicílio principal do destinatário residente ou domiciliado no País
+110101	Operações destinadas a consumo	Local da entrega ou disponibilização
+110201	Operações que não envolvam efetivo consumo: a) no fornecimento de serviços de transmissão de energia elétrica; e b) nas demais operações, inclusive nas hipóteses de geração, distribuição ou comercialização de energia elétrica.	Local do estabelecimento principal do adquirente (assim considerada a matriz), conforme §4º do art. 11
+120101	Disponibilização de energia elétrica	Local do estabelecimento do agente ou de seus representados que figurem na posição devedora da liquidação financeira apurada pela Câmara de Comercialização de Energia Elétrica
+130101	Execução do transporte dutoviário de gás natural, na contratação de capacidade de entrada de gás natural do duto, nos termos da legislação aplicável	Local do estabelecimento principal do fornecedor
+130201	Execução do transporte dutoviário de gás natural, na contratação de capacidade de saída do gás natural do duto	Local do estabelecimento principal do adquirente

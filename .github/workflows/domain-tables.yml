@@ -6,10 +6,13 @@ name: Domain Table Generator
 on:
   pull_request:
     paths:
-      - "tools/generate_domain_tables.py"
-      - "tools/tests/test_generate_domain_tables.py"
+      - "tools/**"
+      - "vendor-bin/domains/**"
       - "resources/domains/**"
+      - "composer.json"
       - ".github/workflows/domain-tables.yml"
+      - ".github/actions/setup-project-php/**"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -21,5 +24,17 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Test deterministic XLSX normalization
-        run: python3 -m unittest tools/tests/test_generate_domain_tables.py
+      - name: Set up PHP from Composer
+        uses: ./.github/actions/setup-project-php
+        with:
+          extensions: dom, mbstring, zip, gd, xml, xmlreader, xmlwriter, simplexml, fileinfo
+      - name: Install isolated domain tooling
+        run: composer --working-dir=vendor-bin/domains install --prefer-dist --no-progress --no-interaction
+      - name: Validate root and isolated Composer manifests
+        run: |
+          composer validate --strict
+          composer --working-dir=vendor-bin/domains validate --strict
+      - name: Run offline deterministic PHPUnit cases
+        run: composer --working-dir=vendor-bin/domains run test
+      - name: Lint PHP domain tools
+        run: find tools -type f -name '*.php' -print0 | xargs -0 -n 1 php -l
