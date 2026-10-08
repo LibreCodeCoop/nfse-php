@@ -42,7 +42,7 @@ final class AnnexReader
     /**
      * @return list<array<string, string>>
      */
-    public function rows(string $sheetName): array
+    public function rows(string $sheetName, bool $skipFormulaCells = false): array
     {
         $sheet = null;
         foreach ($this->workbook->getWorksheetIterator() as $candidate) {
@@ -66,6 +66,10 @@ final class AnnexReader
                 $name = Coordinate::stringFromColumnIndex($i);
                 $cell = $sheet->getCell($name . $r);
                 if ($cell->getDataType() === DataType::TYPE_FORMULA) {
+                    if ($skipFormulaCells) {
+                        // Spreadsheet helper formula: do not execute or trust its cached result.
+                        continue;
+                    }
                     throw new \UnexpectedValueException("Formula not allowed in {$sheetName}!{$name}{$r}");
                 }
                 $raw = $cell->getFormattedValue();
