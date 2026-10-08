@@ -1,0 +1,48 @@
+# SPDX-FileCopyrightText: 2026 LibreCode coop and contributors
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+name: NT009 Source Evidence
+
+on:
+  pull_request:
+    paths:
+      - "tools/src/Nt009Inspector.php"
+      - "tools/bin/domains.php"
+      - "tools/tests/Nt009InspectorTest.php"
+      - ".github/workflows/nt009-evidence.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  optional-official-evidence:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up PHP 8.2
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2.37.2
+        with:
+          php-version: "8.2"
+          extensions: dom, mbstring, zip, gd, xml, xmlreader, xmlwriter, simplexml, fileinfo
+          coverage: none
+      - name: Install isolated domain tooling
+        run: composer --working-dir=vendor-bin/domains install --prefer-dist --no-progress --no-interaction
+      - name: Verify original XLSX hashes and compare official NT009 data
+        run: |
+          php tools/bin/domains.php audit \
+            --download-dir="${{ runner.temp }}/nt009" \
+            --report="${{ runner.temp }}/nt009-comparison.json"
+      - name: Retain full evidence for manual review
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: nt009-official-source-evidence
+          path: |
+            ${{ runner.temp }}/nt009-comparison.json
+            ${{ runner.temp }}/nt009/*.xlsx
+          if-no-files-found: warn
+          retention-days: 30
