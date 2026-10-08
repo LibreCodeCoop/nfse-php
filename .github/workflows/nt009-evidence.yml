@@ -36,6 +36,17 @@ jobs:
           php tools/bin/domains.php audit \
             --download-dir="${{ runner.temp }}/nt009" \
             --report="${{ runner.temp }}/nt009-comparison.json"
+      - name: Export exact official indicator rows for review
+        run: |
+          php -r '
+            require "vendor-bin/domains/vendor/autoload.php";
+            $r = new LibreCodeCoop\NfsePHP\Tools\DomainTableGenerator();
+            $rows = $r->indicatorRows(getenv("RUNNER_TEMP") . "/nt009/annex-vii-nt009.xlsx");
+            if (count($rows) !== 40) { throw new RuntimeException("Unexpected official VII cardinality"); }
+            echo "OFFICIAL_NT009_INDICATORS_BEGIN\n";
+            foreach ($rows as $row) { echo implode("\t", $row) . "\n"; }
+            echo "OFFICIAL_NT009_INDICATORS_END\n";
+          '
       - name: Retain full evidence for manual review
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
