@@ -123,25 +123,32 @@ final class DomainTableGenerator
      */
     public function validateCounts(array $outputs, ?int $expectedVII = null): void
     {
+        if (array_key_exists('indicadores-operacao-ibscbs-v1.03.00.tsv', $outputs)
+            && ($expectedVII === null || $expectedVII < 1)) {
+            throw new \InvalidArgumentException(
+                'Annex VII requires an independently verified --expected-vii count',
+            );
+        }
+
         foreach (self::EXPECTED_COUNTS as $file => $expected) {
             $this->assertCount($file, $outputs[$file] ?? '', $expected);
         }
 
         if (array_key_exists('indicadores-operacao-ibscbs-v1.03.00.tsv', $outputs)) {
-            if ($expectedVII === null || $expectedVII < 1) {
-                throw new \InvalidArgumentException(
-                    'Annex VII requires an independently verified --expected-vii count',
-                );
-            }
-            $this->assertCount('indicadores-operacao-ibscbs-v1.03.00.tsv',
-                $outputs['indicadores-operacao-ibscbs-v1.03.00.tsv'], $expectedVII);
+            $this->assertCount(
+                'indicadores-operacao-ibscbs-v1.03.00.tsv',
+                $outputs['indicadores-operacao-ibscbs-v1.03.00.tsv'],
+                (int) $expectedVII
+            );
         }
     }
 
     private function assertCount(string $file, string $data, int $expected): void
     {
-        $actual = count(array_filter(explode("\n", $data),
-            static fn (string $line): bool => $line !== '' && !str_starts_with($line, '#')));
+        $actual = count(array_filter(
+            explode("\n", $data),
+            static fn (string $line): bool => $line !== '' && !str_starts_with($line, '#')
+        ));
         if ($actual !== $expected) {
             throw new \UnexpectedValueException("{$file}: expected {$expected} rows; generated {$actual}");
         }
@@ -296,10 +303,12 @@ final class DomainTableGenerator
      */
     private static function longestText(array $values, array $excluded): string
     {
-        $candidates = array_filter($values,
+        $candidates = array_filter(
+            $values,
             static fn (string $text): bool => $text !== ''
                 && !in_array($text, $excluded, true)
-                && preg_match('/^[0-9.\\/\\-]+$/D', $text) !== 1);
+                && preg_match('/^[0-9.\\/\\-]+$/D', $text) !== 1
+        );
         usort($candidates, static fn (string $a, string $b): int => strlen($b) <=> strlen($a));
 
         return $candidates[0] ?? '';

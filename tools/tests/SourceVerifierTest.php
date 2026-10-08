@@ -44,8 +44,10 @@ final class SourceVerifierTest extends TestCase
         self::assertSame('unchanged', $results[0]['status']);
         self::assertSame('baseline-needed', $results[1]['status']);
         self::assertSame(hash('sha256', $payload), $results[0]['sha256']);
-        $other = $verifier->inspect($this->manifest,
-            static fn (string $url): string => "PK\x03\x04changed");
+        $other = $verifier->inspect(
+            $this->manifest,
+            static fn (string $url): string => "PK\x03\x04changed"
+        );
         self::assertSame('changed', $other[0]['status']);
     }
 
@@ -59,8 +61,10 @@ final class SourceVerifierTest extends TestCase
         ], JSON_THROW_ON_ERROR));
         $this->expectException(\UnexpectedValueException::class);
         $this->expectExceptionMessage('Unexpected official source URL');
-        (new SourceVerifier())->inspect($this->manifest,
-            static fn (string $url): string => 'should not be fetched');
+        (new SourceVerifier())->inspect(
+            $this->manifest,
+            static fn (string $url): string => 'should not be fetched'
+        );
     }
 
     public function testRejectsHtmlMasqueradingAsAWorkbook(): void
@@ -73,7 +77,9 @@ final class SourceVerifierTest extends TestCase
         ], JSON_THROW_ON_ERROR));
         $this->expectException(\UnexpectedValueException::class);
         $this->expectExceptionMessage('Invalid xlsx download');
-        (new SourceVerifier())->inspect($this->manifest,
-            static fn (string $url): string => '<html>service unavailable</html>');
+        (new SourceVerifier())->inspect(
+            $this->manifest,
+            static fn (string $url): string => '<html>service unavailable</html>'
+        );
     }
 }

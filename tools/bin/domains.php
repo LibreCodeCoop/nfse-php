@@ -36,17 +36,23 @@ try {
             }
         }
         $expectedVII = isset($options['expected-vii']) ? filter_var(
-            $options['expected-vii'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]],
+            $options['expected-vii'],
+            FILTER_VALIDATE_INT,
+            ['options' => ['min_range' => 1]],
         ) : null;
         if ($expectedVII === false) {
             throw new InvalidArgumentException('Invalid --expected-vii count');
         }
         $generator = new DomainTableGenerator();
-        $outputs = $generator->generate($options['annex-a'], $options['annex-b'],
-            $options['annex-c'], $options['annex-vii'] ?? null);
+        $outputs = $generator->generate(
+            $options['annex-a'],
+            $options['annex-b'],
+            $options['annex-c'],
+            $options['annex-vii'] ?? null
+        );
         $generator->validateCounts($outputs, $expectedVII);
         $target = $options['output'] ?? $root . '/resources/domains';
-        if ($command === 'generate' && !is_dir($target) && !mkdir($target, 0775, true)) {
+        if ($command === 'generate' && !is_dir($target) && !mkdir($target, 0o775, true)) {
             throw new RuntimeException('Cannot create output directory');
         }
         foreach ($outputs as $name => $output) {
@@ -80,8 +86,10 @@ try {
         }
     } elseif ($command === 'watch') {
         $verifier = new SourceVerifier();
-        $results = $verifier->inspect($options['manifest'] ?? $root . '/resources/domains/sources.json',
-            SourceVerifier::fetchOfficial(...));
+        $results = $verifier->inspect(
+            $options['manifest'] ?? $root . '/resources/domains/sources.json',
+            SourceVerifier::fetchOfficial(...)
+        );
         $report = [
             'checked_at_utc' => gmdate('c'),
             'notice' => 'Published bytes are not evidence of production activation.',

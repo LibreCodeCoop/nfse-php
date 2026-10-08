@@ -21,7 +21,7 @@ final class DomainTableGeneratorTest extends TestCase
     protected function setUp(): void
     {
         $this->dir = sys_get_temp_dir() . '/nfse-domain-' . bin2hex(random_bytes(8));
-        mkdir($this->dir, 0700);
+        mkdir($this->dir, 0o700);
     }
 
     protected function tearDown(): void
@@ -42,14 +42,20 @@ final class DomainTableGeneratorTest extends TestCase
         self::assertStringContainsString("3304557\tRJ\tRio de Janeiro\n", $first['municipios-ibge-v1.00.tsv']);
         self::assertStringContainsString("0000000\t\tÁGUAS MARÍTIMAS\n", $first['municipios-ibge-v1.00.tsv']);
         self::assertStringContainsString("BR\tBrasil\n", $first['paises-iso2-v1.00.tsv']);
-        self::assertStringContainsString("010101\tAnálise e desenvolvimento de sistemas.\n",
-            $first['servicos-nacionais-v1.01.tsv']);
+        self::assertStringContainsString(
+            "010101\tAnálise e desenvolvimento de sistemas.\n",
+            $first['servicos-nacionais-v1.01.tsv']
+        );
         self::assertStringContainsString("101011100\tServiço NBS válido\n", $first['nbs-v2.0.tsv']);
         self::assertStringNotContainsString("10101100\t", $first['nbs-v2.0.tsv']);
-        self::assertStringContainsString("020101\tExecução sobre bem imóvel\tLocalidade do imóvel\n",
-            $first['indicadores-operacao-ibscbs-v1.01.tsv']);
-        self::assertStringContainsString("030101\tExecução sobre bem imóvel\tEstabelecimento do fornecedor\n",
-            $first['indicadores-operacao-ibscbs-v1.01.tsv']);
+        self::assertStringContainsString(
+            "020101\tExecução sobre bem imóvel\tLocalidade do imóvel\n",
+            $first['indicadores-operacao-ibscbs-v1.01.tsv']
+        );
+        self::assertStringContainsString(
+            "030101\tExecução sobre bem imóvel\tEstabelecimento do fornecedor\n",
+            $first['indicadores-operacao-ibscbs-v1.01.tsv']
+        );
     }
 
     public function testRefusesToAcceptOnlyCardinalityFromPartialOfficialWorkbooks(): void
