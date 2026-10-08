@@ -9,6 +9,7 @@ declare(strict_types=1);
 use LibreCodeCoop\NfsePHP\Tools\AnnexReader;
 use LibreCodeCoop\NfsePHP\Tools\DomainTableGenerator;
 use LibreCodeCoop\NfsePHP\Tools\Nt009Inspector;
+use LibreCodeCoop\NfsePHP\Tools\OfficialAnnexDownloader;
 use LibreCodeCoop\NfsePHP\Tools\PortalIndexDiscovery;
 use LibreCodeCoop\NfsePHP\Tools\SourceVerifier;
 
@@ -69,38 +70,33 @@ try {
             }
         }
         echo "Verified " . count($outputs) . " deterministic snapshots\n";
+    } elseif ($command === 'download') {
+        if (!isset($options['ids'], $options['output'])) {
+            throw new InvalidArgumentException('Download requires --ids=ID,... and --output=DIR');
+        }
+        $files = (new OfficialAnnexDownloader())->download(
+            $options['manifest'] ?? $root . '/resources/domains/sources.json',
+            explode(',', $options['ids']),
+            $options['output'],
+            SourceVerifier::fetchOfficial(...)
+        );
+        foreach ($files as $id => $entry) {
+            echo "{$id}: {$entry['sha256']} -> {$entry['path']}\n";
+        }
     } elseif ($command === 'audit') {
+        $manifest = $options['manifest'] ?? $root . '/resources/domains/sources.json';
+        $downloader = new OfficialAnnexDownloader();
+        $ids = ['annex-vi-nt009', 'annex-vii-nt009'];
+        $sources = $downloader->sources($manifest, $ids);
         if (isset($options['download-dir'])) {
-            $destination = $options['download-dir'];
-            if (!is_dir($destination) && !mkdir($destination, 0o700, true)) {
-                throw new RuntimeException('Cannot create official document download directory');
-            }
-            $manifest = json_decode(
-                (string) file_get_contents($root . '/resources/domains/sources.json'),
-                true,
-                512,
-                JSON_THROW_ON_ERROR
+            $files = $downloader->download(
+                $manifest,
+                $ids,
+                $options['download-dir'],
+                SourceVerifier::fetchOfficial(...)
             );
-            foreach (['annex-vi-nt009' => 'annex-vi', 'annex-vii-nt009' => 'annex-vii'] as $id => $name) {
-                $source = null;
-                foreach ($manifest['sources'] as $entry) {
-                    if ($entry['id'] === $id) {
-                        $source = $entry;
-                        break;
-                    }
-                }
-                if ($source === null || !str_starts_with(
-                    $source['url'],
-                    'https://www.gov.br/nfse/'
-                )) {
-                    throw new RuntimeException('Missing or non-official source: ' . $id);
-                }
-                $file = $destination . '/' . $id . '.xlsx';
-                if (file_put_contents($file, SourceVerifier::fetchOfficial($source['url'])) === false) {
-                    throw new RuntimeException('Failed to save official source: ' . $id);
-                }
-                $options[$name] = $file;
-            }
+            $options['annex-vi'] = $files['annex-vi-nt009']['path'];
+            $options['annex-vii'] = $files['annex-vii-nt009']['path'];
         }
         foreach (['annex-vi', 'annex-vii'] as $name) {
             if (!isset($options[$name])) {
@@ -109,8 +105,8 @@ try {
         }
         $verifier = new SourceVerifier();
         $hashes = [
-            'annex-vi' => '103a150dd6f56ec8edcaa3a453b59a1b0e096d7cd5025d7bd06a387f141ddf39',
-            'annex-vii' => '95f30a44ee94adeea57fb92f3a0337b1e62fdc106f393e73894087889be9e5aa',
+            'annex-vi' => $sources['annex-vi-nt009']['observed_sha256'],
+            'annex-vii' => $sources['annex-vii-nt009']['observed_sha256'],
         ];
         foreach ($hashes as $name => $expected) {
             $hash = $verifier->assertFile($options[$name], $expected);
@@ -146,6 +142,18 @@ try {
                 FILE_APPEND
             );
         }
+    } elseif ($command === 'verify-indicators') {
+        if (!isset($options['annex-vii'])) {
+            throw new InvalidArgumentException('Missing --annex-vii=PATH');
+        }
+        $snapshot = $options['snapshot']
+            ?? $root . '/resources/domains/indicadores-operacao-ibscbs-v1.03.00.tsv';
+        $count = (new Nt009Inspector())->verifyIndicatorSnapshot(
+            $options['annex-vii'],
+            $snapshot,
+            Nt009Inspector::VERIFIED_NT009_INDICATOR_COUNT
+        );
+        echo "Official Annex VII verified: {$count} exact code/characteristic/location triplets\n";
     } elseif ($command === 'watch') {
         $manifest = $options['manifest'] ?? $root . '/resources/domains/sources.json';
         $verifier = new SourceVerifier();
@@ -192,9 +200,12 @@ try {
         }
     } else {
         throw new InvalidArgumentException(
-            "Usage: php tools/bin/domains.php {generate|check|audit|watch} --name=PATH\n"
+            "Usage: php tools/bin/domains.php {generate|check|download|audit|verify-indicators|watch} --name=PATH\n"
             . "generate/check: --annex-a= --annex-b= --annex-c= --output= [--annex-vii= --expected-vii=N]\n"
-            . "audit: --annex-vi= --annex-vii= [--report=] OR --download-dir= [--report=]\nwatch: [--manifest= --report=]\n",
+            . "download: --ids=annex-a,annex-b,... --output=DIR [--manifest=PATH]\n"
+            . "audit: --annex-vi= --annex-vii= [--report=] OR --download-dir= [--report=]\n"
+            . "verify-indicators: --annex-vii=PATH [--snapshot=PATH]\n"
+            . "watch: [--manifest=PATH --report=PATH]\n",
         );
     }
 } catch (Throwable $error) {

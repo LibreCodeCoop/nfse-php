@@ -85,7 +85,10 @@ is **not** proof of changed fiscal semantics or production activation.
 
 ```sh
 composer domains:watch
+composer domains:download -- --ids=annex-a,annex-b,annex-c --output=/tmp/nfse-official
+composer domains:check -- --annex-a=/tmp/nfse-official/annex-a.xlsx --annex-b=/tmp/nfse-official/annex-b.xlsx --annex-c=/tmp/nfse-official/annex-c.xlsx
 composer domains:audit -- --annex-vi=/path/to/ANEXO_VI.xlsx --annex-vii=/path/to/ANEXO_VII.xlsx
+composer domains:verify-indicators -- --annex-vii=/path/to/ANEXO_VII.xlsx
 ```
 
 The audit command checks source bytes against the recorded Annex VI/VII October 2026
@@ -97,3 +100,21 @@ All required PHPUnit and formatting tests are offline. An optional source-reprod
 workflow separately downloads the public production annexes and compares generated
 TSVs byte-for-byte with the committed snapshots. Government downtime must not
 break the deterministic test suite. The `tools/` directory is written in PHP only.
+
+## CI PHP version policy
+
+The **root** `composer.json` owns the minimum PHP version in `require.php` and the
+additional test matrix/primary version in `extra.ci`. The standalone
+`tools/bin/ci-php.php` validates consistency and outputs the minimum, matrix
+(JSON) or primary version without loading vendor dependencies. The local
+`.github/actions/setup-project-php` composite action reads that policy before
+installing PHP. The compatibility matrix is intentionally broader than the
+minimum library requirement; neither a Composer constraint nor a CLI default
+fixes a single runtime patch version.
+
+The repository workflows invoke testable PHP commands rather than embedding
+PHP implementations in YAML. `OfficialAnnexDownloader` checks URLs, content
+types and manifest SHA-256 before saving anything; `Nt009Inspector` verifies
+the frozen indicator table against the official workbook. Both have isolated
+network-free PHPUnit coverage. Advisory download jobs still need network access
+when run, but the regular unit tests do not.

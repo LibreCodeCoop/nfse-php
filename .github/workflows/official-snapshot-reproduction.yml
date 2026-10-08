@@ -31,28 +31,8 @@ jobs:
           extensions: dom, mbstring, zip, gd, xml, xmlreader, xmlwriter, simplexml, fileinfo
       - name: Install isolated domain tooling
         run: composer --working-dir=vendor-bin/domains install --prefer-dist --no-progress --no-interaction
-      - name: Download exact public production annexes A, B and C
-        run: |
-          mkdir -p "${{ runner.temp }}/official"
-          php -r '
-            $sources = json_decode(file_get_contents("resources/domains/sources.json"), true, 512, JSON_THROW_ON_ERROR);
-            foreach ($sources["sources"] as $source) {
-                if (!in_array($source["id"], ["annex-a", "annex-b", "annex-c"], true)) {
-                    continue;
-                }
-                $url = $source["url"];
-                if (!str_starts_with($url, "https://www.gov.br/nfse/")) {
-                    throw new RuntimeException("Non-official source");
-                }
-                $bytes = file_get_contents($url);
-                if ($bytes === false || !str_starts_with($bytes, "PK")) {
-                    throw new RuntimeException("Invalid download of " . $source["id"]);
-                }
-                $filename = getenv("RUNNER_TEMP") . "/official/" . $source["id"] . ".xlsx";
-                file_put_contents($filename, $bytes);
-                echo $source["id"] . " sha256=" . hash("sha256", $bytes) . " bytes=" . strlen($bytes) . PHP_EOL;
-            }
-          '
+      - name: Download checksum-verified official production annexes
+        run: php tools/bin/domains.php download --ids=annex-a,annex-b,annex-c --output="${{ runner.temp }}/official"
       - name: Compare regenerated output byte-for-byte with versioned snapshots
         run: |
           php tools/bin/domains.php check \

@@ -36,23 +36,8 @@ jobs:
           php tools/bin/domains.php audit \
             --download-dir="${{ runner.temp }}/nt009" \
             --report="${{ runner.temp }}/nt009-comparison.json"
-      - name: Verify all 40 published indicators match the versioned TSV
-        run: |
-          php -r '
-            require "vendor-bin/domains/vendor/autoload.php";
-            $generator = new LibreCodeCoop\NfsePHP\Tools\DomainTableGenerator();
-            $rows = $generator->indicatorRows(getenv("RUNNER_TEMP") . "/nt009/annex-vii-nt009.xlsx");
-            $path = "resources/domains/indicadores-operacao-ibscbs-v1.03.00.tsv";
-            $snapshot = array_values(array_filter(
-                explode("\n", trim(file_get_contents($path))),
-                static fn (string $line): bool => $line !== "" && !str_starts_with($line, "#")
-            ));
-            $source = array_map(static fn (array $row): string => implode("\t", $row), $rows);
-            if (count($source) !== 40 || $source !== $snapshot) {
-                throw new UnexpectedValueException("Versioned Anexo VII differs from the official signed-off source");
-            }
-            echo "Official Anexo VII snapshot verified: 40/40 exact code/characteristic/location triplets\n";
-          '
+      - name: Verify versioned Annex VII against all published XLSX rows
+        run: php tools/bin/domains.php verify-indicators --annex-vii="${{ runner.temp }}/nt009/annex-vii-nt009.xlsx"
       - name: Retain full evidence for manual review
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

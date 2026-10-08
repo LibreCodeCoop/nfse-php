@@ -15,6 +15,8 @@ namespace LibreCodeCoop\NfsePHP\Tools;
  */
 final class Nt009Inspector
 {
+    public const VERIFIED_NT009_INDICATOR_COUNT = 40;
+
     /**
      * @return array<string, mixed>
      */

@@ -50,8 +50,10 @@ workflow may be inconclusive; the offline PHPUnit suite remains deterministic.
 rows read directly from the official `cIndOp Public` sheet (A/C/D) on
 2026-10-08, sourced from the immutable XLSX with SHA-256
 `95f30a44ee94adeea57fb92f3a0337b1e62fdc106f393e73894087889be9e5aa`.
-The auxiliary CI audit compares all 40 triplets byte-for-byte against the
-live official workbook. It is a **separate** snapshot: the existing production
+`composer domains:verify-indicators -- --annex-vii=/path/to/ANEXO_VII.xlsx`
+reproduces the auxiliary CI audit against all 40 complete indicator triplets,
+without embedding parsing code into a GitHub workflow. The auxiliary CI audit
+compares all 40 triplets byte-for-byte against the live official workbook. It is a **separate** snapshot: the existing production
 `OfficialDomainCatalog::operationIndicator()` deliberately continues to read
 Anexo C v1.01 until the new fiscal contract's effective date and schema are
 confirmed. The Annex VII table contains codes applicable to multiple fiscal

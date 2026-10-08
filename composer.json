@@ -68,7 +68,9 @@
         "domains:audit": "@php tools/bin/domains.php audit",
         "domains:watch": "@php tools/bin/domains.php watch",
         "domains:test": "@composer --working-dir=vendor-bin/domains run test",
-        "ci:php": "@php tools/bin/ci-php.php validate"
+        "ci:php": "@php tools/bin/ci-php.php validate",
+        "domains:download": "@php tools/bin/domains.php download",
+        "domains:verify-indicators": "@php tools/bin/domains.php verify-indicators"
     },
     "minimum-stability": "stable",
     "prefer-stable": true,
