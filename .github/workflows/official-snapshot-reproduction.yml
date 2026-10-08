@@ -68,6 +68,17 @@ jobs:
             --output="${{ runner.temp }}/generated"
           diff -u resources/domains/indicadores-operacao-ibscbs-v1.01.tsv \
             "${{ runner.temp }}/generated/indicadores-operacao-ibscbs-v1.01.tsv" || true
+      - name: Inspect official Anexo C columns
+        if: always()
+        run: |
+          php -r '
+            require "vendor-bin/domains/vendor/autoload.php";
+            $r = new LibreCodeCoop\NfsePHP\Tools\AnnexReader(getenv("RUNNER_TEMP") . "/official/annex-c.xlsx");
+            foreach (array_slice($r->rows("INDOP"), 0, 9) as $i => $row) {
+                echo "ANNEX_C_ROW_" . ($i + 1) . " " . json_encode($row, JSON_UNESCAPED_UNICODE) . PHP_EOL;
+            }
+            $r->close();
+          '
       - name: Preserve source workbooks for manual review
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
