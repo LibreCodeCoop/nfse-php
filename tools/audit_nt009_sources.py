@@ -65,7 +65,7 @@ def inspect_annex(name: str, path: Path, dump: bool) -> None:
             for number, cells in enumerate(rows, 1):
                 joined = " ".join(cells.values())
                 if name == "annex_vii":
-                    if not any(re.fullmatch(r"[0-9]{6}", re.sub(r"\\D", "", val)) for val in cells.values()):
+                    if not any(re.fullmatch(r"[0-9]{6}", re.sub(r"\D", "", val)) for val in cells.values()):
                         if number > 12:
                             continue
                 elif not any(marker in joined for marker in (
