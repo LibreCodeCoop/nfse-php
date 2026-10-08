@@ -380,6 +380,62 @@ class NfseClientTest extends TestCase
         self::assertStringContainsString('<xMotivo>Cancelamento a pedido do tomador</xMotivo>', $eventoXml);
     }
 
+    public function testCancelWithReasonUsesRequestedOfficialReasonCode(): void
+    {
+        self::$server->setResponseOfPath(
+            '/SefinNacional/nfse/abc-123/eventos',
+            new Response('{}', ['Content-Type' => 'application/json'], 200)
+        );
+
+        $client = $this->makeClient($this->signer);
+        self::assertTrue($client->cancelWithReason('abc-123', '9', 'Outro motivo válido'));
+
+        $request = self::$server->getLastRequest();
+        self::assertNotNull($request);
+        $payload = json_decode($request->getInput(), true, 512, JSON_THROW_ON_ERROR);
+        $compressedXml = base64_decode((string) $payload['pedidoRegistroEventoXmlGZipB64'], true);
+        self::assertNotFalse($compressedXml);
+        $eventoXml = gzdecode($compressedXml);
+        self::assertNotFalse($eventoXml);
+        self::assertStringContainsString('<cMotivo>9</cMotivo>', $eventoXml);
+        self::assertStringContainsString('<xMotivo>Outro motivo válido</xMotivo>', $eventoXml);
+    }
+
+    public function testCancelWithReasonAcceptsOfficialDescriptionBoundaries(): void
+    {
+        self::$server->setResponseOfPath(
+            '/SefinNacional/nfse/abc-123/eventos',
+            new Response('{}', ['Content-Type' => 'application/json'], 200)
+        );
+
+        $client = $this->makeClient($this->signer);
+        self::assertTrue($client->cancelWithReason('abc-123', '1', str_repeat('a', 15)));
+        self::assertTrue($client->cancelWithReason('abc-123', '2', str_repeat('b', 255)));
+    }
+
+    /**
+     * @dataProvider invalidCancellationReasons
+     */
+    public function testCancelWithReasonRejectsInvalidContractBeforeNetwork(string $code, string $description): void
+    {
+        $client = $this->makeClient($this->signer);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $client->cancelWithReason('abc-123', $code, $description);
+    }
+
+    /**
+     * @return array<string, array{string, string}>
+     */
+    public static function invalidCancellationReasons(): array
+    {
+        return [
+            'unknown reason code' => ['3', str_repeat('a', 15)],
+            'description too short' => ['1', str_repeat('a', 14)],
+            'description too long' => ['1', str_repeat('a', 256)],
+        ];
+    }
+
     public function testEmitRejectsMalformedBase64NfseXmlWithoutPhpWarning(): void
     {
         $payload = json_encode([
