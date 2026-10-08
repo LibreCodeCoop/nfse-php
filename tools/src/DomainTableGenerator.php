@@ -261,9 +261,9 @@ final class DomainTableGenerator
     }
 
     /**
-     * For the official Anexo C and VII "INDOP" sheet, column F is the supply
-     * characteristic, G is cIndOp and H is the location. Never rank free-text
-     * fields by length: that can silently misassign tax information.
+     * For the official Anexo C "INDOP" sheet, D is the supply
+     * characteristic, G is cIndOp and H is the location. NT009's public
+     * Annex VII sheet instead uses A/C/D; never infer columns by text length.
      *
      * @return list<list<string>>
      */
@@ -274,7 +274,7 @@ final class DomainTableGenerator
         $names = $book->sheetNames();
         if (in_array('INDOP', $names, true)) {
             $sheet = 'INDOP';
-            $columns = ['code' => 'G', 'characteristic' => 'F', 'location' => 'H'];
+            $columns = ['code' => 'G', 'characteristic' => 'D', 'location' => 'H'];
         } elseif (in_array('cIndOp Public', $names, true)) {
             $sheet = 'cIndOp Public';
             // Official NT009 v1.03.00: A=Código indOp, C=Característica,
