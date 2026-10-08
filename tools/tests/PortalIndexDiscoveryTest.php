@@ -28,8 +28,10 @@ final class PortalIndexDiscoveryTest extends TestCase
             $html = '<html><a href="/nfse/pt-br/biblioteca/documentacao-tecnica/rtc/anexovii-indop_v1-02-00.xlsx">old</a>'
                 . '<a href="/nfse/pt-br/biblioteca/documentacao-tecnica/rtc/anexovii-indop_v1-04-00.xlsx/view">new</a>'
                 . '<a href="https://example.org/nfse/anexovii-indop_v9-00-00.xlsx">other</a></html>';
-            $discovered = (new PortalIndexDiscovery())->findNewer($manifest,
-                static fn (string $url): string => $html);
+            $discovered = (new PortalIndexDiscovery())->findNewer(
+                $manifest,
+                static fn (string $url): string => $html
+            );
             self::assertCount(1, $discovered);
             self::assertSame('1.4.0', $discovered[0]['version']);
             self::assertStringEndsWith('v1-04-00.xlsx', $discovered[0]['url']);
