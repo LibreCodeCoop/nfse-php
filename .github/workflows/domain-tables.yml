@@ -35,8 +35,3 @@ jobs:
         run: composer --working-dir=vendor-bin/domains run test
       - name: Lint PHP domain tools
         run: find tools -type f -name '*.php' -print0 | xargs -0 -n 1 php -l
-      - name: Export initial lockfile for signed commit
-        run: |
-          echo DOMAIN_LOCK_BEGIN
-          cat vendor-bin/domains/composer.lock
-          echo DOMAIN_LOCK_END
