@@ -58,6 +58,16 @@ jobs:
             --annex-a="${{ runner.temp }}/official/annex-a.xlsx" \
             --annex-b="${{ runner.temp }}/official/annex-b.xlsx" \
             --annex-c="${{ runner.temp }}/official/annex-c.xlsx"
+      - name: Show authoritative indicator differences for review
+        if: always()
+        run: |
+          php tools/bin/domains.php generate \
+            --annex-a="${{ runner.temp }}/official/annex-a.xlsx" \
+            --annex-b="${{ runner.temp }}/official/annex-b.xlsx" \
+            --annex-c="${{ runner.temp }}/official/annex-c.xlsx" \
+            --output="${{ runner.temp }}/generated"
+          diff -u resources/domains/indicadores-operacao-ibscbs-v1.01.tsv \
+            "${{ runner.temp }}/generated/indicadores-operacao-ibscbs-v1.01.tsv" || true
       - name: Preserve source workbooks for manual review
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

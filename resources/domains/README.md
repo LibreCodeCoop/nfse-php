@@ -75,7 +75,8 @@ must fail pending manual examination; never guess which description belongs to a
 
 `resources/domains/sources.json` records official portal URLs, version, reported environment
 and the available **observed** SHA-256 values. They are not official digital signatures.
-Two older source baselines have not yet been verified and are intentionally null.
+All currently tracked XLSX baselines were directly downloaded and SHA-256 checked
+on 2026-10-08. SHA-256 detects byte changes; it is not a government signature.
 The scheduled source-watch GitHub workflow downloads these exact public URLs, rejects
 HTML masquerading as an XLSX and reports byte-level differences. It also inspects
 the production and RTC index pages for newer versioned annex links, because simply

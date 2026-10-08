@@ -8,7 +8,7 @@
       "environment": "production",
       "type": "xlsx",
       "url": "https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/documentacao-atual/anexo_a-municipio_ibge-paises_iso2-v1-00-snnfse-20251210.xlsx",
-      "observed_sha256": null,
+      "observed_sha256": "238b715ab2dcc2c9e0857c44d69048e0af806b45ec8499568342de4a37f4419d",
       "index_url": "https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/documentacao-atual",
       "file_pattern": "anexo[_-]a[-_]"
     },
@@ -18,7 +18,7 @@
       "environment": "production",
       "type": "xlsx",
       "url": "https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/documentacao-atual/anexo_b-nbs2-lista_servico_nacional-snnfse-v1-01-20260122.xlsx",
-      "observed_sha256": null,
+      "observed_sha256": "e74b0be8ad204e458932efb1716225a3fb5703a84e5475ce5c4c6789d1c61b1a",
       "index_url": "https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/documentacao-atual",
       "file_pattern": "anexo[_-]b[-_]"
     },
@@ -53,5 +53,5 @@
       "file_pattern": "anexovii[-_]indop"
     }
   ],
-  "checksum_provenance": "The 2026-10-05 observed SHA-256 values for Annex C, VI and VII were recorded by an independent downloader, not digitally signed by the Brazilian government. A/B baselines remain unverified pending direct retrieval."
+  "checksum_provenance": "Anexo A, B and C SHA-256 verified by direct downloads from the official NFS-e portal in GitHub Actions on 2026-10-08; Anexo VI and VII observed on 2026-10-05 independently and verified against direct official downloads on 2026-10-08. These are not government-issued digital signatures."
 }
