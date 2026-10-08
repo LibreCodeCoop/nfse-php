@@ -67,13 +67,22 @@
         "domains:check": "@php tools/bin/domains.php check",
         "domains:audit": "@php tools/bin/domains.php audit",
         "domains:watch": "@php tools/bin/domains.php watch",
-        "domains:test": "@composer --working-dir=vendor-bin/domains run test"
+        "domains:test": "@composer --working-dir=vendor-bin/domains run test",
+        "ci:php": "@php tools/bin/ci-php.php validate"
     },
     "minimum-stability": "stable",
     "prefer-stable": true,
     "extra": {
         "branch-alias": {
             "dev-main": "1.0.x-dev"
+        },
+        "ci": {
+            "php-matrix": [
+                "8.2",
+                "8.3",
+                "8.4"
+            ],
+            "php-default": "8.3"
         }
     },
     "config": {

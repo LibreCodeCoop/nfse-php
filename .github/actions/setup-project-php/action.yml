@@ -1,0 +1,43 @@
+# SPDX-FileCopyrightText: 2026 LibreCode coop and contributors
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+name: Set up project PHP
+description: Use the PHP compatibility contract in the root composer.json
+inputs:
+  php-version:
+    description: Explicit CI matrix version, or empty for the Composer minimum
+    required: false
+    default: ""
+  extensions:
+    description: Extensions needed by the invoking job
+    required: false
+    default: "openssl, dom, soap"
+  coverage:
+    description: Coverage driver
+    required: false
+    default: "none"
+  ini-file:
+    description: PHP INI preset
+    required: false
+    default: ""
+  ini-values:
+    description: Additional INI values
+    required: false
+    default: ""
+runs:
+  using: composite
+  steps:
+    - name: Validate root Composer PHP policy
+      id: php-policy
+      shell: bash
+      run: |
+        php tools/bin/ci-php.php validate
+        echo "minimum=$(php tools/bin/ci-php.php minimum)" >> "$GITHUB_OUTPUT"
+    - name: Install PHP
+      uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2.37.2
+      with:
+        php-version: ${{ inputs.php-version || steps.php-policy.outputs.minimum }}
+        extensions: ${{ inputs.extensions }}
+        coverage: ${{ inputs.coverage }}
+        ini-file: ${{ inputs.ini-file }}
+        ini-values: ${{ inputs.ini-values }}
