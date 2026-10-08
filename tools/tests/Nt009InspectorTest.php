@@ -38,10 +38,11 @@ final class Nt009InspectorTest extends TestCase
             ['cIndOp', '0-1', 'condicional'],
             ['CST', '1-1', 'dentro de trib'],
         ]);
-        $vii = $this->workbook('vii.xlsx', 'INDOP', [
-            ['', '', '', '', '', 'Característica', 'Código', 'Local'],
-            ['', '', '', '', '', 'Descrição alterada', '020101', 'Imóvel'],
-            ['', '', '', '', '', 'Serviço novo', '040101', 'Evento'],
+        $vii = $this->workbook('vii.xlsx', 'cIndOp Public', [
+            ['Código indOp', 'Tipo de operação', 'Característica do fornecimento',
+                'Local do fornecimento a ser identificado no DFe'],
+            ['020101', 'Bem imóvel', 'Descrição alterada', 'Imóvel'],
+            ['040101', 'Eventos', 'Serviço novo', 'Evento'],
         ]);
         $legacy = $this->directory . '/previous.tsv';
         file_put_contents($legacy, "# Previous production snapshot\n"

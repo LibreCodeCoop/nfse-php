@@ -26,7 +26,10 @@ the layout worksheet rows with literal field names (ignoring, not evaluating,
 spreadsheet helper formulas) and compares the complete
 indicator-code/description/location triplets with the existing Anexo C v1.01
 snapshot. Both known official indicator worksheet names (`INDOP` and `cIndOp Public`) are
-supported; unknown sheet names fail explicitly. The JSON report lists additions, removals and text changes, as well
+supported; unknown sheet names fail explicitly. The NT009 sheet identifies A as the
+six-digit indicator, C as the supply characteristic and D as the location in the DFe.
+Its column J is a separate NFS-e IBS-incidence classification and must not be
+substituted for the official DFe location text. The JSON report lists additions, removals and text changes, as well
 as original cell coordinates for relevant NT009 layout entries.
 
 **Interpretation boundary:** exported raw layout rows do *not* automatically

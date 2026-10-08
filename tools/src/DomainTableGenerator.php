@@ -272,21 +272,28 @@ final class DomainTableGenerator
         $rows = [];
         $seen = [];
         $names = $book->sheetNames();
-        $sheet = in_array('INDOP', $names, true) ? 'INDOP'
-            : (in_array('cIndOp Public', $names, true) ? 'cIndOp Public' : null);
-        if ($sheet === null) {
+        if (in_array('INDOP', $names, true)) {
+            $sheet = 'INDOP';
+            $columns = ['code' => 'G', 'characteristic' => 'F', 'location' => 'H'];
+        } elseif (in_array('cIndOp Public', $names, true)) {
+            $sheet = 'cIndOp Public';
+            // Official NT009 v1.03.00: A=Código indOp, C=Característica,
+            // D=Local do fornecimento a ser identificado no DFe.
+            // J is NFSeLocIncidIBS (an additional classification), NOT the local description.
+            $columns = ['code' => 'A', 'characteristic' => 'C', 'location' => 'D'];
+        } else {
             throw new \UnexpectedValueException('Missing indicator worksheet INDOP or cIndOp Public');
         }
         foreach ($book->rows($sheet) as $row) {
-            $rawCode = $row['G'] ?? '';
+            $rawCode = $row[$columns['code']] ?? '';
             $code = self::digits($rawCode);
             if (strlen($code) !== 6 || !preg_match('/^[0-9.]+$/D', $rawCode)) {
                 continue;
             }
-            $characteristic = $row['F'] ?? '';
-            $location = $row['H'] ?? '';
+            $characteristic = $row[$columns['characteristic']] ?? '';
+            $location = $row[$columns['location']] ?? '';
             if ($characteristic === '' || $location === '') {
-                throw new \UnexpectedValueException("Incomplete operation indicator {$code} in INDOP F/G/H");
+                throw new \UnexpectedValueException("Incomplete operation indicator {$code} in {$sheet}");
             }
             $this->appendCode($rows, $seen, [$code, $characteristic, $location]);
         }
