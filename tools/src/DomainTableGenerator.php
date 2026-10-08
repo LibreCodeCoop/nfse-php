@@ -119,6 +119,19 @@ final class DomainTableGenerator
     }
 
     /**
+     * @return list<list<string>>
+     */
+    public function indicatorRows(string $workbookPath): array
+    {
+        $book = new AnnexReader($workbookPath);
+        try {
+            return $this->indicators($book);
+        } finally {
+            $book->close();
+        }
+    }
+
+    /**
      * @param array<string, string> $outputs
      */
     public function validateCounts(array $outputs, ?int $expectedVII = null): void
@@ -248,9 +261,9 @@ final class DomainTableGenerator
     }
 
     /**
-     * For the official production Anexo C "INDOP" sheet, D is the supply
-     * characteristic, G is cIndOp, H is the location. Never rank free-text
-     * fields by length: that can silently misassign tax information.
+     * For the official Anexo C "INDOP" sheet, D is the supply
+     * characteristic, G is cIndOp and H is the location. NT009's public
+     * Annex VII sheet instead uses A/C/D; never infer columns by text length.
      *
      * @return list<list<string>>
      */
@@ -258,16 +271,29 @@ final class DomainTableGenerator
     {
         $rows = [];
         $seen = [];
-        foreach ($book->rows('INDOP') as $row) {
-            $rawCode = $row['G'] ?? '';
+        $names = $book->sheetNames();
+        if (in_array('INDOP', $names, true)) {
+            $sheet = 'INDOP';
+            $columns = ['code' => 'G', 'characteristic' => 'D', 'location' => 'H'];
+        } elseif (in_array('cIndOp Public', $names, true)) {
+            $sheet = 'cIndOp Public';
+            // Official NT009 v1.03.00: A=Código indOp, C=Característica,
+            // D=Local do fornecimento a ser identificado no DFe.
+            // J is NFSeLocIncidIBS (an additional classification), NOT the local description.
+            $columns = ['code' => 'A', 'characteristic' => 'C', 'location' => 'D'];
+        } else {
+            throw new \UnexpectedValueException('Missing indicator worksheet INDOP or cIndOp Public');
+        }
+        foreach ($book->rows($sheet) as $row) {
+            $rawCode = $row[$columns['code']] ?? '';
             $code = self::digits($rawCode);
             if (strlen($code) !== 6 || !preg_match('/^[0-9.]+$/D', $rawCode)) {
                 continue;
             }
-            $characteristic = $row['D'] ?? '';
-            $location = $row['H'] ?? '';
+            $characteristic = $row[$columns['characteristic']] ?? '';
+            $location = $row[$columns['location']] ?? '';
             if ($characteristic === '' || $location === '') {
-                throw new \UnexpectedValueException("Incomplete operation indicator {$code} in INDOP D/G/H");
+                throw new \UnexpectedValueException("Incomplete operation indicator {$code} in {$sheet}");
             }
             $this->appendCode($rows, $seen, [$code, $characteristic, $location]);
         }
