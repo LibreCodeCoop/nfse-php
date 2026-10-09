@@ -33,6 +33,20 @@ final class OfficialXsdPackageInspectorTest extends TestCase
         self::assertSame(hash('sha256', $production), $comparison['production']['sha256']);
     }
 
+    public function testSameBasenameInDifferentFoldersIsPreserved(): void
+    {
+        $zip = $this->zip([
+            'Schemas/DPS_v1.01.xsd' => '<xs:schema>one</xs:schema>',
+            'Archive/DPS_v1.01.xsd' => '<xs:schema>two</xs:schema>',
+        ]);
+        $files = (new OfficialXsdPackageInspector())->inspect($zip);
+        self::assertSame(2, $files['xsd_count']);
+        self::assertNotSame(
+            $files['files']['Schemas/DPS_v1.01.xsd'],
+            $files['files']['Archive/DPS_v1.01.xsd']
+        );
+    }
+
     public function testForbidsUntrustedSchemaSource(): void
     {
         $this->expectException(\InvalidArgumentException::class);

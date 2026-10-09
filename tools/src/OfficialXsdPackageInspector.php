@@ -92,9 +92,11 @@ final class OfficialXsdPackageInspector
                     || str_contains($path, '\\') || ($entry['size'] ?? 0) > self::MAX_XSD_BYTES) {
                     throw new \UnexpectedValueException('Unsafe XSD archive entry');
                 }
-                $basename = basename($path);
-                if (isset($files[$basename])) {
-                    throw new \UnexpectedValueException('Duplicate XSD basename in official schema ZIP');
+                // Official ZIPs may contain distinct directory trees with
+                // identically named XSDs. Compare full archive paths rather
+                // than silently overwriting or rejecting valid entries.
+                if (isset($files[$path])) {
+                    throw new \UnexpectedValueException('Duplicate XSD archive path');
                 }
                 if (count($files) >= self::MAX_XSD_FILES) {
                     throw new \UnexpectedValueException('Too many XSD files in archive');
@@ -108,7 +110,7 @@ final class OfficialXsdPackageInspector
                 if ($data === false || strlen($data) !== $size) {
                     throw new \UnexpectedValueException('Cannot read an official XSD entry');
                 }
-                $files[$basename] = hash('sha256', $data);
+                $files[$path] = hash('sha256', $data);
             }
             if ($files === []) {
                 throw new \UnexpectedValueException('No XSD files present in the schema ZIP');
