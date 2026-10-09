@@ -33,6 +33,16 @@
       "file_pattern": "anexo[-_]c[-_].*indop"
     },
     {
+      "id": "annex-i-production",
+      "version": "ANEXO_I-SEFIN_ADN-DPS_NFSe-SNNFSe v1.01 (20260209)",
+      "environment": "production",
+      "type": "xlsx",
+      "url": "https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/documentacao-atual/anexo_i-sefin_adn-dps_nfse-snnfse-v1-01-20260209.xlsx",
+      "observed_sha256": "de5bc492959eadc8bfa7540e16939995924f2188f743648eaf84d3b31e9eeb7c",
+      "index_url": "https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/documentacao-atual",
+      "file_pattern": "anexo[_-]i[-_].*dps"
+    },
+    {
       "id": "annex-vi-nt009",
       "version": "ANEXO_VI v1.04.01",
       "environment": "RTC documentation (activation not established)",
@@ -53,5 +63,5 @@
       "file_pattern": "anexovii[-_]indop"
     }
   ],
-  "checksum_provenance": "Anexo A, B and C SHA-256 verified by direct downloads from the official NFS-e portal in GitHub Actions on 2026-10-08; Anexo VI and VII observed on 2026-10-05 independently and verified against direct official downloads on 2026-10-08. These are not government-issued digital signatures."
+  "checksum_provenance": "Anexo A, B and C SHA-256 verified by direct downloads from the official NFS-e portal in GitHub Actions on 2026-10-08; Anexo VI and VII observed on 2026-10-05 independently and verified against direct official downloads on 2026-10-08. These are not government-issued digital signatures. Original production Annex I v1.01 directly downloaded from www.gov.br/nfse in a GitHub Actions job on 2026-10-08 (Brazil local date) and recorded by observed SHA-256; not a government signature."
 }
