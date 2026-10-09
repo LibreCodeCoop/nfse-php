@@ -20,10 +20,15 @@ final class Nt009BaseAdjustmentPreviewGroup
         $modes = (int) ($input->percentualIssqn !== null)
             + (int) ($input->valorIssqn !== null)
             + (int) ($input->documentos !== []);
-        if ($modes !== 1) {
+        if ($modes > 1) {
             throw new \InvalidArgumentException(
                 'NT009 vAjusteBC requires exactly one percentage, value or documents mode'
             );
+        }
+        // Annex VI rows 294-296 are optional ISSQN alternatives; row 336
+        // permits an independent IBS/CBS exterior adjustment.
+        if ($modes === 0 && $input->valorIbsCbsComExterior === null) {
+            throw new \InvalidArgumentException('NT009 vAjusteBC requires at least one adjustment');
         }
         if (count($input->documentos) > 1000) {
             throw new \InvalidArgumentException('NT009 vAjusteBC supports at most 1000 adjustment documents');

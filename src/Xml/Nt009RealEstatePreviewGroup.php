@@ -79,8 +79,12 @@ final class Nt009RealEstatePreviewGroup
             }
             $element->appendChild($address);
             foreach ($unit->ajustes as $adjustment) {
-                if (preg_match('/^[0-9]{2}$/D', $adjustment->tipo) !== 1
-                    || ($adjustment->descricaoTipo !== null && !$this->text($adjustment->descricaoTipo, 150))) {
+                // Annex VI rows 401-402 enumerate five adjustment types.
+                // A free-text description belongs only to type 99.
+                if (!in_array($adjustment->tipo, ['01', '02', '03', '04', '99'], true)
+                    || ($adjustment->descricaoTipo !== null
+                        && ($adjustment->tipo !== '99'
+                            || !$this->text($adjustment->descricaoTipo, 150)))) {
                     throw new \InvalidArgumentException('Invalid NT009 property adjustment type');
                 }
                 $this->decimal($adjustment->valor, 15, 'vAjusteBCLocImoveis');

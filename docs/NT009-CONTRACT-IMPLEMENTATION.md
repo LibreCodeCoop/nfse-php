@@ -177,6 +177,27 @@ commit or tagged release**, adds a compatible version-selector or emitter,
 and retests the module's emission and recovery flows with the applicable
 staging environment. Do not pin this unmerged PR's SHA in the consumer.
 
+
+## Post-PR #101 published-layout guards (review only)
+
+The NT009 preview additionally checks the exact published adjustment type
+domain (Annex VI row 298), the conditional descriptions for types 99/199
+(row 299), and the strict \`vAjusteAplic <= vTotDoc\` constraint (row 301).
+The amount comparison uses decimal strings as integer cents; it never rounds
+or converts fiscal amounts to floating point or platform integers. DF-e
+reference types are limited to 1/2/3/9, with \`xTipoChaveDFe\` permitted only
+for 9 (rows 305-306). Property adjustment types are limited to
+01/02/03/04/99, with descriptions permitted for 99 (rows 401-402).
+The independently optional export IBS/CBS adjustment (row 336) can appear
+without an unrelated ISSQN adjustment (rows 294-296).
+
+These are source-supported **structural** constraints only. They do not
+implement municipal eligibility, taxpayer classification, the official
+adjustment-repercussion matrix or downstream emission. In particular, no
+restrictions are inferred from consultative Annex VIII, and the preview
+remains non-emitting until an applicable officially effective XSD, environment
+activation and SEFIN acceptance tests have been confirmed.
+
 ## Outstanding normative gates
 
 1. Obtain authoritative NT009-compatible XSD packages for each intended

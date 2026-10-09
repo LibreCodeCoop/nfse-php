@@ -774,6 +774,237 @@ final class Nt009DpsPreviewBuilderTest extends TestCase
         );
     }
 
+
+    public function testDocumentAdjustmentCannotExceedTotalAtLargePrecision(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('vAjusteAplic cannot exceed vTotDoc');
+        $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                ajusteBase: new Nt009BaseAdjustmentData(
+                    documentos: [
+                        new Nt009AdjustmentDocumentData(
+                            '1',
+                            '999999999999998.99',
+                            '999999999999999.00',
+                            new Nt009OtherDocumentReference('CON-1', 'Contrato'),
+                        ),
+                    ],
+                ),
+            )
+        );
+    }
+
+    public function testDocumentAdjustmentCanEqualLargeTotal(): void
+    {
+        $amount = '999999999999999.99';
+        $draft = $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                ajusteBase: new Nt009BaseAdjustmentData(
+                    documentos: [
+                        new Nt009AdjustmentDocumentData(
+                            '199',
+                            $amount,
+                            $amount,
+                            new Nt009OtherDocumentReference('CON-1', 'Contrato'),
+                            descricaoTipo: 'Reembolso',
+                        ),
+                    ],
+                ),
+            )
+        );
+        self::assertSame($amount, $this->first(
+            $draft->xml,
+            '/n:DPS/n:infDPS/n:valores/n:vAjusteBC/n:documentos/n:docAjusteBC/n:vAjusteAplic'
+        )->textContent);
+    }
+
+    public function testDocumentAdjustmentRejectsUnlistedPublishedType(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid NT009 tpAjusteBC');
+        $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                ajusteBase: new Nt009BaseAdjustmentData(
+                    documentos: [
+                        new Nt009AdjustmentDocumentData(
+                            '100', '50.00', '20.00',
+                            new Nt009OtherDocumentReference('CON-1', 'Contrato'),
+                        ),
+                    ],
+                ),
+            )
+        );
+    }
+
+    public function testDocumentAdjustmentDescriptionCannotAccompanyOrdinaryType(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid NT009 tpAjusteBC');
+        $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                ajusteBase: new Nt009BaseAdjustmentData(
+                    documentos: [
+                        new Nt009AdjustmentDocumentData(
+                            '1', '50.00', '20.00',
+                            new Nt009OtherDocumentReference('CON-1', 'Contrato'),
+                            descricaoTipo: 'Descrição não prevista',
+                        ),
+                    ],
+                ),
+            )
+        );
+    }
+
+    public function testNationalDfeReferenceRejectsUnknownType(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid NT009 dFeNacional reference');
+        $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                ajusteBase: new Nt009BaseAdjustmentData(
+                    documentos: [
+                        new Nt009AdjustmentDocumentData(
+                            '1', '50.00', '20.00',
+                            new Nt009NationalInvoiceReference('4', 'KEY-123'),
+                        ),
+                    ],
+                ),
+            )
+        );
+    }
+
+    public function testNationalDfeDescriptionRequiresOtherType(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid NT009 dFeNacional reference');
+        $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                ajusteBase: new Nt009BaseAdjustmentData(
+                    documentos: [
+                        new Nt009AdjustmentDocumentData(
+                            '1', '50.00', '20.00',
+                            new Nt009NationalInvoiceReference('1', 'KEY-123', 'Outra espécie'),
+                        ),
+                    ],
+                ),
+            )
+        );
+    }
+
+    public function testNationalDfeOtherTypeAcceptsDescription(): void
+    {
+        $draft = $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                ajusteBase: new Nt009BaseAdjustmentData(
+                    documentos: [
+                        new Nt009AdjustmentDocumentData(
+                            '1', '50.00', '20.00',
+                            new Nt009NationalInvoiceReference('9', 'KEY-123', 'Outro documento'),
+                        ),
+                    ],
+                ),
+            )
+        );
+        self::assertSame('Outro documento', $this->first(
+            $draft->xml,
+            '/n:DPS/n:infDPS/n:valores/n:vAjusteBC/n:documentos/n:docAjusteBC/n:dFeNacional/n:xTipoChaveDFe'
+        )->textContent);
+    }
+
+    public function testPropertyAdjustmentRejectsUnknownCode(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid NT009 property adjustment type');
+        $this->builder->previewNt009Dps(
+            $this->makeDps(codigoTributacaoNacional: '990301'),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                cst: '000',
+                classificacaoTributaria: '000001',
+                exigeGrupoIbsCbs: false,
+                imovel: new Nt009RealEstateData(
+                    municipioIbge: '3304557',
+                    unidades: [
+                        new Nt009RealEstateUnitData(
+                            cib: '12345678',
+                            cep: '20000000',
+                            logradouro: 'Rua Um',
+                            numero: '42',
+                            ajustes: [new Nt009PropertyAdjustmentData('98', '10.00')],
+                        ),
+                    ],
+                ),
+            )
+        );
+    }
+
+    public function testPropertyAdjustmentDescriptionRequiresOtherCode(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid NT009 property adjustment type');
+        $this->builder->previewNt009Dps(
+            $this->makeDps(codigoTributacaoNacional: '990301'),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                cst: '000',
+                classificacaoTributaria: '000001',
+                exigeGrupoIbsCbs: false,
+                imovel: new Nt009RealEstateData(
+                    municipioIbge: '3304557',
+                    unidades: [
+                        new Nt009RealEstateUnitData(
+                            cib: '12345678',
+                            cep: '20000000',
+                            logradouro: 'Rua Um',
+                            numero: '42',
+                            ajustes: [new Nt009PropertyAdjustmentData('01', '10.00', 'Indevido')],
+                        ),
+                    ],
+                ),
+            )
+        );
+    }
+
+    public function testExteriorIbsCbsAdjustmentDoesNotRequireIssqnMode(): void
+    {
+        $draft = $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                ajusteBase: new Nt009BaseAdjustmentData(valorIbsCbsComExterior: '12.50'),
+            )
+        );
+        self::assertSame('12.50', $this->first(
+            $draft->xml,
+            '/n:DPS/n:infDPS/n:valores/n:vAjusteBC/n:vAjusteBCIBSCBSComExt'
+        )->textContent);
+    }
+
     private function makeDps(
         ?int $ibsCbsFinalidade = null,
         string $codigoTributacaoNacional = '010701',

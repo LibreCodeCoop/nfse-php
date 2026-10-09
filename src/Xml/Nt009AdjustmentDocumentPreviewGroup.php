@@ -21,12 +21,27 @@ final class Nt009AdjustmentDocumentPreviewGroup
 {
     public function build(\DOMDocument $doc, Nt009AdjustmentDocumentData $data): \DOMElement
     {
-        if (preg_match('/^[0-9]{1,3}$/D', $data->tipo) !== 1
-            || ($data->descricaoTipo !== null && !$this->text($data->descricaoTipo, 150, 0))) {
+        // Exact values published in Annex VI v1.04.01, row 298.
+        // Whether a type affects ISSQN, IBS/CBS or Simples remains external.
+        if (!in_array($data->tipo, [
+            '1', '2', '3', '4', '5', '6', '7', '8', '9',
+            '99', '101', '102', '103', '104', '105', '199',
+        ], true)
+            || ($data->descricaoTipo !== null
+                && (!in_array($data->tipo, ['99', '199'], true)
+                    || !$this->text($data->descricaoTipo, 150, 0)))) {
             throw new \InvalidArgumentException('Invalid NT009 tpAjusteBC or xTpAjusteBC');
         }
         $this->decimal($data->valorTotalDocumento, 'vTotDoc');
         $this->decimal($data->valorAjustado, 'vAjusteAplic');
+        // Annex VI row 301 requires vAjusteAplic <= vTotDoc. Compare
+        // canonical integer cents rather than floats or platform integers.
+        $total = $this->cents($data->valorTotalDocumento);
+        $applied = $this->cents($data->valorAjustado);
+        if (strlen($applied) > strlen($total)
+            || (strlen($applied) === strlen($total) && strcmp($applied, $total) > 0)) {
+            throw new \InvalidArgumentException('NT009 vAjusteAplic cannot exceed vTotDoc');
+        }
         foreach ([
             'dtEmiDoc' => $data->dataEmissao,
             'dtCompDoc' => $data->dataCompetencia,
@@ -55,10 +70,13 @@ final class Nt009AdjustmentDocumentPreviewGroup
 
         $reference = $data->referencia;
         if ($reference instanceof Nt009NationalInvoiceReference) {
-            if (preg_match('/^[0-9]$/D', $reference->tipoChaveDfe) !== 1
+            // Annex VI rows 305-306: 1 NFS-e, 2 NF-e, 3 CT-e, 9 other.
+            // xTipoChaveDFe may only describe the "other" type.
+            if (!in_array($reference->tipoChaveDfe, ['1', '2', '3', '9'], true)
                 || !$this->text($reference->chaveDfe, 50)
                 || ($reference->descricaoTipoChaveDfe !== null
-                    && !$this->text($reference->descricaoTipoChaveDfe, 255))) {
+                    && ($reference->tipoChaveDfe !== '9'
+                        || !$this->text($reference->descricaoTipoChaveDfe, 255)))) {
                 throw new \InvalidArgumentException('Invalid NT009 dFeNacional reference');
             }
             $group = $doc->createElement('dFeNacional');
@@ -96,6 +114,11 @@ final class Nt009AdjustmentDocumentPreviewGroup
         }
 
         return $element;
+    }
+
+    private function cents(string $value): string
+    {
+        return ltrim(str_replace('.', '', $value), '0') ?: '0';
     }
 
     private function decimal(string $value, string $field): void
