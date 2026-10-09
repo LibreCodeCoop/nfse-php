@@ -83,6 +83,16 @@
             font-size: 8pt;
         }
 
+        .footer-table {
+            margin-top: 30pt;
+            border-collapse: collapse;
+        }
+
+        .footer-table td {
+            border: 1px solid #000;
+            padding: 3pt 4pt;
+        }
+
         .header-table {
             margin-bottom: 2pt;
             border-bottom: 1px solid #000;
@@ -266,8 +276,8 @@
                     <span class="value"><?= $data['emitente']['municipio'] ?></span>
                 </td>
                 <td>
-                    <span class="label">CEP</span>
-                    <span class="value"><?= $data['emitente']['cep'] ?></span>
+                    <span class="label">Código IBGE / CEP</span>
+                    <span class="value"><?= $data['emitente']['ibge_cep'] ?></span>
                 </td>
             </tr>
             <tr>
@@ -323,8 +333,8 @@
                     <span class="value"><?= $data['tomador']['municipio'] ?></span>
                 </td>
                 <td style="width: 25%;">
-                    <span class="label">CEP</span>
-                    <span class="value"><?= $data['tomador']['cep'] ?></span>
+                    <span class="label">Código IBGE / CEP</span>
+                    <span class="value"><?= $data['tomador']['ibge_cep'] ?></span>
                 </td>
             </tr>
         </table>
@@ -412,7 +422,7 @@
             <tr>
                 <td colspan="4">
                     <span class="label">Descrição do Serviço</span>
-                    <span class="value"><?= $data['servico']['descricao'] ?></span>
+                    <span class="value"><?= nl2br($data['servico']['descricao'], false) ?></span>
                 </td>
             </tr>
         </table>
@@ -483,7 +493,7 @@
                     <span class="value"><?= $data['tributacao_federal']['cp'] ?? '-' ?></span>
                 </td>
                 <td style="width: 25%;">
-                    <span class="label">CSLL - Retida</span>
+                    <span class="label">Contribuições Sociais - Retidas</span>
                     <span class="value"><?= $data['tributacao_federal']['csll'] ?? '-' ?></span>
                 </td>
                 <td style="width: 25%;"></td>
@@ -632,5 +642,14 @@
             </tr>
         </table>
     </div>
+
+    <!-- The XML has no acknowledgement timestamp or handwritten signature data. -->
+    <table class="footer-table">
+        <tr>
+            <td style="width: 25%;"><span class="label">DATA CIENTIFICAÇÃO</span><span class="value">-</span></td>
+            <td style="width: 35%;"><span class="label">IDENTIFICAÇÃO E ASSINATURA</span><span class="value">-</span></td>
+            <td style="width: 40%;"><span class="label">Nº NFS-e / CHAVE NFS-e</span><span class="value"><?= $data['numero_nfse'] ?> / <?= $data['chave_acesso'] ?></span></td>
+        </tr>
+    </table>
 </body>
 </html>

@@ -85,6 +85,7 @@ final class DanfseTemplate
         $serv    = $this->node($infDps, 'serv');
         $cServ   = $this->node($serv, 'cServ');
         $valores = $this->node($infDps, 'valores');
+        $authorizedValues = $this->node($infNfse, 'valores');
         $tribMun = $this->node($valores, 'trib', 'tribMun');
         $tribFed = $this->node($valores, 'trib', 'tribFed');
         $totTrib = $this->node($valores, 'trib', 'totTrib', 'pTotTrib');
@@ -113,12 +114,13 @@ final class DanfseTemplate
             'emitente' => [
                 'nome'            => $this->val($emit, 'xNome') ?: '-',
                 'cnpj_cpf'        => $this->formattedDocument($emit),
-                'im'              => '-',
+                'im'              => $this->val($prest, 'IM') ?: '-',
                 'telefone'        => $this->formatter->phone($this->val($emit, 'fone')),
                 'email'           => strtolower($this->val($emit, 'email')),
                 'endereco'        => $this->address($enderEmit),
                 'municipio'       => $this->cityWithUf($this->val($infNfse, 'xLocEmi'), $this->val($enderEmit, 'UF')),
                 'cep'             => $this->formatter->cep($this->val($enderEmit, 'CEP')),
+                'ibge_cep'        => $this->ibgeCep($this->val($enderEmit, 'cMun'), $this->val($enderEmit, 'CEP')),
                 'simples_nacional' => OptanteSimplesNacional::labelFor($this->val($regTrib, 'opSimpNac')),
                 'regime_sn'       => RegimeApuracaoTributariaSN::labelFor($this->val($regTrib, 'regApTribSN')),
             ],
@@ -132,6 +134,7 @@ final class DanfseTemplate
                 'endereco'  => $this->address($endToma),
                 'municipio' => $this->city($this->val($endToma, 'endNac', 'cMun')),
                 'cep'       => $this->formatter->cep($this->val($endToma, 'endNac', 'CEP')),
+                'ibge_cep'  => $this->ibgeCep($this->val($endToma, 'endNac', 'cMun'), $this->val($endToma, 'endNac', 'CEP')),
             ],
 
             'intermediario' => $interm === [] ? null : [
@@ -160,10 +163,10 @@ final class DanfseTemplate
                 'municipio_incidencia' => $this->val($infNfse, 'xLocIncid') ?: '-',
                 'regime_especial'      => RegimeEspecialTributacao::labelFor($this->val($regTrib, 'regEspTrib')),
                 'valor_servico'        => $this->formatter->currency($this->val($valores, 'vServPrest', 'vServ')),
-                'bc_issqn'             => $this->currencyOrDash($this->val($tribMun, 'vBC')),
-                'aliquota'             => $this->percentOrDash($this->val($tribMun, 'pAliq')),
+                'bc_issqn'             => $this->currencyOrDash($this->val($authorizedValues, 'vBC')),
+                'aliquota'             => $this->percentOrDash($this->val($authorizedValues, 'pAliqAplic')), 
                 'retencao_issqn'       => TipoRetencaoISSQN::labelFor($this->val($tribMun, 'tpRetISSQN')),
-                'issqn_apurado'        => $this->currencyOrDash($this->val($tribMun, 'vISSQN')),
+                'issqn_apurado'        => $this->currencyOrDash($this->val($authorizedValues, 'vISSQN')), 
             ],
 
             'tributacao_federal' => [
@@ -181,8 +184,8 @@ final class DanfseTemplate
                 'valor_servico'           => $this->formatter->currency($this->val($valores, 'vServPrest', 'vServ')),
                 'desconto_condicionado'   => $this->currencyOrDash($this->val($tribMun, 'vDescCond')),
                 'desconto_incondicionado' => $this->currencyOrDash($this->val($tribMun, 'vDescIncond')),
-                'issqn_retido'            => ($this->val($tribMun, 'vISSQN') !== '' && ($this->val($tribMun, 'tpRetISSQN') ?: '1') !== '1')
-                    ? $this->formatter->currency($this->val($tribMun, 'vISSQN'))
+                'issqn_retido'            => ($this->val($authorizedValues, 'vISSQN') !== '' && ($this->val($tribMun, 'tpRetISSQN') ?: '1') !== '1')
+                    ? $this->formatter->currency($this->val($authorizedValues, 'vISSQN'))
                     : '-',
                 'retencoes_federais' => $this->sumCurrency(
                     $this->val($tribFed, 'vRetIRRF'),
@@ -305,6 +308,7 @@ final class DanfseTemplate
         $parts = array_filter([
             $this->val($endereco, 'xLgr'),
             $this->val($endereco, 'nro'),
+            $this->val($endereco, 'xCpl'),
             $this->val($endereco, 'xBairro'),
         ], static fn (string $value): bool => $value !== '');
 
@@ -314,6 +318,11 @@ final class DanfseTemplate
     private function cityWithUf(string $city, string $uf): string
     {
         return ($city !== '' && $uf !== '') ? $city . ' - ' . $uf : '-';
+    }
+
+    private function ibgeCep(string $ibge, string $cep): string
+    {
+        return ($ibge !== '' ? $ibge : '-') . ' / ' . $this->formatter->cep($cep);
     }
 
     private function city(string $cMun): string

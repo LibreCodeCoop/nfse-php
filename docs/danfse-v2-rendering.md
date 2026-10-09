@@ -13,14 +13,17 @@ The stable contract covered by tests is:
 
 - authorized NFS-e identity, access key and QR-code presence;
 - provider, taker and intermediary identity fields;
-- retained ISS labels and totals as authorized in the XML;
+- retained ISS labels from the DPS and municipal base/rate/assessed tax from the authorized `infNFSe/valores` (not the DPS `tribMun`);
 - foreign taker NIF without inventing a Brazilian CPF/CNPJ;
 - 60-character taxation-description content with an ellipsis suffix when truncated;
 - IBS/CBS block rendered only when the authorized XML contains it;
 - IBS/CBS values displayed from authorized totals without recalculation;
 - legacy authorized XML without IBS/CBS remains renderable;
 - homologation documents have a visible environment marker;
-- local generation returns a valid PDF artifact.
+- local generation returns a valid PDF artifact;
+- line breaks in the authorized service description are preserved as escaped HTML line breaks;
+- optional contact complement and IBGE/CEP follow the authorized XML without inventing missing data;
+- the reference footer never fabricates an acknowledgement date or human signature.
 
 The project does not guarantee byte-identical PDF output. PDF metadata, font
 metrics and QR SVG serialization can change when rendering dependencies are
