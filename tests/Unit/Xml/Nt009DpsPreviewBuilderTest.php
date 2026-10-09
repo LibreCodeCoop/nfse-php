@@ -10,11 +10,18 @@ namespace LibreCodeCoop\NfsePHP\Tests\Unit\Xml;
 use LibreCodeCoop\NfsePHP\Dto\DeductionReductionData;
 use LibreCodeCoop\NfsePHP\Dto\DpsData;
 use LibreCodeCoop\NfsePHP\Dto\Nt009BaseAdjustmentData;
+use LibreCodeCoop\NfsePHP\Dto\Nt009CondominiumChargeData;
+use LibreCodeCoop\NfsePHP\Dto\Nt009CondominiumData;
+use LibreCodeCoop\NfsePHP\Dto\Nt009CondominiumDetailData;
 use LibreCodeCoop\NfsePHP\Dto\Nt009DpsPreview;
 use LibreCodeCoop\NfsePHP\Dto\Nt009DpsPreviewData;
+use LibreCodeCoop\NfsePHP\Dto\Nt009LeaseData;
 use LibreCodeCoop\NfsePHP\Dto\Nt009LinkedPaymentData;
 use LibreCodeCoop\NfsePHP\Dto\Nt009MovableAssetData;
 use LibreCodeCoop\NfsePHP\Dto\Nt009RecipientAddressData;
+use LibreCodeCoop\NfsePHP\Dto\Nt009PropertyAdjustmentData;
+use LibreCodeCoop\NfsePHP\Dto\Nt009RealEstateData;
+use LibreCodeCoop\NfsePHP\Dto\Nt009RealEstateUnitData;
 use LibreCodeCoop\NfsePHP\Dto\Nt009RecipientData;
 use LibreCodeCoop\NfsePHP\Tests\TestCase;
 use LibreCodeCoop\NfsePHP\Xml\DpsSchemaValidator;
@@ -451,6 +458,118 @@ final class Nt009DpsPreviewBuilderTest extends TestCase
                 classificacaoTributaria: '000001',
                 exigeGrupoIbsCbs: false,
                 bensMoveis: [$item],
+            )
+        );
+    }
+
+    public function testPropertyLeaseAndUnitsFollowOfficialGroupOrder(): void
+    {
+        $xml = $this->builder->previewNt009Dps(
+            $this->makeDps(codigoTributacaoNacional: '990301'),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                cst: '000',
+                classificacaoTributaria: '000001',
+                exigeGrupoIbsCbs: false,
+                imovel: new Nt009RealEstateData(
+                    municipioIbge: '3304557',
+                    locacao: new Nt009LeaseData('40.00', '150.00'),
+                    unidades: [
+                        new Nt009RealEstateUnitData(
+                            cib: '12345678',
+                            cep: '20000000',
+                            logradouro: 'Rua Um',
+                            numero: '42',
+                            ajustes: [new Nt009PropertyAdjustmentData('01', '10.00')],
+                        ),
+                    ],
+                ),
+            )
+        )->xml;
+        self::assertSame('150.00', $this->first(
+            $xml,
+            '/n:DPS/n:infDPS/n:IBSCBS/n:imovel/n:gLocacao/n:vTotOper'
+        )->textContent);
+        self::assertSame('12345678', $this->first(
+            $xml,
+            '/n:DPS/n:infDPS/n:IBSCBS/n:imovel/n:gUnidImob/n:cCIB'
+        )->textContent);
+        self::assertSame('10.00', $this->first(
+            $xml,
+            '/n:DPS/n:infDPS/n:IBSCBS/n:imovel/n:gUnidImob/n:gAjusteBCLocImoveis/n:vAjusteBCLocImoveis'
+        )->textContent);
+        self::assertTrue(strpos($xml, '<imovel>') < strpos($xml, '<valores>'));
+    }
+
+    public function testPropertyLeaseRejectsUnrelatedNationalServiceCode(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('gLocacao requires cTribNac');
+        $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                cst: '000',
+                classificacaoTributaria: '000001',
+                exigeGrupoIbsCbs: false,
+                imovel: new Nt009RealEstateData(
+                    municipioIbge: '3304557',
+                    locacao: new Nt009LeaseData('30.00', '150.00'),
+                ),
+            )
+        );
+    }
+
+    public function testCondominiumChargesAndDetailsUseExactCentArithmetic(): void
+    {
+        $xml = $this->builder->previewNt009Dps(
+            $this->makeDps(codigoTributacaoNacional: '990501'),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                cst: '000',
+                classificacaoTributaria: '000001',
+                exigeGrupoIbsCbs: false,
+                condominios: new Nt009CondominiumData(
+                    vencimentoOriginal: '2026-11-10',
+                    cobrancas: [
+                        new Nt009CondominiumChargeData(
+                            tipo: '01',
+                            valor: '150.00',
+                            detalhes: [new Nt009CondominiumDetailData('001', '150.00')],
+                        ),
+                    ],
+                ),
+            )
+        )->xml;
+        self::assertSame('150.00', $this->first(
+            $xml,
+            '/n:DPS/n:infDPS/n:IBSCBS/n:condominios/n:gCobranca/n:gDetCobranca/n:vDetCobranca'
+        )->textContent);
+        self::assertSame('2026-11-10', $this->first(
+            $xml,
+            '/n:DPS/n:infDPS/n:IBSCBS/n:condominios/n:dVencOrig'
+        )->textContent);
+    }
+
+    public function testCondominiumAmountsMustReconcileWithServiceValue(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('charges must sum to service value');
+        $this->builder->previewNt009Dps(
+            $this->makeDps(codigoTributacaoNacional: '990501'),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                cst: '000',
+                classificacaoTributaria: '000001',
+                exigeGrupoIbsCbs: false,
+                condominios: new Nt009CondominiumData(
+                    '2026-11-10',
+                    [new Nt009CondominiumChargeData('01', '149.99')],
+                ),
             )
         );
     }
