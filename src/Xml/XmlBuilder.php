@@ -8,7 +8,6 @@ declare(strict_types=1);
 namespace LibreCodeCoop\NfsePHP\Xml;
 
 use LibreCodeCoop\NfsePHP\Domain\OfficialDomainCatalog;
-
 use LibreCodeCoop\NfsePHP\Dto\DpsData;
 use LibreCodeCoop\NfsePHP\Support\DpsIdentifier;
 
