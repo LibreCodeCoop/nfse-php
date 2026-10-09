@@ -16,6 +16,34 @@ namespace LibreCodeCoop\NfsePHP\Tools;
 final class OfficialAnnexDownloader
 {
     /**
+     * One-time provenance observation for a newly published government XLSX.
+     * It is never a trusted production source until its hash is reviewed and
+     * pinned in the versioned manifest. Unlike download(), it has no baseline.
+     *
+     * @param callable(string): string $fetch
+     */
+    public function observe(string $url, string $outputFile, callable $fetch): string
+    {
+        $parts = parse_url($url);
+        if (!is_array($parts) || ($parts['scheme'] ?? '') !== 'https'
+            || ($parts['host'] ?? '') !== 'www.gov.br'
+            || !str_starts_with($parts['path'] ?? '', '/nfse/')
+            || isset($parts['user']) || isset($parts['pass']) || isset($parts['port'])) {
+            throw new \InvalidArgumentException('Provenance observation requires an official NFS-e URL');
+        }
+        $bytes = $fetch($url);
+        if ($bytes === '' || strlen($bytes) >= SourceVerifier::MAX_SOURCE_BYTES
+            || !str_starts_with($bytes, "PK\x03\x04")) {
+            throw new \UnexpectedValueException('Invalid unpinned official XLSX');
+        }
+        if (is_link($outputFile) || file_put_contents($outputFile, $bytes) !== strlen($bytes)) {
+            throw new \RuntimeException('Cannot write unpinned official XLSX observation');
+        }
+
+        return hash('sha256', $bytes);
+    }
+
+    /**
      * @param list<string> $ids
      * @return array<string, array{url:string,observed_sha256:string}>
      */

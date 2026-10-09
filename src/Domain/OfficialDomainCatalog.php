@@ -19,6 +19,7 @@ final class OfficialDomainCatalog
     public const MUNICIPALITY_COUNTRY_VERSION = 'ANEXO_A v1.00 (20251210)';
     public const SERVICE_NBS_VERSION = 'ANEXO_B v1.01 (20260122)';
     public const OPERATION_INDICATOR_VERSION = 'ANEXO_C v1.01 (20260122)';
+    public const OPERATION_INDICATOR_NT009_VERSION = 'ANEXO_VII v1.03.00 (NT009 v1.01)';
 
     /** @var array<string, array<string, list<string>>> */
     private array $cache = [];
@@ -85,9 +86,16 @@ final class OfficialDomainCatalog
     /**
      * @return array{code:string,characteristic:string,location:string}|null
      */
-    public function operationIndicator(string $code): ?array
-    {
-        $row = $this->table('indicadores-operacao-ibscbs-v1.01.tsv', 3)[$code] ?? null;
+    public function operationIndicator(
+        string $code,
+        string $version = self::OPERATION_INDICATOR_VERSION,
+    ): ?array {
+        $file = match ($version) {
+            self::OPERATION_INDICATOR_VERSION => 'indicadores-operacao-ibscbs-v1.01.tsv',
+            self::OPERATION_INDICATOR_NT009_VERSION => 'indicadores-operacao-ibscbs-v1.03.00.tsv',
+            default => throw new \InvalidArgumentException('Unsupported NFS-e operation-indicator version: ' . $version),
+        };
+        $row = $this->table($file, 3)[$code] ?? null;
 
         return $row === null ? null : [
             'code' => $row[0],
@@ -150,9 +158,22 @@ final class OfficialDomainCatalog
         return $this->nbs($code) !== null;
     }
 
-    public function hasOperationIndicator(string $code): bool
+    public function hasOperationIndicator(
+        string $code,
+        string $version = self::OPERATION_INDICATOR_VERSION,
+    ): bool {
+        return $this->operationIndicator($code, $version) !== null;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function operationIndicatorVersions(): array
     {
-        return $this->operationIndicator($code) !== null;
+        return [
+            self::OPERATION_INDICATOR_VERSION,
+            self::OPERATION_INDICATOR_NT009_VERSION,
+        ];
     }
 
     /**

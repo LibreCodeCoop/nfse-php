@@ -8,8 +8,10 @@ declare(strict_types=1);
 
 use LibreCodeCoop\NfsePHP\Tools\AnnexReader;
 use LibreCodeCoop\NfsePHP\Tools\DomainTableGenerator;
+use LibreCodeCoop\NfsePHP\Tools\Nt009ContractMatrix;
 use LibreCodeCoop\NfsePHP\Tools\Nt009Inspector;
 use LibreCodeCoop\NfsePHP\Tools\OfficialAnnexDownloader;
+use LibreCodeCoop\NfsePHP\Tools\OfficialXsdPackageInspector;
 use LibreCodeCoop\NfsePHP\Tools\PortalIndexDiscovery;
 use LibreCodeCoop\NfsePHP\Tools\SourceVerifier;
 
@@ -70,6 +72,52 @@ try {
             }
         }
         echo "Verified " . count($outputs) . " deterministic snapshots\n";
+    } elseif ($command === 'observe-source') {
+        if (!isset($options['url'], $options['output'])
+            || ($options['acknowledge-unpinned'] ?? '') !== 'yes') {
+            throw new InvalidArgumentException(
+                'Observation requires --url= --output= --acknowledge-unpinned=yes'
+            );
+        }
+        $sha = (new OfficialAnnexDownloader())->observe(
+            $options['url'],
+            $options['output'],
+            SourceVerifier::fetchOfficial(...)
+        );
+        echo "UNPINNED source: {$sha}; review provenance before adding to trusted manifest\n";
+    } elseif ($command === 'schema-packages') {
+        if (!isset($options['report'])) {
+            throw new InvalidArgumentException('Missing --report=PATH');
+        }
+        $comparison = (new OfficialXsdPackageInspector())->comparePinned(
+            $options['manifest'] ?? $root . '/resources/domains/sources.json',
+            SourceVerifier::fetchOfficial(...)
+        );
+        $json = json_encode($comparison, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES
+            | JSON_THROW_ON_ERROR) . "\n";
+        if (file_put_contents($options['report'], $json) !== strlen($json)) {
+            throw new RuntimeException('Unable to save official schema comparison');
+        }
+        echo 'Production XSD package: ' . $comparison['production']['sha256']
+            . '; Restricted XSD package: ' . $comparison['restricted']['sha256'] . "\n";
+        echo 'XSD byte comparison by filename: ' . json_encode(array_count_values(
+            $comparison['basename_comparison']
+        ), JSON_THROW_ON_ERROR) . "\n";
+    } elseif ($command === 'contract-matrix') {
+        foreach (['legacy-annex', 'annex-vi', 'output'] as $name) {
+            if (!isset($options[$name])) {
+                throw new InvalidArgumentException("Missing --{$name}=PATH");
+            }
+        }
+        $matrix = new Nt009ContractMatrix();
+        $rows = $matrix->compare($options['legacy-annex'], $options['annex-vi']);
+        $data = $matrix->toTsv($rows);
+        if (file_put_contents($options['output'], $data) !== strlen($data)) {
+            throw new RuntimeException('Cannot write official NT009 contract comparison');
+        }
+        $counts = array_count_values(array_column($rows, 'status'));
+        echo 'Official DPS field matrix: '
+            . json_encode($counts, JSON_THROW_ON_ERROR) . "\n";
     } elseif ($command === 'download') {
         if (!isset($options['ids'], $options['output'])) {
             throw new InvalidArgumentException('Download requires --ids=ID,... and --output=DIR');
@@ -121,6 +169,12 @@ try {
         );
         $json = json_encode($comparison, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE
             | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR) . "\n";
+        if (($options['print-layout'] ?? '') === 'yes') {
+            foreach ($comparison['layout_rows'] as $row) {
+                echo 'NT009_LAYOUT_ROW '
+                    . json_encode($row, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR) . "\n";
+            }
+        }
         if (isset($options['report'])) {
             if (file_put_contents($options['report'], $json) === false) {
                 throw new RuntimeException('Unable to save NT009 comparison');
@@ -200,8 +254,9 @@ try {
         }
     } else {
         throw new InvalidArgumentException(
-            "Usage: php tools/bin/domains.php {generate|check|download|audit|verify-indicators|watch} --name=PATH\n"
+            "Usage: php tools/bin/domains.php {generate|check|observe-source|schema-packages|contract-matrix|download|audit|verify-indicators|watch} --name=PATH\n"
             . "generate/check: --annex-a= --annex-b= --annex-c= --output= [--annex-vii= --expected-vii=N]\n"
+            . "contract-matrix: --legacy-annex=PATH --annex-vi=PATH --output=PATH\n"
             . "download: --ids=annex-a,annex-b,... --output=DIR [--manifest=PATH]\n"
             . "audit: --annex-vi= --annex-vii= [--report=] OR --download-dir= [--report=]\n"
             . "verify-indicators: --annex-vii=PATH [--snapshot=PATH]\n"

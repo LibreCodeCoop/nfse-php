@@ -35,9 +35,23 @@ jobs:
         run: |
           php tools/bin/domains.php audit \
             --download-dir="${{ runner.temp }}/nt009" \
-            --report="${{ runner.temp }}/nt009-comparison.json"
+            --report="${{ runner.temp }}/nt009-comparison.json" \
+            --print-layout=yes
       - name: Verify versioned Annex VII against all published XLSX rows
         run: php tools/bin/domains.php verify-indicators --annex-vii="${{ runner.temp }}/nt009/annex-vii-nt009.xlsx"
+      - name: Reproduce official DPS matrix from checksum-pinned XLSX
+        run: |
+          php tools/bin/domains.php download \
+            --ids=annex-i-production \
+            --output="${{ runner.temp }}/nt009"
+          php tools/bin/domains.php contract-matrix \
+            --legacy-annex="${{ runner.temp }}/nt009/annex-i-production.xlsx" \
+            --annex-vi="${{ runner.temp }}/nt009/annex-vi-nt009.xlsx" \
+            --output="${{ runner.temp }}/nt009-dps-matrix.tsv"
+          diff -u resources/contracts/nt009-dps-v1.04.01-matrix.tsv \
+            "${{ runner.temp }}/nt009-dps-matrix.tsv"
+      - name: Compare checksum-pinned official XSD packages by file content
+        run: php tools/bin/domains.php schema-packages --report="${{ runner.temp }}/nt009-xsd-packages.json"
       - name: Retain full evidence for manual review
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -45,6 +59,8 @@ jobs:
           name: nt009-official-source-evidence
           path: |
             ${{ runner.temp }}/nt009-comparison.json
+            ${{ runner.temp }}/nt009-dps-matrix.tsv
+            ${{ runner.temp }}/nt009-xsd-packages.json
             ${{ runner.temp }}/nt009/*.xlsx
           if-no-files-found: warn
           retention-days: 30

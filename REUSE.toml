@@ -32,7 +32,8 @@ SPDX-License-Identifier = "CC-BY-ND-3.0"
 
 [[annotations]]
 path = [
-    "resources/domains/*.tsv"
+    "resources/domains/*.tsv",
+    "resources/contracts/*.tsv"
 ]
 precedence = "override"
 SPDX-FileCopyrightText = "Sistema Nacional NFS-e / Governo Federal"
