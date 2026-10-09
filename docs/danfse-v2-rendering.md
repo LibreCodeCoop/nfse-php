@@ -38,10 +38,10 @@ cells, four-column tax tables, and a receipt stub aligned to the A4 footer.
 This is a visual convention, not a byte-exact or official portal rendering.
 
 The standard header includes the NFS-e project's horizontal logo. The asset is
-bundled as a local base64-encoded PNG for offline Dompdf generation, with a
+bundled as a normal `src/Danfse/Assets/nfse-horizontal.png` file for offline Dompdf generation, with a
 separate CC-BY-ND-3.0 attribution file. Official source:
 https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/logos-da-nfs-e
-Caller-provided logos override the default without editing the core renderer.
+The image remains directly viewable on disk and is encoded in the temporary HTML only during PDF rendering, not stored as base64 in the repository. The asset is required for the default renderer: missing assets fail explicitly rather than silently removing the logo. Caller-provided logos override the default without editing the core renderer.
 
 All monetary values and document identity continue to come only from authorized
 NFS-e XML; the layout neither recalculates taxes nor invents absent fiscal

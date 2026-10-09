@@ -12,8 +12,7 @@ namespace LibreCodeCoop\NfsePHP\Danfse\Config;
  *
  * Uses the bundled official horizontal NFS-e logo by default, without network
  * access during PDF generation. A caller may override it with a data URI or
- * local image file (data URI takes precedence). The mark is separately licensed
- * from this PHP source; see the attribution next to the bundled asset.
+ * local image file (data URI takes precedence). The PNG is separately licensed from this PHP source; see its .license file.
  */
 final readonly class DanfseConfig
 {
@@ -31,18 +30,14 @@ final readonly class DanfseConfig
 
     private static function defaultOfficialLogo(): ?string
     {
-        // Text-encoded PNG is shipped as a non-executable local resource. The
-        // NFS-e identity artwork belongs to the official Brazilian project.
-        $asset = __DIR__ . '/../Assets/nfse-horizontal.png.base64';
-        if (!is_readable($asset)) {
-            return null;
+        // Keep the official artwork as a real, inspectable PNG in the package.
+        // Dompdf receives its bytes as a data URI at runtime because remote
+        // requests are intentionally disabled for document generation.
+        $asset = __DIR__ . '/../Assets/nfse-horizontal.png';
+        if (!is_file($asset) || !is_readable($asset)) {
+            throw new \RuntimeException('Bundled official NFS-e PNG is missing: ' . $asset);
         }
 
-        $encoded = trim((string) file_get_contents($asset));
-        if ($encoded === '' || base64_decode($encoded, true) === false) {
-            return null;
-        }
-
-        return 'data:image/png;base64,' . $encoded;
+        return LogoLoader::pathToDataUri($asset);
     }
 }
