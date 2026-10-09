@@ -111,12 +111,31 @@ final class Nt009DpsPreviewBuilder
             if ($preview->codigoIndicadorOperacao !== null) {
                 $ibs->appendChild($document->createElement('cIndOp', $preview->codigoIndicadorOperacao));
             }
+            if ($preview->imovel !== null) {
+                $ibs->appendChild(
+                    (new Nt009RealEstatePreviewGroup())->build(
+                        $document,
+                        $preview->imovel,
+                        $dps->codigoTributacaoNacional
+                    )
+                );
+            }
             foreach ((new Nt009MovableAssetsPreviewGroup())->build(
                 $document,
                 $preview->bensMoveis,
                 $dps->codigoTributacaoNacional
             ) as $asset) {
                 $ibs->appendChild($asset);
+            }
+            if ($preview->condominios !== null) {
+                $ibs->appendChild(
+                    (new Nt009CondominiumPreviewGroup())->build(
+                        $document,
+                        $preview->condominios,
+                        $dps->codigoTributacaoNacional,
+                        $dps->valorServico
+                    )
+                );
             }
             $valores = $document->createElement('valores');
             $trib = $document->createElement('trib');
@@ -192,7 +211,9 @@ final class Nt009DpsPreviewBuilder
             || $preview->valorAjusteCbs !== null
             || $preview->exigeGrupoIbsCbs !== null
             || $preview->bensMoveis !== []
-            || $preview->pagamentosVinculados !== [];
+            || $preview->pagamentosVinculados !== []
+            || $preview->imovel !== null
+            || $preview->condominios !== null;
 
         if (!$hasIbs) {
             return;

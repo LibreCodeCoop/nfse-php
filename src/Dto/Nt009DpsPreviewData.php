@@ -55,6 +55,10 @@ final readonly class Nt009DpsPreviewData
         public array $bensMoveis = [],
         /** Up to 99 transaction records under IBSCBS/gPgtoVinc. */
         public array $pagamentosVinculados = [],
+        /** Optional property operation details, Annex VI rows 383-403. */
+        public ?Nt009RealEstateData $imovel = null,
+        /** Optional condominium billing, Annex VI rows 408-421. */
+        public ?Nt009CondominiumData $condominios = null,
     ) {
     }
 }
