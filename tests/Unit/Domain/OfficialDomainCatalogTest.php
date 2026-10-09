@@ -65,6 +65,15 @@ final class OfficialDomainCatalogTest extends TestCase
         self::assertCount(338, $this->catalog->searchNationalServices(null, 500));
     }
 
+    public function testSearchNbsUsesOfficialOfflineCodeAndDescription(): void
+    {
+        $results = $this->catalog->searchNbs('115011000');
+
+        self::assertSame('115011000', $results[0]['code'] ?? null);
+        self::assertCount(918, $this->catalog->searchNbs());
+        self::assertSame([], $this->catalog->searchNbs('not-a-service'));
+    }
+
     public function testKnownIbsCbsOperationIndicatorIsAvailableOffline(): void
     {
         $indicator = $this->catalog->operationIndicator('020101');

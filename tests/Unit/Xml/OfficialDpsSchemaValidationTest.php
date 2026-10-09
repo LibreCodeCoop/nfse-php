@@ -122,9 +122,17 @@ final class OfficialDpsSchemaValidationTest extends TestCase
         );
     }
 
+    public function testNbsServiceCodeMatchesOfficialSchema(): void
+    {
+        $xml = $this->builder->buildDps($this->makeDps(codigoNbs: '115011000'));
+
+        self::assertSame([], $this->validator->validate($xml));
+    }
+
     public function testIbsCbsDpsMatchesOfficialSchema(): void
     {
         $xml = $this->builder->buildDps($this->makeDps(
+            codigoNbs: '115011000',
             ibsCbsFinalidade: 0,
             ibsCbsIndFinal: 0,
             ibsCbsCodigoIndicadorOperacao: '100101',
@@ -251,6 +259,7 @@ final class OfficialDpsSchemaValidationTest extends TestCase
     private function makeDps(
         string $cnpjPrestador = '11222333000181',
         string $documentoTomador = '12345678000195',
+        string $codigoNbs = '',
         ?int $ibsCbsFinalidade = null,
         ?int $ibsCbsIndFinal = null,
         string $ibsCbsCodigoIndicadorOperacao = '',
@@ -291,6 +300,7 @@ final class OfficialDpsSchemaValidationTest extends TestCase
             regimeEspecialTributacao: 0,
             tipoRetencaoIss: 1,
             indicadorTributacao: 0,
+            codigoNbs: $codigoNbs,
             ibsCbsFinalidade: $ibsCbsFinalidade,
             ibsCbsIndFinal: $ibsCbsIndFinal,
             ibsCbsCodigoIndicadorOperacao: $ibsCbsCodigoIndicadorOperacao,

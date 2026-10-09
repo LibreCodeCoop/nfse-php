@@ -158,6 +158,35 @@ final class OfficialDomainCatalog
         return $this->nbs($code) !== null;
     }
 
+    /**
+     * @return list<array{code:string,description:string}>
+     */
+    public function searchNbs(?string $query = null, int $limit = 1000): array
+    {
+        $query = mb_strtolower(trim((string) $query), 'UTF-8');
+        $limit = max(1, min($limit, 1000));
+        $results = [];
+
+        foreach ($this->table('nbs-v2.0.tsv', 2) as $row) {
+            if (preg_match('/^\\d{9}$/D', $row[0]) !== 1) {
+                continue;
+            }
+
+            if ($query !== ''
+                && !str_contains($row[0], $query)
+                && !str_contains(mb_strtolower($row[1], 'UTF-8'), $query)) {
+                continue;
+            }
+
+            $results[] = ['code' => $row[0], 'description' => $row[1]];
+            if (count($results) >= $limit) {
+                break;
+            }
+        }
+
+        return $results;
+    }
+
     public function hasOperationIndicator(
         string $code,
         string $version = self::OPERATION_INDICATOR_VERSION,

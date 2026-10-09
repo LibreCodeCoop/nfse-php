@@ -208,6 +208,9 @@ final readonly class DpsData
          */
         public ?string $codigoTributacaoMunicipal = null,
 
+        /** NBS 2.0 official service code (nine digits). Mandatory if IBS/CBS is informed. */
+        public string $codigoNbs = '',
+
         /** Optional official NFS-e substitution reference for replacement DPS issuance. */
         public ?SubstitutionData $substituicao = null,
 

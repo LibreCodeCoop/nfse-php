@@ -7,6 +7,8 @@ declare(strict_types=1);
 
 namespace LibreCodeCoop\NfsePHP\Xml;
 
+use LibreCodeCoop\NfsePHP\Domain\OfficialDomainCatalog;
+
 use LibreCodeCoop\NfsePHP\Dto\DpsData;
 use LibreCodeCoop\NfsePHP\Support\DpsIdentifier;
 
@@ -145,6 +147,10 @@ class XmlBuilder
             throw new \InvalidArgumentException(
                 'Incomplete IBSCBS configuration: missing ' . implode(', ', $missing),
             );
+        }
+
+        if ($dps->codigoNbs === '') {
+            throw new \InvalidArgumentException('E0322: cNBS is required whenever IBS/CBS data is informed.');
         }
 
         $ibsCbs = $doc->createElement('IBSCBS');
@@ -565,6 +571,14 @@ class XmlBuilder
         }
 
         $cServ->appendChild($doc->createElement('xDescServ', htmlspecialchars($dps->discriminacao, ENT_XML1)));
+        if ($dps->codigoNbs !== '') {
+            if (preg_match('/^\d{9}$/D', $dps->codigoNbs) !== 1
+                || !(new OfficialDomainCatalog())->hasNbs($dps->codigoNbs)) {
+                throw new \InvalidArgumentException('Invalid cNBS: expected a nine-digit code from the official NBS 2.0 catalog.');
+            }
+
+            $cServ->appendChild($doc->createElement('cNBS', $dps->codigoNbs));
+        }
         $serv->appendChild($cServ);
 
         return $serv;
