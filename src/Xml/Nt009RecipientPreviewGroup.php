@@ -15,8 +15,14 @@ use LibreCodeCoop\NfsePHP\Dto\Nt009RecipientData;
  */
 final class Nt009RecipientPreviewGroup
 {
-    public function build(\DOMDocument $doc, Nt009RecipientData $input): \DOMElement
-    {
+    public function build(
+        \DOMDocument $doc,
+        Nt009RecipientData $input,
+        string $groupName = 'dest',
+    ): \DOMElement {
+        if (!in_array($groupName, ['dest', 'fornec'], true)) {
+            throw new \InvalidArgumentException('Unsupported NT009 recipient group name');
+        }
         if (!$this->text($input->nome, 150)) {
             throw new \InvalidArgumentException('NT009 dest/xNome must have 1-150 characters');
         }
@@ -30,7 +36,7 @@ final class Nt009RecipientPreviewGroup
             throw new \InvalidArgumentException('NT009 dest requires exactly one valid tax identity');
         }
 
-        $dest = $doc->createElement('dest');
+        $dest = $doc->createElement($groupName);
         foreach (['CNPJ' => $input->cnpj, 'CPF' => $input->cpf, 'NIF' => $input->nif] as $tag => $value) {
             if ($value !== null) {
                 $this->add($doc, $dest, $tag, $value);

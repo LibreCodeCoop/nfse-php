@@ -13,6 +13,9 @@ namespace LibreCodeCoop\NfsePHP\Dto;
  */
 final readonly class Nt009BaseAdjustmentData
 {
+    /**
+     * @param list<Nt009AdjustmentDocumentData> $documentos
+     */
     public function __construct(
         /** pAjusteBCISSQN, mutually exclusive with valorIssqn. */
         public ?string $percentualIssqn = null,
@@ -20,6 +23,8 @@ final readonly class Nt009BaseAdjustmentData
         public ?string $valorIssqn = null,
         /** vAjusteBCIBSCBSComExt, only when separately applicable. */
         public ?string $valorIbsCbsComExterior = null,
+        /** Document-based alternative to percentage or monetary adjustment. */
+        public array $documentos = [],
     ) {
     }
 }
