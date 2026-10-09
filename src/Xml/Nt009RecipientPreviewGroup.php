@@ -47,7 +47,20 @@ final class Nt009RecipientPreviewGroup
         }
         $this->add($doc, $dest, 'xNome', $input->nome);
         if ($input->endereco !== null) {
-            $dest->appendChild($this->buildAddress($doc, $input->endereco));
+            $address = $this->buildAddress($doc, $input->endereco);
+            $dest->appendChild($address);
+            if ($groupName === 'fornec') {
+                // Anexo VI rows 330-333 place supplier street fields directly
+                // under fornec, unlike destination address fields (rows 195-198).
+                foreach (['xLgr', 'nro', 'xCpl', 'xBairro'] as $name) {
+                    foreach ($address->childNodes as $child) {
+                        if ($child instanceof \DOMElement && $child->localName === $name) {
+                            $dest->appendChild($child);
+                            break;
+                        }
+                    }
+                }
+            }
         }
         if ($input->telefone !== null) {
             if (preg_match('/^[0-9]{6,20}$/D', $input->telefone) !== 1) {
