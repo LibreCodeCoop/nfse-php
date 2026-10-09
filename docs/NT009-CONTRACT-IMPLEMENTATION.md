@@ -125,15 +125,21 @@ It now includes explicitly typed, separately validated structural drafts for:
   `cTribNac=99.04.01`, preserving the 8-digit NCM and bounded quantities.
 - `IBSCBS/gPgtoVinc/pgto` (rows 443-449): up to 99 records, with distinct
   transaction IDs and payment numbers and the published payment method codes.
+- `IBSCBS/imovel` (rows 383-403): explicit municipality, the
+  classification-restricted optional `gLocacao`, and up to 99 units with
+  bounded address and per-unit adjustment data.
+- `IBSCBS/condominios` (rows 408-421): source-coded charge categories and
+  optional detail and discount records, with exact-cent reconciliation of
+  `gDetCobranca` to the charge and total charge values to `vServ`.
 
 The builder now rejects legacy `DpsData::deducaoReducao` in NT009 preview
 instead of silently copying the obsolete `vDedRed` group. This prevents
 mistaking old deduction rules for the new, not-yet-effective schema.
 No taxpayer identity or payment values are inferred.
 
-Still missing are document-backed `vAjusteBC`, `imovel`,
-`condominios`, more specialized adjustment branches, other NT009 conditional
-groups and — most importantly — validation against a published,
+Still missing are document-backed `vAjusteBC`, externally verified
+tax-code correlations, other specialized adjustment branches, other NT009
+conditional groups and — most importantly — validation against a published,
 environment-specific **effective NT009 XSD**. None of these review-only
 structures is enabled in the real emission path. The builder rejects
 mixing legacy IBS fields and the new preview options. It removes the obsolete
