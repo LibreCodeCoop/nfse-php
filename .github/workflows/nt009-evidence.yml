@@ -39,6 +39,19 @@ jobs:
             --print-layout=yes
       - name: Verify versioned Annex VII against all published XLSX rows
         run: php tools/bin/domains.php verify-indicators --annex-vii="${{ runner.temp }}/nt009/annex-vii-nt009.xlsx"
+      - name: Observe official production Anexo I and compare full DPS layouts
+        run: |
+          php tools/bin/domains.php observe-source \
+            --url="https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/documentacao-atual/anexo_i-sefin_adn-dps_nfse-snnfse-v1-01-20260209.xlsx" \
+            --output="${{ runner.temp }}/nt009/legacy-annex-i.xlsx" \
+            --acknowledge-unpinned=yes
+          php tools/bin/domains.php contract-matrix \
+            --legacy-annex="${{ runner.temp }}/nt009/legacy-annex-i.xlsx" \
+            --annex-vi="${{ runner.temp }}/nt009/annex-vi-nt009.xlsx" \
+            --output="${{ runner.temp }}/nt009-dps-matrix.tsv"
+          echo "MATRIX_TSV_BEGIN"
+          cat "${{ runner.temp }}/nt009-dps-matrix.tsv"
+          echo "MATRIX_TSV_END"
       - name: Retain full evidence for manual review
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -46,6 +59,7 @@ jobs:
           name: nt009-official-source-evidence
           path: |
             ${{ runner.temp }}/nt009-comparison.json
+            ${{ runner.temp }}/nt009-dps-matrix.tsv
             ${{ runner.temp }}/nt009/*.xlsx
           if-no-files-found: warn
           retention-days: 30
