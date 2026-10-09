@@ -135,13 +135,24 @@ It now includes explicitly typed, separately validated structural drafts for:
   optional detail and discount records, with exact-cent reconciliation of
   `gDetCobranca` to the charge and total charge values to `vServ`.
 
+The preview also models `IBSCBS/valores/trib/gIBSCBS/gEstornoCred`
+(Annex VI rows 438-440), containing both decimal `vIBSEstCred` and
+`vCBSEstCred`. The caller must separately verify the official cClassTrib
+attribute `ind_gEstornoCred`; it is never inferred from the classification
+code or the advisory Annex VIII. A verified true flag requires both values,
+while a false flag forbids the group. An omitted flag cannot authorize an
+estorno. The optional `gPagAntecipado` (rows 441-442) accepts 1-99
+50-character `refNFSe` references to previously issued advance-payment
+invoices; no prior invoice is inferred or retrieved by this library. Both
+groups remain review-only, with the same unresolved NT009 XSD gate.
+
 The builder now rejects legacy `DpsData::deducaoReducao` in NT009 preview
 instead of silently copying the obsolete `vDedRed` group. This prevents
 mistaking old deduction rules for the new, not-yet-effective schema.
 No taxpayer identity or payment values are inferred.
 
-Still missing are independently confirmed adjustment-type domains
-and tax-code repercussions, externally verified tax-code correlations,
+Still missing are independently confirmed adjustment-type tax-code
+repercussions, externally verified tax-code correlations,
 specialized conditional groups not yet modeled, and — most importantly —
 validation against a published,
 environment-specific **effective NT009 XSD**. None of these review-only

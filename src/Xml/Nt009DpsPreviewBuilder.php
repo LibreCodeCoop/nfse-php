@@ -153,6 +153,25 @@ final class Nt009DpsPreviewBuilder
                     $adjustment->appendChild($document->createElement('vCBS', (string) $preview->valorAjusteCbs));
                     $group->appendChild($adjustment);
                 }
+                if ($preview->valorEstornoIbs !== null) {
+                    // Annex VI rows 438-440: allowed/required exclusively
+                    // by the caller-verified cClassTrib.ind_gEstornoCred.
+                    $reversal = $document->createElement('gEstornoCred');
+                    $reversal->appendChild($document->createElement('vIBSEstCred', $preview->valorEstornoIbs));
+                    $reversal->appendChild($document->createElement('vCBSEstCred', (string) $preview->valorEstornoCbs));
+                    $group->appendChild($reversal);
+                }
+                if ($preview->notasPagamentoAntecipado !== []) {
+                    // Annex VI rows 441-442: explicit references only;
+                    // the library never invents a prior paid invoice.
+                    $advance = $document->createElement('gPagAntecipado');
+                    foreach ($preview->notasPagamentoAntecipado as $key) {
+                        $ref = $document->createElement('refNFSe');
+                        $ref->appendChild($document->createTextNode($key));
+                        $advance->appendChild($ref);
+                    }
+                    $group->appendChild($advance);
+                }
                 $trib->appendChild($group);
             }
             $valores->appendChild($trib);
@@ -209,6 +228,10 @@ final class Nt009DpsPreviewBuilder
             || $preview->codigoCreditoPresumido !== null
             || $preview->valorAjusteIbs !== null
             || $preview->valorAjusteCbs !== null
+            || $preview->exigeEstornoCredito !== null
+            || $preview->valorEstornoIbs !== null
+            || $preview->valorEstornoCbs !== null
+            || $preview->notasPagamentoAntecipado !== []
             || $preview->exigeGrupoIbsCbs !== null
             || $preview->bensMoveis !== []
             || $preview->pagamentosVinculados !== []
@@ -241,7 +264,10 @@ final class Nt009DpsPreviewBuilder
         }
         if (!$preview->exigeGrupoIbsCbs
             && ($preview->codigoCreditoPresumido !== null
-                || $preview->valorAjusteIbs !== null || $preview->valorAjusteCbs !== null)) {
+                || $preview->valorAjusteIbs !== null || $preview->valorAjusteCbs !== null
+                || $preview->exigeEstornoCredito === true
+                || $preview->valorEstornoIbs !== null || $preview->valorEstornoCbs !== null
+                || $preview->notasPagamentoAntecipado !== [])) {
             throw new \InvalidArgumentException('NT009 forbids gIBSCBS children when ind_gIBSCBS is false');
         }
         if ($preview->codigoCreditoPresumido !== null
@@ -260,6 +286,29 @@ final class Nt009DpsPreviewBuilder
             if (preg_match('/^[0-9]{1,15}\.[0-9]{2}$/D', $preview->valorAjusteIbs) !== 1
                 || preg_match('/^[0-9]{1,15}\.[0-9]{2}$/D', (string) $preview->valorAjusteCbs) !== 1) {
                 throw new \InvalidArgumentException('NT009 gIBSCBSAjuste requires decimal vIBS and vCBS strings');
+            }
+        }
+        if (($preview->valorEstornoIbs === null) !== ($preview->valorEstornoCbs === null)) {
+            throw new \InvalidArgumentException('NT009 gEstornoCred requires both vIBSEstCred and vCBSEstCred');
+        }
+        if ($preview->exigeEstornoCredito === true && $preview->valorEstornoIbs === null) {
+            throw new \InvalidArgumentException('NT009 caller-verified ind_gEstornoCred requires both reversal amounts');
+        }
+        if ($preview->valorEstornoIbs !== null) {
+            if ($preview->exigeEstornoCredito !== true) {
+                throw new \InvalidArgumentException('NT009 gEstornoCred requires caller-verified ind_gEstornoCred');
+            }
+            if (preg_match('/^[0-9]{1,15}\.[0-9]{2}$/D', $preview->valorEstornoIbs) !== 1
+                || preg_match('/^[0-9]{1,15}\.[0-9]{2}$/D', (string) $preview->valorEstornoCbs) !== 1) {
+                throw new \InvalidArgumentException('NT009 gEstornoCred requires decimal vIBSEstCred and vCBSEstCred strings');
+            }
+        }
+        if (count($preview->notasPagamentoAntecipado) > 99) {
+            throw new \InvalidArgumentException('NT009 gPagAntecipado allows at most 99 refNFSe keys');
+        }
+        foreach ($preview->notasPagamentoAntecipado as $key) {
+            if (!is_string($key) || mb_strlen($key) !== 50 || preg_match('/\p{Cc}/u', $key) !== 0) {
+                throw new \InvalidArgumentException('NT009 gPagAntecipado/refNFSe must contain 50 valid characters');
             }
         }
     }
