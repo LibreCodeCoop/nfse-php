@@ -525,6 +525,36 @@ class XmlBuilderTest extends TestCase
         self::assertStringContainsString('<pTotTrib><pTotTribFed>3.65</pTotTribFed><pTotTribEst>0.00</pTotTribEst><pTotTribMun>2.00</pTotTribMun></pTotTrib>', str_replace(["\n", '  '], '', $xml));
     }
 
+    public function testBuildDpsEmitsNbsInOfficialServiceOrder(): void
+    {
+        $xml = $this->builder->buildDps($this->makeDps(codigoNbs: '115011000'));
+        $normalized = preg_replace('/\\s+/', '', $xml) ?: '';
+
+        self::assertStringContainsString('</xDescServ><cNBS>115011000</cNBS></cServ>', $normalized);
+    }
+
+    public function testBuildDpsRejectsInvalidNbsCode(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid cNBS');
+
+        $this->builder->buildDps($this->makeDps(codigoNbs: '123456789'));
+    }
+
+    public function testBuildDpsRejectsIbsCbsWithoutNbsBeforeTransport(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('E0322: cNBS is required');
+
+        $this->builder->buildDps($this->makeDps(
+            ibsCbsFinalidade: 0,
+            ibsCbsCodigoIndicadorOperacao: '100301',
+            ibsCbsIndDest: 0,
+            ibsCbsCst: '000',
+            ibsCbsClassificacaoTributaria: '000001',
+        ));
+    }
+
     public function testBuildDpsOmitsIbsCbsWhenNotConfigured(): void
     {
         $xml = $this->builder->buildDps($this->makeDps());
@@ -535,6 +565,7 @@ class XmlBuilderTest extends TestCase
     public function testBuildDpsIncludesMinimalIbsCbsGroupInSchemaOrder(): void
     {
         $xml = $this->builder->buildDps($this->makeDps(
+            codigoNbs: '115011000',
             ibsCbsFinalidade: 0,
             ibsCbsIndFinal: 0,
             ibsCbsCodigoIndicadorOperacao: '010101',
@@ -957,6 +988,7 @@ class XmlBuilderTest extends TestCase
         string $ibsCbsCst = '',
         string $ibsCbsClassificacaoTributaria = '',
         ?string $codigoTributacaoMunicipal = null,
+        string $codigoNbs = '',
         ?SubstitutionData $substituicao = null,
         ?DeductionReductionData $deducaoReducao = null,
         ?MunicipalBenefitData $beneficioMunicipal = null,
@@ -1015,6 +1047,7 @@ class XmlBuilderTest extends TestCase
             ibsCbsCst: $ibsCbsCst,
             ibsCbsClassificacaoTributaria: $ibsCbsClassificacaoTributaria,
             codigoTributacaoMunicipal: $codigoTributacaoMunicipal,
+            codigoNbs: $codigoNbs,
             substituicao: $substituicao,
             deducaoReducao: $deducaoReducao,
             beneficioMunicipal: $beneficioMunicipal,
