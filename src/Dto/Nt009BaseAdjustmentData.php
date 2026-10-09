@@ -8,8 +8,8 @@ declare(strict_types=1);
 namespace LibreCodeCoop\NfsePHP\Dto;
 
 /**
- * Review-only NT009 valores/vAjusteBC. Document-based reductions require a
- * separate official record structure and are deliberately not synthesized.
+ * Review-only NT009 valores/vAjusteBC. Monetary, percentage and explicit
+ * document-backed alternatives are mutually exclusive and never inferred.
  */
 final readonly class Nt009BaseAdjustmentData
 {
