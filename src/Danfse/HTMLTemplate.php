@@ -14,14 +14,14 @@
     <meta charset="UTF-8">
     <title>DANFSe - <?= $data['numero_nfse'] ?></title>
     <style>
-        @page { margin: 7pt 7pt 33pt; }
+        @page { margin: 7pt 7pt 65pt; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: Arial, Helvetica, sans-serif;
             font-size: 6.5pt;
             line-height: 1.14;
             color: #111;
-            margin: 0;
+            margin: 4pt;
             padding: 3pt 4pt;
             border: 0.7pt solid #111;
         }
@@ -52,7 +52,7 @@
         .access-key { white-space: nowrap; font-size: 6.6pt; }
         .no-party { text-align: center; font-size: 6.4pt; padding: 2pt; border-bottom: 0.7pt solid #222; }
         .value-highlight { font-weight: bold; background: #ededed; }
-        .footer-container { position: fixed; bottom: 0; left: 0; width: 100%; }
+        .footer-container { position: fixed; bottom: 0; left: 4pt; right: 4pt; }
         .footer-table { width: 100%; background: #fff; }
         .footer-table td { border: 0.8pt solid #000; padding: 2pt 3pt; }
         .footer-table .label { font-size: 5.8pt; }
@@ -80,7 +80,7 @@
         <tr>
             <td class="logo-cell">
                 <?php if ($logo): ?>
-                <img src="<?= htmlspecialchars($logo) ?>" alt="Logo NFS-e" style="max-width: 155pt; max-height: 37pt;">
+                <img src="<?= htmlspecialchars($logo) ?>" alt="Logo NFS-e" style="max-width: 115pt; max-height: 30pt;">
                 <?php endif; ?>
             </td>
             <td class="title-cell">

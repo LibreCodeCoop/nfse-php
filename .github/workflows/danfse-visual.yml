@@ -38,6 +38,9 @@ jobs:
       - name: Install dependencies
         run: composer install --prefer-dist --no-progress
 
+      - name: Install PDF inspection tools
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils
+
       - name: Generate synthetic PDFs for visual review
         run: php tools/bin/render-danfse-visual-fixtures.php "${{ runner.temp }}/danfse"
 
