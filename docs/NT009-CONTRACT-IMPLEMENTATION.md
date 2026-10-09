@@ -49,7 +49,7 @@ Restricted production instead lists
 `esquemas-nfse-rtc-v1-01-20260727.zip`. They share a numeric schema
 version but not necessarily the same content or deployment semantics.
 
-At review time (2026-10-08), the RTC portal published NT009 v1.01 but no
+At re-verification (2026-10-09), the RTC portal published NT009 v1.01 but no
 NT009-specific XSD package or confirmed SEFIN deployment/effective date.
 The NT009 text points to a separately published rollout schedule. **Do not
 enable or claim production/homologation conformity for the draft NT009
@@ -134,6 +134,17 @@ It now includes explicitly typed, separately validated structural drafts for:
 - `IBSCBS/condominios` (rows 408-421): source-coded charge categories and
   optional detail and discount records, with exact-cent reconciliation of
   `gDetCobranca` to the charge and total charge values to `vServ`.
+
+Additional optional, source-backed Annex VI groups are represented without
+fiscal inference: `indZFMALC` (row 377, explicitly verified geography plus
+published cIndOp whitelist), `tpOper`/`gRefNFSe` (rows 378-380, mandatory
+reference for type 2/3), `tpEnteGov` (row 381, verified government purchase),
+`indDoacao` (row 382, donation without consideration), `gTribRegular`
+(rows 431-433) and `gDif` (rows 434-437). Existing callers are unaffected:
+the `Nt009DpsPreviewData` constructor adds trailing optional arguments only.
+The optional nested tax groups are rejected if the caller-verified
+`ind_gIBSCBS` disallows `gIBSCBS`. Cross-domain applicability and
+calculations remain caller responsibilities.
 
 The preview also models `IBSCBS/valores/trib/gIBSCBS/gEstornoCred`
 (Annex VI rows 438-440), containing both decimal `vIBSEstCred` and
@@ -254,6 +265,18 @@ php tools/bin/domains.php schema-packages --report=/tmp/nfse-xsd-comparison.json
 
 These packages cannot independently prove an NT009 v1.04.01 rollout, which
 is a separate contractual/effective-date gate.
+
+## Downstream adoption boundary
+
+`LibreCodeCoop/akaunting-nfse` currently pins
+`librecodeoop/nfse-php: dev-main#f179d7f723bec80f5b19a25dfbc385a612c2447f`
+in `3rdparty/composer.json`. The opt-in preview extends the constructor with
+optional trailing parameters, leaving the current `DpsData` constructor,
+`XmlBuilder::buildDps(DpsData)`, `DpsSchemaValidator` and
+`NfseClient::emit()` unchanged. Existing consumers need no migration for
+ordinary emission. **No NT009 commit should replace the consumer pin** until
+an effective schema, correct environment and successful SEFIN contract tests
+are evidenced. This library makes no downstream UI/persistence changes.
 
 ## Cross-publication discrepancies requiring official confirmation
 
