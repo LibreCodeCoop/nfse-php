@@ -9,6 +9,7 @@ namespace LibreCodeCoop\NfsePHP\Tests\Unit\Xml;
 
 use LibreCodeCoop\NfsePHP\Dto\DeductionReductionData;
 use LibreCodeCoop\NfsePHP\Dto\DpsData;
+use LibreCodeCoop\NfsePHP\Dto\Nt009AdjustmentDocumentData;
 use LibreCodeCoop\NfsePHP\Dto\Nt009BaseAdjustmentData;
 use LibreCodeCoop\NfsePHP\Dto\Nt009CondominiumChargeData;
 use LibreCodeCoop\NfsePHP\Dto\Nt009CondominiumData;
@@ -18,6 +19,9 @@ use LibreCodeCoop\NfsePHP\Dto\Nt009DpsPreviewData;
 use LibreCodeCoop\NfsePHP\Dto\Nt009LeaseData;
 use LibreCodeCoop\NfsePHP\Dto\Nt009LinkedPaymentData;
 use LibreCodeCoop\NfsePHP\Dto\Nt009MovableAssetData;
+use LibreCodeCoop\NfsePHP\Dto\Nt009NationalInvoiceReference;
+use LibreCodeCoop\NfsePHP\Dto\Nt009OtherDocumentReference;
+use LibreCodeCoop\NfsePHP\Dto\Nt009OtherFiscalReference;
 use LibreCodeCoop\NfsePHP\Dto\Nt009RecipientAddressData;
 use LibreCodeCoop\NfsePHP\Dto\Nt009PropertyAdjustmentData;
 use LibreCodeCoop\NfsePHP\Dto\Nt009RealEstateData;
@@ -569,6 +573,159 @@ final class Nt009DpsPreviewBuilderTest extends TestCase
                 condominios: new Nt009CondominiumData(
                     '2026-11-10',
                     [new Nt009CondominiumChargeData('01', '149.99')],
+                ),
+            )
+        );
+    }
+
+    public function testDocumentBasedAdjustmentRendersEachExclusiveReferenceType(): void
+    {
+        $xml = $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                ajusteBase: new Nt009BaseAdjustmentData(
+                    documentos: [
+                        new Nt009AdjustmentDocumentData(
+                            tipo: '1',
+                            valorTotalDocumento: '120.00',
+                            valorAjustado: '25.00',
+                            referencia: new Nt009NationalInvoiceReference('1', 'NATIONAL-KEY-123'),
+                            dataEmissao: '2026-10-07',
+                        ),
+                        new Nt009AdjustmentDocumentData(
+                            tipo: '2',
+                            valorTotalDocumento: '200.00',
+                            valorAjustado: '15.00',
+                            referencia: new Nt009OtherFiscalReference(
+                                '3304557',
+                                'DOC-55',
+                                'Serviço público & fiscal'
+                            ),
+                        ),
+                        new Nt009AdjustmentDocumentData(
+                            tipo: '3',
+                            valorTotalDocumento: '80.00',
+                            valorAjustado: '10.00',
+                            referencia: new Nt009OtherDocumentReference('OTHER-01', 'Contrato & aviso'),
+                        ),
+                    ],
+                ),
+            )
+        )->xml;
+
+        self::assertSame(3, $this->xpath($xml)->query(
+            '/n:DPS/n:infDPS/n:valores/n:vAjusteBC/n:documentos/n:docAjusteBC'
+        )?->length);
+        self::assertSame('NATIONAL-KEY-123', $this->first(
+            $xml,
+            '/n:DPS/n:infDPS/n:valores/n:vAjusteBC/n:documentos/n:docAjusteBC/n:dFeNacional/n:chaveDFe'
+        )->textContent);
+        self::assertSame('Serviço público & fiscal', $this->first(
+            $xml,
+            '/n:DPS/n:infDPS/n:valores/n:vAjusteBC/n:documentos/n:docAjusteBC/n:docFiscalOutro/n:xDocFiscal'
+        )->textContent);
+        self::assertSame('Contrato & aviso', $this->first(
+            $xml,
+            '/n:DPS/n:infDPS/n:valores/n:vAjusteBC/n:documentos/n:docAjusteBC/n:docOutro/n:xDoc'
+        )->textContent);
+        self::assertStringContainsString('Contrato &amp; aviso', $xml);
+        self::assertStringNotContainsString('<vDedRed>', $xml);
+    }
+
+    public function testDocumentAdjustmentCanPreserveVettedSupplierDetails(): void
+    {
+        $xml = $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                ajusteBase: new Nt009BaseAdjustmentData(
+                    documentos: [
+                        new Nt009AdjustmentDocumentData(
+                            tipo: '1',
+                            valorTotalDocumento: '150.00',
+                            valorAjustado: '50.00',
+                            referencia: new Nt009OtherDocumentReference('C-7', 'Contract'),
+                            fornecedor: new Nt009RecipientData(nome: 'Fornecedor & Filhos', cpf: '12345678901'),
+                        ),
+                    ],
+                ),
+            )
+        )->xml;
+        self::assertSame('Fornecedor & Filhos', $this->first(
+            $xml,
+            '/n:DPS/n:infDPS/n:valores/n:vAjusteBC/n:documentos/n:docAjusteBC/n:fornec/n:xNome'
+        )->textContent);
+    }
+
+    public function testDocumentAdjustmentCannotBeCombinedWithValueMode(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('requires exactly one');
+        $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                ajusteBase: new Nt009BaseAdjustmentData(
+                    valorIssqn: '5.00',
+                    documentos: [
+                        new Nt009AdjustmentDocumentData(
+                            tipo: '1',
+                            valorTotalDocumento: '150.00',
+                            valorAjustado: '50.00',
+                            referencia: new Nt009OtherDocumentReference('C-7', 'Contract'),
+                        ),
+                    ],
+                ),
+            )
+        );
+    }
+
+    public function testDocumentAdjustmentRejectsInvalidDate(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid NT009 date field');
+        $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                ajusteBase: new Nt009BaseAdjustmentData(
+                    documentos: [
+                        new Nt009AdjustmentDocumentData(
+                            tipo: '1',
+                            valorTotalDocumento: '150.00',
+                            valorAjustado: '50.00',
+                            referencia: new Nt009OtherDocumentReference('C-7', 'Contract'),
+                            dataEmissao: '2026-02-30',
+                        ),
+                    ],
+                ),
+            )
+        );
+    }
+
+    public function testDocumentAdjustmentRejectsInvalidFinancialPrecision(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid NT009 decimal field');
+        $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                ajusteBase: new Nt009BaseAdjustmentData(
+                    documentos: [
+                        new Nt009AdjustmentDocumentData(
+                            tipo: '1',
+                            valorTotalDocumento: '150.00',
+                            valorAjustado: '50.001',
+                            referencia: new Nt009OtherDocumentReference('C-7', 'Contract'),
+                        ),
+                    ],
                 ),
             )
         );
