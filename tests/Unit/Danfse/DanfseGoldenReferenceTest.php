@@ -43,6 +43,13 @@ final class DanfseGoldenReferenceTest extends TestCase
 
     public function testStandardLogoUsesBundledOfficialArtwork(): void
     {
+        $file = dirname(__DIR__, 3) . '/src/Danfse/Assets/nfse-horizontal.png';
+        self::assertFileExists($file);
+        $image = getimagesize($file);
+        self::assertIsArray($image);
+        self::assertSame('image/png', $image['mime']);
+        self::assertGreaterThan(100, $image[0]);
+
         $config = new DanfseConfig();
         self::assertNotNull($config->logoDataUri);
         self::assertStringStartsWith('data:image/png;base64,', $config->logoDataUri);
