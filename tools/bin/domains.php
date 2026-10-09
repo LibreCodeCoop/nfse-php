@@ -11,6 +11,7 @@ use LibreCodeCoop\NfsePHP\Tools\DomainTableGenerator;
 use LibreCodeCoop\NfsePHP\Tools\Nt009ContractMatrix;
 use LibreCodeCoop\NfsePHP\Tools\Nt009Inspector;
 use LibreCodeCoop\NfsePHP\Tools\OfficialAnnexDownloader;
+use LibreCodeCoop\NfsePHP\Tools\OfficialXsdPackageInspector;
 use LibreCodeCoop\NfsePHP\Tools\PortalIndexDiscovery;
 use LibreCodeCoop\NfsePHP\Tools\SourceVerifier;
 
@@ -84,6 +85,27 @@ try {
             SourceVerifier::fetchOfficial(...)
         );
         echo "UNPINNED source: {$sha}; review provenance before adding to trusted manifest\n";
+    } elseif ($command === 'schema-packages') {
+        foreach (['production-url', 'restricted-url', 'report'] as $name) {
+            if (!isset($options[$name])) {
+                throw new InvalidArgumentException("Missing --{$name}=VALUE");
+            }
+        }
+        $comparison = (new OfficialXsdPackageInspector())->compareOfficial(
+            $options['production-url'],
+            $options['restricted-url'],
+            SourceVerifier::fetchOfficial(...)
+        );
+        $json = json_encode($comparison, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES
+            | JSON_THROW_ON_ERROR) . "\n";
+        if (file_put_contents($options['report'], $json) !== strlen($json)) {
+            throw new RuntimeException('Unable to save official schema comparison');
+        }
+        echo 'Production XSD package: ' . $comparison['production']['sha256']
+            . '; Restricted XSD package: ' . $comparison['restricted']['sha256'] . "\n";
+        echo 'File comparison: ' . json_encode(array_count_values(
+            $comparison['file_comparison']
+        ), JSON_THROW_ON_ERROR) . "\n";
     } elseif ($command === 'contract-matrix') {
         foreach (['legacy-annex', 'annex-vi', 'output'] as $name) {
             if (!isset($options[$name])) {
@@ -235,7 +257,7 @@ try {
         }
     } else {
         throw new InvalidArgumentException(
-            "Usage: php tools/bin/domains.php {generate|check|observe-source|contract-matrix|download|audit|verify-indicators|watch} --name=PATH\n"
+            "Usage: php tools/bin/domains.php {generate|check|observe-source|schema-packages|contract-matrix|download|audit|verify-indicators|watch} --name=PATH\n"
             . "generate/check: --annex-a= --annex-b= --annex-c= --output= [--annex-vii= --expected-vii=N]\n"
             . "contract-matrix: --legacy-annex=PATH --annex-vi=PATH --output=PATH\n"
             . "download: --ids=annex-a,annex-b,... --output=DIR [--manifest=PATH]\n"
