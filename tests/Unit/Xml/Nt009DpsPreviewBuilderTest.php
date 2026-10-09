@@ -7,7 +7,13 @@ declare(strict_types=1);
 
 namespace LibreCodeCoop\NfsePHP\Tests\Unit\Xml;
 
+use LibreCodeCoop\NfsePHP\Dto\DeductionReductionData;
 use LibreCodeCoop\NfsePHP\Dto\DpsData;
+use LibreCodeCoop\NfsePHP\Dto\Nt009BaseAdjustmentData;
+use LibreCodeCoop\NfsePHP\Dto\Nt009LinkedPaymentData;
+use LibreCodeCoop\NfsePHP\Dto\Nt009MovableAssetData;
+use LibreCodeCoop\NfsePHP\Dto\Nt009RecipientAddressData;
+use LibreCodeCoop\NfsePHP\Dto\Nt009RecipientData;
 use LibreCodeCoop\NfsePHP\Dto\Nt009DpsPreview;
 use LibreCodeCoop\NfsePHP\Dto\Nt009DpsPreviewData;
 use LibreCodeCoop\NfsePHP\Tests\TestCase;
@@ -249,7 +255,211 @@ final class Nt009DpsPreviewBuilderTest extends TestCase
         self::assertLessThan(strpos($xml, '<valores>'), strpos($xml, '<serv>'));
     }
 
-    private function makeDps(?int $ibsCbsFinalidade = null): DpsData
+    public function testNewRecipientIsExplicitlyRepresentedAndXmlEscaped(): void
+    {
+        $xml = $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 1,
+                destinatario: new Nt009RecipientData(
+                    nome: 'Ana & Associados',
+                    cnpj: '11222333000181',
+                    endereco: new Nt009RecipientAddressData(
+                        logradouro: 'Rua A & B',
+                        numero: '42',
+                        bairro: 'Centro',
+                        municipioIbge: '3304557',
+                        cep: '20000000',
+                    ),
+                ),
+            )
+        )->xml;
+
+        self::assertSame('Ana & Associados', $this->first(
+            $xml,
+            '/n:DPS/n:infDPS/n:dest/n:xNome'
+        )->textContent);
+        self::assertSame('Rua A & B', $this->first(
+            $xml,
+            '/n:DPS/n:infDPS/n:dest/n:end/n:xLgr'
+        )->textContent);
+        self::assertStringContainsString('Ana &amp; Associados', $xml);
+        self::assertTrue(strpos($xml, '<indDest>') < strpos($xml, '<dest>'));
+        self::assertTrue(strpos($xml, '<dest>') < strpos($xml, '<serv>'));
+    }
+
+    public function testRecipientCannotBeSeparateWhenIndDestIsZero(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('not allowed when indDest=0');
+        $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                destinatario: new Nt009RecipientData(nome: 'Teste', cpf: '12345678901'),
+            )
+        );
+    }
+
+    public function testRecipientIdentityAndAddressChoiceAreValidated(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('exactly one valid tax identity');
+        $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 1,
+                destinatario: new Nt009RecipientData(
+                    nome: 'Duplicated',
+                    cpf: '12345678901',
+                    cnpj: '11222333000181',
+                ),
+            )
+        );
+    }
+
+    public function testNewBaseAdjustmentDoesNotEmitLegacyDeductionGroup(): void
+    {
+        $xml = $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                ajusteBase: new Nt009BaseAdjustmentData(valorIssqn: '10.25'),
+            )
+        )->xml;
+
+        self::assertSame('10.25', $this->first(
+            $xml,
+            '/n:DPS/n:infDPS/n:valores/n:vAjusteBC/n:vAjusteBCISSQN'
+        )->textContent);
+        self::assertStringNotContainsString('<vDedRed>', $xml);
+        self::assertTrue(strpos($xml, '<vAjusteBC>') < strpos($xml, '<trib>'));
+    }
+
+    public function testLegacyDeductionIsRejectedInsteadOfPassingThrough(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('cannot reuse legacy vDedRed');
+        $this->builder->previewNt009Dps(
+            $this->makeDps(
+                deducaoReducao: new DeductionReductionData(valor: '15.00')
+            ),
+            new Nt009DpsPreviewData(finalidade: 0, indicadorDestinatario: 0)
+        );
+    }
+
+    public function testTwoBaseAdjustmentAlternativesAreRejected(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('requires exactly one');
+        $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                ajusteBase: new Nt009BaseAdjustmentData(
+                    percentualIssqn: '5.00',
+                    valorIssqn: '5.00',
+                ),
+            )
+        );
+    }
+
+    public function testLinkedPaymentsUseSourceOrderAndEscapeTransactionText(): void
+    {
+        $xml = $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                codigoIndicadorOperacao: '010101',
+                cst: '000',
+                classificacaoTributaria: '000001',
+                exigeGrupoIbsCbs: true,
+                pagamentosVinculados: [
+                    new Nt009LinkedPaymentData(
+                        numeroPagamento: '001',
+                        identificadorTransacao: 'PIX&TX-01',
+                        tipoMeioPagamento: '17',
+                        cnpjRecebedor: '11222333000181',
+                        cnpjBasePsp: '11222333',
+                    ),
+                ],
+            )
+        )->xml;
+
+        self::assertSame('PIX&TX-01', $this->first(
+            $xml,
+            '/n:DPS/n:infDPS/n:IBSCBS/n:gPgtoVinc/n:pgto/n:idTransacao'
+        )->textContent);
+        self::assertStringContainsString('PIX&amp;TX-01', $xml);
+        self::assertTrue(strpos($xml, '<valores>') < strpos($xml, '<gPgtoVinc>'));
+    }
+
+    public function testDuplicatedPaymentNumbersAreRejectedEvenWithLeadingZeroes(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('must be unique');
+        $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                codigoIndicadorOperacao: '010101',
+                cst: '000',
+                classificacaoTributaria: '000001',
+                exigeGrupoIbsCbs: true,
+                pagamentosVinculados: [
+                    new Nt009LinkedPaymentData('1', 'TX-A', '17', '11222333000181', '11222333'),
+                    new Nt009LinkedPaymentData('001', 'TX-B', '17', '11222333000181', '11222333'),
+                ],
+            )
+        );
+    }
+
+    public function testMovableItemsRequireRelevantTaxCodeAndHaveBoundedQuantity(): void
+    {
+        $item = new Nt009MovableAssetData('12345678', 'Bem móvel', 2);
+        $draft = $this->builder->previewNt009Dps(
+            $this->makeDps(codigoTributacaoNacional: '990401'),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                cst: '000',
+                classificacaoTributaria: '000001',
+                exigeGrupoIbsCbs: false,
+                bensMoveis: [$item],
+            )
+        );
+        self::assertSame('12345678', $this->first(
+            $draft->xml,
+            '/n:DPS/n:infDPS/n:IBSCBS/n:bensMoveis/n:cNCMBemMovel'
+        )->textContent);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('exclusive to cTribNac');
+        $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                cst: '000',
+                classificacaoTributaria: '000001',
+                exigeGrupoIbsCbs: false,
+                bensMoveis: [$item],
+            )
+        );
+    }
+
+    private function makeDps(
+        ?int $ibsCbsFinalidade = null,
+        string $codigoTributacaoNacional = '010701',
+        ?DeductionReductionData $deducaoReducao = null,
+    ): DpsData
     {
         return new DpsData(
             cnpjPrestador: '11222333000181',
@@ -260,8 +470,9 @@ final class Nt009DpsPreviewBuilderTest extends TestCase
             discriminacao: 'Servico de tecnologia',
             serie: '00001',
             numeroDps: '17',
-            codigoTributacaoNacional: '010701',
+            codigoTributacaoNacional: $codigoTributacaoNacional,
             ibsCbsFinalidade: $ibsCbsFinalidade,
+            deducaoReducao: $deducaoReducao,
         );
     }
 
