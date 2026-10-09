@@ -73,6 +73,9 @@ environment-specific official XSD and activation have been verified. Do not
 pass their XML to `emit()` or update a downstream version pin based only
 on a draft layout.
 
+For supported preview APIs, source verification and the activation boundary,
+see [NT009 contract guide](docs/nt009.md).
+
 ## Secret Storage with OpenBao
 
 PFX passwords are stored in OpenBao (or Vault) KV v2, for example in `nfse/pfx/{cnpj}`.
