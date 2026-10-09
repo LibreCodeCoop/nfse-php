@@ -72,3 +72,97 @@ CI compares the complete matrix byte-for-byte with fresh downloads of the
 checksum-pinned official workbooks. Network failures are reported by an
 advisory job and cannot establish that the matrix passed; offline PHPUnit
 covers the extraction algorithm independently.
+
+## Explicit opt-in preview (not an emitter)
+
+The `XmlBuilder::buildDps(DpsData)` API and `DpsData` constructor remain
+unchanged. Legacy callers continue to serialize using the production v1.01
+contract, including their existing IBSCBS behavior. The new entry point
+`XmlBuilder::previewNt009Dps(DpsData, Nt009DpsPreviewData)` returns a
+`Nt009DpsPreview` object, **not** a string suitable for
+`NfseClient::emit()`.
+
+```php
+use LibreCodeCoop\NfsePHP\Dto\Nt009DpsPreviewData;
+use LibreCodeCoop\NfsePHP\Xml\XmlBuilder;
+
+// $existingDps has no legacy ibsCbs* values set.
+$draft = (new XmlBuilder())->previewNt009Dps(
+    $existingDps,
+    new Nt009DpsPreviewData(
+        finalidade: 0,
+        indicadorDestinatario: 0,
+        codigoIndicadorOperacao: '010101',
+        cst: '000',
+        classificacaoTributaria: '000001',
+        exigeGrupoIbsCbs: true, // from the official ind_gIBSCBS attribute
+    ),
+);
+// $draft->xml is for comparison and review ONLY; do not transmit for issuance.
+```
+
+The preview currently covers the structural placement of `finNFSe`,
+`tpNFSeDebito`, `tpNFSeCredito`, `indDest`, `regApIBSCBSSN`,
+`IBSCBS/indFinal`, `cIndOp`, `IBSCBS/valores/trib/CST`,
+`cClassTrib` and conditional `gIBSCBS`. It also models the
+`gIBSCBSAjuste` paths and values for the adjustment types documented by
+Annex VI. Both `CST` and `cClassTrib` are required whenever `IBSCBS/valores/trib`
+is configured; `cIndOp` and `gIBSCBS` are forbidden if the externally
+verified `ind_gIBSCBS` flag is false, and required in the appropriate
+conditional form if it is true.
+
+**The preview deliberately cannot model the complete 450-row new contract.**
+In particular the new `vAjusteBC` structure, detailed `dest` group,
+`gPgtoVinc`, `imovel`, `bensMoveis`, `condominios` and other conditional
+groups are not implemented for production serialization. The builder rejects
+mixing legacy IBS fields and the new preview options. It removes the obsolete
+`xsi:schemaLocation` reference, without claiming that it matches a new
+schema. The existing `DpsSchemaValidator` remains bound to the February
+production XSD and rejects this review-only structure. The current
+`NfseClient` and its emission path are **not wired to the preview**.
+
+The SDK intentionally does not calculate IBS/CBS or infer tax classification
+from `cClassTrib`. Callers must supply `ind_gIBSCBS` from the authoritative
+classification attributes, not consultative Annex VIII. The preview accepts
+an externally verified boolean, but that is **not proof of actual fiscal
+acceptance** by the SEFIN API.
+
+## Downstream handoff: LibreCodeCoop/akaunting-nfse
+
+The consumer's `3rdparty/composer.json` currently pins
+`librecodeoop/nfse-php` to
+`dev-main#f179d7f723bec80f5b19a25dfbc385a612c2447f`. It uses
+`Application/RuntimeDpsFactory.php` to reflect the existing `DpsData`
+constructor, maps all present legacy IBS/CBS fields in
+`Application/InvoiceDpsBuilder.php`, and calls `NfseClient::emit(DpsData)`
+from `Application/IssueInvoiceNfse.php`.
+
+No constructor parameter, default legacy serializer or emission interface
+changed here. Consequently the consumer **requires no immediate update**
+to remain on its existing fiscal contract. Adopting NT009 for fiscal emission
+requires a separate downstream RTC integration that first verifies official
+schema deployment, updates the scoped Composer pin to a reviewed **merged
+commit or tagged release**, adds a compatible version-selector or emitter,
+and retests the module's emission and recovery flows with the applicable
+staging environment. Do not pin this unmerged PR's SHA in the consumer.
+
+## Outstanding normative gates
+
+1. Obtain authoritative NT009-compatible XSD packages for each intended
+   environment, record byte-level hashes and compare against the existing
+   February production and July restricted-production packages.
+2. Verify public activation dates and SEFIN acceptance behavior. Annex VI
+   publication alone is not activation.
+3. Resolve implementation of the complete revised DPS contract, including
+   its new or moved optional and conditional groups, and verify those cases
+   against the actual new XSD.
+4. Confirm CST/cClassTrib and `ind_gIBSCBS` attributes from authoritative
+   tax classifications, not Annex VIII consultation. Validate code
+   applicability to NFS-e before restricting domains.
+5. Only after those verifications, implement an approved version-specific
+   **emitter**, fixtures and end-to-end acceptance tests for the downstream
+   consumer. Keep the current production emitter as its default until
+   official applicability is established.
+
+**Issue #95 must remain open.** Offline tests and a structural preview prove
+the library can express part of NT009; they do not establish fiscal conformity.
