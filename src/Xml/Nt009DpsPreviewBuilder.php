@@ -209,6 +209,13 @@ final class Nt009DpsPreviewBuilder
 
     private function rejectLegacyIbsCbs(DpsData $dps): void
     {
+        // Legacy vDedRed and NT009 vAjusteBC use different field names,
+        // alternatives and rules. Never pass the old group through silently.
+        if ($dps->deducaoReducao !== null) {
+            throw new \InvalidArgumentException(
+                'NT009 preview cannot reuse legacy vDedRed; supply ajusteBase explicitly'
+            );
+        }
         if ($dps->ibsCbsFinalidade !== null
             || $dps->ibsCbsIndFinal !== null
             || $dps->ibsCbsCodigoIndicadorOperacao !== ''
