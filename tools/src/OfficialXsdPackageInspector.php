@@ -52,14 +52,52 @@ final class OfficialXsdPackageInspector
                 : ($b === null ? 'production-only' : ($a === $b ? 'identical' : 'different'));
         }
 
+        // Compare the multiset of SHA-256 values for each XSD basename as
+        // well as full archive paths. Different ZIP folder names must not
+        // falsely report that every logical schema is unique to one bundle.
+        $aByName = $this->byBasename($production['files']);
+        $bByName = $this->byBasename($restricted['files']);
+        $basenameComparison = [];
+        $basenameNames = array_values(array_unique(array_merge(
+            array_keys($aByName),
+            array_keys($bByName)
+        )));
+        sort($basenameNames);
+        foreach ($basenameNames as $name) {
+            $a = $aByName[$name] ?? null;
+            $b = $bByName[$name] ?? null;
+            $basenameComparison[$name] = $a === null ? 'restricted-only'
+                : ($b === null ? 'production-only' : ($a === $b ? 'identical' : 'different'));
+        }
+
         return [
-            'notice' => 'Schema packages are compared by their XSD bytes; this does not establish NT009 activation.',
+            'notice' => 'Schema packages are compared by XSD bytes, not solely ZIP metadata; this does not establish NT009 activation.',
             'production_url' => $productionUrl,
             'restricted_url' => $restrictedUrl,
             'production' => $production,
             'restricted' => $restricted,
             'file_comparison' => $changed,
+            'basename_comparison' => $basenameComparison,
         ];
+    }
+
+    /**
+     * @param array<string, string> $files
+     * @return array<string, list<string>>
+     */
+    private function byBasename(array $files): array
+    {
+        $groups = [];
+        foreach ($files as $path => $sha) {
+            $groups[basename($path)][] = $sha;
+        }
+        foreach ($groups as &$shas) {
+            sort($shas);
+        }
+        unset($shas);
+        ksort($groups);
+
+        return $groups;
     }
 
     /**

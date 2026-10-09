@@ -28,6 +28,8 @@ final class OfficialXsdPackageInspectorTest extends TestCase
 
         self::assertSame('different', $comparison['file_comparison']['DPS_v1.01.xsd']);
         self::assertSame('restricted-only', $comparison['file_comparison']['new_types_v1.01.xsd']);
+        self::assertSame('different', $comparison['basename_comparison']['DPS_v1.01.xsd']);
+        self::assertSame('restricted-only', $comparison['basename_comparison']['new_types_v1.01.xsd']);
         self::assertSame(1, $comparison['production']['xsd_count']);
         self::assertSame(2, $comparison['restricted']['xsd_count']);
         self::assertSame(hash('sha256', $production), $comparison['production']['sha256']);
@@ -45,6 +47,20 @@ final class OfficialXsdPackageInspectorTest extends TestCase
             $files['files']['Schemas/DPS_v1.01.xsd'],
             $files['files']['Archive/DPS_v1.01.xsd']
         );
+    }
+
+    public function testSameSchemaBytesAreRecognizedAcrossDifferentArchiveDirectories(): void
+    {
+        $production = $this->zip(['A/DPS_v1.01.xsd' => '<xs:schema>identical</xs:schema>']);
+        $restricted = $this->zip(['B/DPS_v1.01.xsd' => '<xs:schema>identical</xs:schema>']);
+        $comparison = (new OfficialXsdPackageInspector())->compareOfficial(
+            'https://www.gov.br/nfse/production.zip',
+            'https://www.gov.br/nfse/restricted.zip',
+            static fn (string $url): string => str_contains($url, 'production') ? $production : $restricted
+        );
+        self::assertSame('identical', $comparison['basename_comparison']['DPS_v1.01.xsd']);
+        self::assertSame('production-only', $comparison['file_comparison']['A/DPS_v1.01.xsd']);
+        self::assertSame('restricted-only', $comparison['file_comparison']['B/DPS_v1.01.xsd']);
     }
 
     public function testForbidsUntrustedSchemaSource(): void
