@@ -20,6 +20,7 @@ final readonly class Nt009DpsPreviewData
      * @param list<Nt009LinkedPaymentData> $pagamentosVinculados
      * @param list<Nt009MovableAssetData> $bensMoveis
      * @param list<string> $notasPagamentoAntecipado
+     * @param list<string> $notasFiscaisReferenciadas
      */
     public function __construct(
         /** finNFSe: 0 regular, 1 credit, 2 debit. */
@@ -68,6 +69,24 @@ final readonly class Nt009DpsPreviewData
         public ?string $valorEstornoCbs = null,
         /** 1-99 prior NFS-e payment-reference keys, 50 characters each. */
         public array $notasPagamentoAntecipado = [],
+        /** indZFMALC, present only for the officially enumerated operations. */
+        public ?int $indicadorZfmAlc = null,
+        /** Caller confirmed the location requirements in Annex VI row 377. */
+        public ?bool $elegibilidadeZfmAlcConfirmada = null,
+        /** tpOper 1-5; externally verified applicable transaction. */
+        public ?int $tipoOperacao = null,
+        /** Prior NFS-e references (gRefNFSe), 1-99 keys of 50 characters. */
+        public array $notasFiscaisReferenciadas = [],
+        /** tpEnteGov 1-4, only in externally confirmed government purchases. */
+        public ?int $tipoEnteGovernamental = null,
+        /** Whether the caller confirmed this is a government purchase. */
+        public ?bool $compraGovernamentalConfirmada = null,
+        /** Presence means donor declares a transaction without consideration. */
+        public ?bool $doacaoSemContraprestacao = null,
+        /** Explicit optional regular taxation group, not a tax calculation. */
+        public ?Nt009RegularTaxData $tributacaoRegular = null,
+        /** Explicit optional deferral percentages, not tax calculation. */
+        public ?Nt009DeferralData $diferimento = null,
     ) {
     }
 }

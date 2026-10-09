@@ -14,6 +14,7 @@ use LibreCodeCoop\NfsePHP\Dto\Nt009BaseAdjustmentData;
 use LibreCodeCoop\NfsePHP\Dto\Nt009CondominiumChargeData;
 use LibreCodeCoop\NfsePHP\Dto\Nt009CondominiumData;
 use LibreCodeCoop\NfsePHP\Dto\Nt009CondominiumDetailData;
+use LibreCodeCoop\NfsePHP\Dto\Nt009DeferralData;
 use LibreCodeCoop\NfsePHP\Dto\Nt009DpsPreview;
 use LibreCodeCoop\NfsePHP\Dto\Nt009DpsPreviewData;
 use LibreCodeCoop\NfsePHP\Dto\Nt009LeaseData;
@@ -27,6 +28,7 @@ use LibreCodeCoop\NfsePHP\Dto\Nt009RealEstateData;
 use LibreCodeCoop\NfsePHP\Dto\Nt009RealEstateUnitData;
 use LibreCodeCoop\NfsePHP\Dto\Nt009RecipientAddressData;
 use LibreCodeCoop\NfsePHP\Dto\Nt009RecipientData;
+use LibreCodeCoop\NfsePHP\Dto\Nt009RegularTaxData;
 use LibreCodeCoop\NfsePHP\Tests\TestCase;
 use LibreCodeCoop\NfsePHP\Xml\DpsSchemaValidator;
 use LibreCodeCoop\NfsePHP\Xml\XmlBuilder;
@@ -1236,6 +1238,261 @@ final class Nt009DpsPreviewBuilderTest extends TestCase
         self::assertSame(0, $this->xpath($draft->xml)->query(
             '/n:DPS/n:infDPS/n:IBSCBS/n:valores/n:trib/n:gIBSCBS/n:gPagAntecipado'
         )?->length);
+    }
+
+    public function testNt009AddsRemainingOptionalAnnexViGroupsInDocumentOrder(): void
+    {
+        $invoice = str_repeat('A', 50);
+        $draft = $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                cst: '000',
+                classificacaoTributaria: '000001',
+                codigoIndicadorOperacao: '010101',
+                exigeGrupoIbsCbs: true,
+                indicadorZfmAlc: 1,
+                elegibilidadeZfmAlcConfirmada: true,
+                tipoOperacao: 2,
+                notasFiscaisReferenciadas: [$invoice],
+                tipoEnteGovernamental: 1,
+                compraGovernamentalConfirmada: true,
+                doacaoSemContraprestacao: true,
+                tributacaoRegular: new Nt009RegularTaxData('000', '000001'),
+                diferimento: new Nt009DeferralData('1.25', '2.50', '0.00'),
+            )
+        );
+        $xml = $draft->xml;
+        $root = '/n:DPS/n:infDPS/n:IBSCBS';
+        self::assertSame('1', $this->first($xml, $root . '/n:indZFMALC')->textContent);
+        self::assertSame('2', $this->first($xml, $root . '/n:tpOper')->textContent);
+        self::assertSame($invoice, $this->first($xml, $root . '/n:gRefNFSe/n:refNFSe')->textContent);
+        self::assertSame('1', $this->first($xml, $root . '/n:tpEnteGov')->textContent);
+        self::assertSame('1', $this->first($xml, $root . '/n:indDoacao')->textContent);
+        self::assertSame('000', $this->first(
+            $xml,
+            $root . '/n:valores/n:trib/n:gIBSCBS/n:gTribRegular/n:CSTReg'
+        )->textContent);
+        self::assertSame('2.50', $this->first(
+            $xml,
+            $root . '/n:valores/n:trib/n:gIBSCBS/n:gDif/n:pDifMun'
+        )->textContent);
+        self::assertLessThan(strpos($xml, '<tpOper>'), strpos($xml, '<indZFMALC>'));
+        self::assertLessThan(strpos($xml, '<gRefNFSe>'), strpos($xml, '<tpOper>'));
+        self::assertLessThan(strpos($xml, '<tpEnteGov>'), strpos($xml, '<gRefNFSe>'));
+        self::assertLessThan(strpos($xml, '<indDoacao>'), strpos($xml, '<tpEnteGov>'));
+        self::assertLessThan(strpos($xml, '<gDif>'), strpos($xml, '<gTribRegular>'));
+    }
+
+    public function testNt009OptionalGroupsAreOmittedForOrdinaryTaxpayer(): void
+    {
+        $xml = $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                cst: '000',
+                classificacaoTributaria: '000001',
+                exigeGrupoIbsCbs: false,
+            )
+        )->xml;
+        foreach (['indZFMALC', 'tpOper', 'gRefNFSe', 'tpEnteGov', 'indDoacao', 'gTribRegular', 'gDif'] as $tag) {
+            self::assertStringNotContainsString('<' . $tag . '>', $xml);
+        }
+    }
+
+    public function testNt009ZfmRequiresPublishedCodeAndGeographicEvidence(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('caller-verified ZFM/ALC location');
+        $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                cst: '000',
+                classificacaoTributaria: '000001',
+                exigeGrupoIbsCbs: false,
+                indicadorZfmAlc: 1,
+                codigoIndicadorOperacao: null,
+            )
+        );
+    }
+
+    public function testNt009ZfmRejectsUnlistedCIndOpEvenWithGeographicEvidence(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('eligible cIndOp');
+        $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                cst: '000',
+                classificacaoTributaria: '000001',
+                codigoIndicadorOperacao: '010105',
+                exigeGrupoIbsCbs: true,
+                indicadorZfmAlc: 1,
+                elegibilidadeZfmAlcConfirmada: true,
+            )
+        );
+    }
+
+    public function testNt009TpOperRequiresReferencesForTypesTwoAndThree(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('tpOper 2 or 3 requires gRefNFSe');
+        $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                cst: '000',
+                classificacaoTributaria: '000001',
+                exigeGrupoIbsCbs: false,
+                tipoOperacao: 3,
+            )
+        );
+    }
+
+    public function testNt009TpOperRejectsOutOfRangeValues(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('tpOper must be 1-5');
+        $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                cst: '000',
+                classificacaoTributaria: '000001',
+                exigeGrupoIbsCbs: false,
+                tipoOperacao: 9,
+            )
+        );
+    }
+
+    public function testNt009GovernmentEntityRequiresExplicitEvidence(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('requires a government purchase');
+        $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                cst: '000',
+                classificacaoTributaria: '000001',
+                exigeGrupoIbsCbs: false,
+                tipoEnteGovernamental: 4,
+            )
+        );
+    }
+
+    public function testNt009InvoiceReferencesMustHavePublishedLength(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('gRefNFSe/refNFSe must contain 50');
+        $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                cst: '000',
+                classificacaoTributaria: '000001',
+                exigeGrupoIbsCbs: false,
+                tipoOperacao: 2,
+                notasFiscaisReferenciadas: ['too-short'],
+            )
+        );
+    }
+
+    public function testNt009InvoiceReferencesRejectMoreThan99Keys(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('gRefNFSe allows at most 99');
+        $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                cst: '000',
+                classificacaoTributaria: '000001',
+                exigeGrupoIbsCbs: false,
+                notasFiscaisReferenciadas: array_fill(0, 100, str_repeat('8', 50)),
+            )
+        );
+    }
+
+    public function testNt009RegularTaxationRequiresExactPublishedCodes(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('gTribRegular requires CSTReg');
+        $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                cst: '000',
+                classificacaoTributaria: '000001',
+                exigeGrupoIbsCbs: true,
+                codigoIndicadorOperacao: '010101',
+                tributacaoRegular: new Nt009RegularTaxData('00', '000001'),
+            )
+        );
+    }
+
+    public function testNt009DeferralRequiresAllThreePercentages(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('gDif requires three percentage');
+        $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                cst: '000',
+                classificacaoTributaria: '000001',
+                exigeGrupoIbsCbs: true,
+                codigoIndicadorOperacao: '010101',
+                diferimento: new Nt009DeferralData('1.25', '2.50', '7.123'),
+            )
+        );
+    }
+
+    public function testNt009NestedTaxGroupsAreForbiddenWhenGIBSCBSIsFalse(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('forbids gIBSCBS children');
+        $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                cst: '000',
+                classificacaoTributaria: '000001',
+                exigeGrupoIbsCbs: false,
+                diferimento: new Nt009DeferralData('1.25', '2.50', '0.00'),
+            )
+        );
+    }
+
+    public function testNt009DonationWithoutConsiderationIsExplicit(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('indDoacao must be omitted');
+        $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                cst: '000',
+                classificacaoTributaria: '000001',
+                exigeGrupoIbsCbs: false,
+                doacaoSemContraprestacao: false,
+            )
+        );
     }
 
     private function makeDps(

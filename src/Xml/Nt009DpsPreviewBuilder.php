@@ -111,6 +111,27 @@ final class Nt009DpsPreviewBuilder
             if ($preview->codigoIndicadorOperacao !== null) {
                 $ibs->appendChild($document->createElement('cIndOp', $preview->codigoIndicadorOperacao));
             }
+            if ($preview->indicadorZfmAlc !== null) {
+                $ibs->appendChild($document->createElement('indZFMALC', (string) $preview->indicadorZfmAlc));
+            }
+            if ($preview->tipoOperacao !== null) {
+                $ibs->appendChild($document->createElement('tpOper', (string) $preview->tipoOperacao));
+            }
+            if ($preview->notasFiscaisReferenciadas !== []) {
+                $references = $document->createElement('gRefNFSe');
+                foreach ($preview->notasFiscaisReferenciadas as $key) {
+                    $ref = $document->createElement('refNFSe');
+                    $ref->appendChild($document->createTextNode($key));
+                    $references->appendChild($ref);
+                }
+                $ibs->appendChild($references);
+            }
+            if ($preview->tipoEnteGovernamental !== null) {
+                $ibs->appendChild($document->createElement('tpEnteGov', (string) $preview->tipoEnteGovernamental));
+            }
+            if ($preview->doacaoSemContraprestacao === true) {
+                $ibs->appendChild($document->createElement('indDoacao', '1'));
+            }
             if ($preview->imovel !== null) {
                 $ibs->appendChild(
                     (new Nt009RealEstatePreviewGroup())->build(
@@ -152,6 +173,22 @@ final class Nt009DpsPreviewBuilder
                     $adjustment->appendChild($document->createElement('vIBS', $preview->valorAjusteIbs));
                     $adjustment->appendChild($document->createElement('vCBS', (string) $preview->valorAjusteCbs));
                     $group->appendChild($adjustment);
+                }
+                if ($preview->tributacaoRegular !== null) {
+                    $regular = $document->createElement('gTribRegular');
+                    $regular->appendChild($document->createElement('CSTReg', $preview->tributacaoRegular->cst));
+                    $regular->appendChild($document->createElement(
+                        'cClassTribReg',
+                        $preview->tributacaoRegular->classificacao
+                    ));
+                    $group->appendChild($regular);
+                }
+                if ($preview->diferimento !== null) {
+                    $deferral = $document->createElement('gDif');
+                    $deferral->appendChild($document->createElement('pDifUF', $preview->diferimento->percentualUf));
+                    $deferral->appendChild($document->createElement('pDifMun', $preview->diferimento->percentualMunicipio));
+                    $deferral->appendChild($document->createElement('pDifCBS', $preview->diferimento->percentualCbs));
+                    $group->appendChild($deferral);
                 }
                 if ($preview->valorEstornoIbs !== null) {
                     // Annex VI rows 438-440: allowed/required exclusively
@@ -232,6 +269,13 @@ final class Nt009DpsPreviewBuilder
             || $preview->valorEstornoIbs !== null
             || $preview->valorEstornoCbs !== null
             || $preview->notasPagamentoAntecipado !== []
+            || $preview->indicadorZfmAlc !== null
+            || $preview->tipoOperacao !== null
+            || $preview->notasFiscaisReferenciadas !== []
+            || $preview->tipoEnteGovernamental !== null
+            || $preview->doacaoSemContraprestacao === true
+            || $preview->tributacaoRegular !== null
+            || $preview->diferimento !== null
             || $preview->exigeGrupoIbsCbs !== null
             || $preview->bensMoveis !== []
             || $preview->pagamentosVinculados !== []
@@ -267,7 +311,9 @@ final class Nt009DpsPreviewBuilder
                 || $preview->valorAjusteIbs !== null || $preview->valorAjusteCbs !== null
                 || $preview->exigeEstornoCredito === true
                 || $preview->valorEstornoIbs !== null || $preview->valorEstornoCbs !== null
-                || $preview->notasPagamentoAntecipado !== [])) {
+                || $preview->notasPagamentoAntecipado !== []
+                || $preview->tributacaoRegular !== null
+                || $preview->diferimento !== null)) {
             throw new \InvalidArgumentException('NT009 forbids gIBSCBS children when ind_gIBSCBS is false');
         }
         if ($preview->codigoCreditoPresumido !== null
@@ -303,12 +349,76 @@ final class Nt009DpsPreviewBuilder
                 throw new \InvalidArgumentException('NT009 gEstornoCred requires decimal vIBSEstCred and vCBSEstCred strings');
             }
         }
-        if (count($preview->notasPagamentoAntecipado) > 99) {
-            throw new \InvalidArgumentException('NT009 gPagAntecipado allows at most 99 refNFSe keys');
+        $this->validateInvoiceKeys($preview->notasPagamentoAntecipado, 'gPagAntecipado');
+
+        if ($preview->indicadorZfmAlc !== null) {
+            // Annex VI row 377: both operation-code whitelist and geographic
+            // requirements must hold; location is verified by the caller.
+            $eligibleOperations = [
+                '010101', '010102', '010103', '010106', '020101', '020201',
+                '020301', '030101', '030102', '050101', '050102', '050201',
+                '060101', '070101', '070102', '100301', '100302', '100401',
+                '100501', '100502', '100601',
+            ];
+            if (!in_array($preview->indicadorZfmAlc, [0, 1], true)
+                || !in_array($preview->codigoIndicadorOperacao, $eligibleOperations, true)
+                || $preview->elegibilidadeZfmAlcConfirmada !== true) {
+                throw new \InvalidArgumentException(
+                    'NT009 indZFMALC requires a published eligible cIndOp and caller-verified ZFM/ALC location'
+                );
+            }
         }
-        foreach ($preview->notasPagamentoAntecipado as $key) {
+        if ($preview->tipoOperacao !== null
+            && !in_array($preview->tipoOperacao, [1, 2, 3, 4, 5], true)) {
+            throw new \InvalidArgumentException('NT009 tpOper must be 1-5');
+        }
+        if (in_array($preview->tipoOperacao, [2, 3], true)
+            && $preview->notasFiscaisReferenciadas === []) {
+            throw new \InvalidArgumentException('NT009 tpOper 2 or 3 requires gRefNFSe');
+        }
+        $this->validateInvoiceKeys($preview->notasFiscaisReferenciadas, 'gRefNFSe');
+        if ($preview->tipoEnteGovernamental !== null
+            && (!in_array($preview->tipoEnteGovernamental, [1, 2, 3, 4], true)
+                || $preview->compraGovernamentalConfirmada !== true)) {
+            throw new \InvalidArgumentException('NT009 tpEnteGov requires a government purchase and code 1-4');
+        }
+        if ($preview->doacaoSemContraprestacao === false) {
+            throw new \InvalidArgumentException(
+                'NT009 indDoacao must be omitted for transactions with consideration'
+            );
+        }
+        if ($preview->tributacaoRegular !== null) {
+            if (preg_match('/^[0-9]{3}$/D', $preview->tributacaoRegular->cst) !== 1
+                || preg_match('/^[0-9]{6}$/D', $preview->tributacaoRegular->classificacao) !== 1) {
+                throw new \InvalidArgumentException('NT009 gTribRegular requires CSTReg (3) and cClassTribReg (6)');
+            }
+        }
+        if ($preview->diferimento !== null) {
+            foreach ([
+                $preview->diferimento->percentualUf,
+                $preview->diferimento->percentualMunicipio,
+                $preview->diferimento->percentualCbs,
+            ] as $percentual) {
+                if (preg_match('/^[0-9]{1,3}\.[0-9]{2}$/D', $percentual) !== 1) {
+                    throw new \InvalidArgumentException('NT009 gDif requires three percentage strings (1-3V2)');
+                }
+            }
+        }
+    }
+
+    /**
+     * @param array<array-key, mixed> $keys
+     */
+    private function validateInvoiceKeys(array $keys, string $group): void
+    {
+        if (count($keys) > 99) {
+            throw new \InvalidArgumentException('NT009 ' . $group . ' allows at most 99 refNFSe keys');
+        }
+        foreach ($keys as $key) {
             if (!is_string($key) || mb_strlen($key) !== 50 || preg_match('/\p{Cc}/u', $key) !== 0) {
-                throw new \InvalidArgumentException('NT009 gPagAntecipado/refNFSe must contain 50 valid characters');
+                throw new \InvalidArgumentException(
+                    'NT009 ' . $group . '/refNFSe must contain 50 valid characters'
+                );
             }
         }
     }
