@@ -564,7 +564,9 @@ class NfseClient implements NfseClientInterface, CancellationClientInterface, De
                 return '';
             }
 
-            return trim((string) $numberNodes->item(0)?->textContent);
+            $number = $numberNodes->item(0);
+
+            return $number instanceof \DOMElement ? trim($number->textContent) : '';
         } finally {
             libxml_clear_errors();
             libxml_use_internal_errors($previous);
