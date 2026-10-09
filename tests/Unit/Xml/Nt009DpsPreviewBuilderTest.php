@@ -10,12 +10,12 @@ namespace LibreCodeCoop\NfsePHP\Tests\Unit\Xml;
 use LibreCodeCoop\NfsePHP\Dto\DeductionReductionData;
 use LibreCodeCoop\NfsePHP\Dto\DpsData;
 use LibreCodeCoop\NfsePHP\Dto\Nt009BaseAdjustmentData;
+use LibreCodeCoop\NfsePHP\Dto\Nt009DpsPreview;
+use LibreCodeCoop\NfsePHP\Dto\Nt009DpsPreviewData;
 use LibreCodeCoop\NfsePHP\Dto\Nt009LinkedPaymentData;
 use LibreCodeCoop\NfsePHP\Dto\Nt009MovableAssetData;
 use LibreCodeCoop\NfsePHP\Dto\Nt009RecipientAddressData;
 use LibreCodeCoop\NfsePHP\Dto\Nt009RecipientData;
-use LibreCodeCoop\NfsePHP\Dto\Nt009DpsPreview;
-use LibreCodeCoop\NfsePHP\Dto\Nt009DpsPreviewData;
 use LibreCodeCoop\NfsePHP\Tests\TestCase;
 use LibreCodeCoop\NfsePHP\Xml\DpsSchemaValidator;
 use LibreCodeCoop\NfsePHP\Xml\XmlBuilder;
@@ -459,8 +459,7 @@ final class Nt009DpsPreviewBuilderTest extends TestCase
         ?int $ibsCbsFinalidade = null,
         string $codigoTributacaoNacional = '010701',
         ?DeductionReductionData $deducaoReducao = null,
-    ): DpsData
-    {
+    ): DpsData {
         return new DpsData(
             cnpjPrestador: '11222333000181',
             municipioIbge: '3303302',
