@@ -92,8 +92,8 @@ final class Nt009DpsPreviewBuilder
             $valores = $document->createElement('valores');
             $trib = $document->createElement('trib');
             // NT009: CST and cClassTrib moved directly beneath trib.
-            $trib->appendChild($document->createElement('CST', $preview->cst));
-            $trib->appendChild($document->createElement('cClassTrib', $preview->classificacaoTributaria));
+            $trib->appendChild($document->createElement('CST', (string) $preview->cst));
+            $trib->appendChild($document->createElement('cClassTrib', (string) $preview->classificacaoTributaria));
             if ($preview->exigeGrupoIbsCbs) {
                 $group = $document->createElement('gIBSCBS');
                 if ($preview->codigoCreditoPresumido !== null) {
@@ -178,6 +178,9 @@ final class Nt009DpsPreviewBuilder
         }
         if ($preview->exigeGrupoIbsCbs && $preview->codigoIndicadorOperacao === null) {
             throw new \InvalidArgumentException('NT009 cIndOp is required when caller-verified ind_gIBSCBS is true');
+        }
+        if (!$preview->exigeGrupoIbsCbs && $preview->codigoIndicadorOperacao !== null) {
+            throw new \InvalidArgumentException('NT009 cIndOp is forbidden when caller-verified ind_gIBSCBS is false');
         }
         if (!$preview->exigeGrupoIbsCbs
             && ($preview->codigoCreditoPresumido !== null

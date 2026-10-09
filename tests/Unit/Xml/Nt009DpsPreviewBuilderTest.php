@@ -57,7 +57,6 @@ final class Nt009DpsPreviewBuilderTest extends TestCase
                 finalidade: 0,
                 indicadorDestinatario: 1,
                 indicadorUsoPessoal: 0,
-                codigoIndicadorOperacao: '010101',
                 cst: '000',
                 classificacaoTributaria: '000001',
                 exigeGrupoIbsCbs: false,
@@ -76,10 +75,9 @@ final class Nt009DpsPreviewBuilderTest extends TestCase
             $draft->xml,
             '/n:DPS/n:infDPS/n:IBSCBS/n:valores/n:trib/n:cClassTrib'
         )->textContent);
-        self::assertSame('010101', $this->first(
-            $draft->xml,
+        self::assertSame(0, $this->xpath($draft->xml)->query(
             '/n:DPS/n:infDPS/n:IBSCBS/n:cIndOp'
-        )->textContent);
+        )?->length);
         $xpath = $this->xpath($draft->xml);
         self::assertSame(0, $xpath->query(
             '/n:DPS/n:infDPS/n:IBSCBS/n:valores/n:trib/n:gIBSCBS'
@@ -167,6 +165,23 @@ final class Nt009DpsPreviewBuilderTest extends TestCase
                 codigoIndicadorOperacao: '030103',
                 cst: '000',
                 classificacaoTributaria: '000001',
+                exigeGrupoIbsCbs: true,
+            )
+        );
+    }
+
+    public function testCIndOpIsAbsentWhenOfficialClassificationForbidsDetails(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('cIndOp is forbidden when caller-verified ind_gIBSCBS is false');
+        $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                codigoIndicadorOperacao: '010101',
+                cst: '400',
+                classificacaoTributaria: '400001',
                 exigeGrupoIbsCbs: false,
             )
         );
