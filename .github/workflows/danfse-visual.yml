@@ -41,7 +41,18 @@ jobs:
       - name: Generate synthetic PDFs for visual review
         run: php tools/bin/render-danfse-visual-fixtures.php "${{ runner.temp }}/danfse"
 
+      - name: Verify printable receipt footer and long-description pagination
+        shell: bash
+        run: |
+          for pdf in "${{ runner.temp }}/danfse/"*.pdf; do
+            pdftotext -layout "$pdf" - | grep -Fq "DATA CIENTIFICAÇÃO"
+            pdftotext -layout "$pdf" - | grep -Fq "IDENTIFICAÇÃO E ASSINATURA"
+          done
+          pages=$(pdfinfo "${{ runner.temp }}/danfse/danfse-long-description.pdf" | awk '/^Pages:/ {print $2}')
+          test "$pages" -gt 1
+
       - name: Preserve render evidence
+        if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: danfse-visual-evidence
