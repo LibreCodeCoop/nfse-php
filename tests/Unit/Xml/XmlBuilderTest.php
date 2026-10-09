@@ -535,7 +535,7 @@ class XmlBuilderTest extends TestCase
 
     public function testBuildDpsRejectsInvalidNbsCode(): void
     {
-        $this->expectException(\\InvalidArgumentException::class);
+        $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage('Invalid cNBS');
 
         $this->builder->buildDps($this->makeDps(codigoNbs: '123456789'));
@@ -543,7 +543,7 @@ class XmlBuilderTest extends TestCase
 
     public function testBuildDpsRejectsIbsCbsWithoutNbsBeforeTransport(): void
     {
-        $this->expectException(\\InvalidArgumentException::class);
+        $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage('E0322: cNBS is required');
 
         $this->builder->buildDps($this->makeDps(
