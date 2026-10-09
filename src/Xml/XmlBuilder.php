@@ -20,6 +20,18 @@ class XmlBuilder
     private const XSD_SCHEMA    = 'http://www.sped.fazenda.gov.br/nfse DPS_v1.01.xsd';
     private const DPS_VERSION   = '1.01';
 
+    /**
+     * Return a review-only NT009 XML preview; never substitute for buildDps().
+     *
+     * The effective SEFIN XSD and deployment schedule are not established.
+     */
+    public function previewNt009Dps(
+        DpsData $dps,
+        \LibreCodeCoop\NfsePHP\Dto\Nt009DpsPreviewData $preview,
+    ): \LibreCodeCoop\NfsePHP\Dto\Nt009DpsPreview {
+        return (new Nt009DpsPreviewBuilder($this))->build($dps, $preview);
+    }
+
     public function buildDps(DpsData $dps): string
     {
         $doc = new \DOMDocument('1.0', 'UTF-8');
