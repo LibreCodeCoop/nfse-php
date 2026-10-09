@@ -25,6 +25,32 @@ use LibreCodeCoop\NfsePHP\Tests\TestCase;
  */
 final class DanfseGoldenReferenceTest extends TestCase
 {
+    public function testNationalPortalStyleUsesCompactGridsAndFooter(): void
+    {
+        $html = (new DanfseTemplate())->render($this->fixtureData(), new DanfseConfig());
+
+        self::assertStringContainsString('background: #f3f3f3', $html);
+        self::assertStringContainsString('background: #ededed', $html);
+        self::assertStringContainsString('position: fixed;', $html);
+        self::assertStringContainsString('bottom: 0;', $html);
+        self::assertStringContainsString('PRESTADOR / FORNECEDOR', $html);
+        self::assertStringContainsString('TOMADOR / ADQUIRENTE', $html);
+        self::assertStringContainsString('TRIBUTAÇÃO MUNICIPAL (ISSQN)', $html);
+        self::assertStringContainsString('BC ISSQN', $html);
+        self::assertStringContainsString('VALOR LÍQUIDO DA NFS-e', $html);
+        self::assertStringContainsString('Nº NFS-e / CHAVE NFS-e', $html);
+    }
+
+    public function testStandardLogoUsesBundledOfficialArtwork(): void
+    {
+        $config = new DanfseConfig();
+        self::assertNotNull($config->logoDataUri);
+        self::assertStringStartsWith('data:image/png;base64,', $config->logoDataUri);
+        $png = base64_decode(substr($config->logoDataUri, strlen('data:image/png;base64,')), true);
+        self::assertNotFalse($png);
+        self::assertStringStartsWith("\x89PNG\r\n\x1a\n", $png);
+    }
+
     public function testCommonTaxableReferenceKeepsRequiredIdentityAndSections(): void
     {
         $data = $this->fixtureData();

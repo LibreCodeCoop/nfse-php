@@ -14,127 +14,56 @@
     <meta charset="UTF-8">
     <title>DANFSe - <?= $data['numero_nfse'] ?></title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        @page { margin: 7pt 7pt 33pt; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: Arial, Helvetica, sans-serif;
-            font-size: 7pt;
-            color: #000;
-            margin: 7pt;
-            padding: 4pt 7pt;
-            border: 1pt #000 solid;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 0;
-        }
-
-        td {
-            padding: 1pt 2pt;
-            border: none;
-            vertical-align: top;
-        }
-
-        table > tbody > tr > td {
-            padding-bottom: 3pt;
-        }
-
-        .bordered-section {
-            margin-bottom: 1pt;
-            border-bottom: 1px solid #000;
-        }
-
-        .bordered-section:last-of-type {
-            border-bottom: none;
-        }
-
-        .first-section table td {
-            padding-bottom: 0 !important;
-        }
-
-        .label {
-            font-size: 7pt;
-            font-weight: bold;
-            color: #000;
-            display: block;
-            margin-bottom: 2pt;
-        }
-
-        .value {
-            font-size: 8pt;
-            font-weight: normal;
-            color: #000;
-        }
-
-        .section-header {
-            font-weight: bold;
-            font-size: 8pt;
-            text-align: left;
-            padding: 3pt;
-        }
-
-        .section-title {
-            font-size: 8pt;
-        }
-
-        .footer-table {
-            margin-top: 30pt;
-            border-collapse: collapse;
-        }
-
-        .footer-table td {
-            border: 1px solid #000;
+            font-size: 6.5pt;
+            line-height: 1.14;
+            color: #111;
+            margin: 0;
             padding: 3pt 4pt;
+            border: 0.7pt solid #111;
         }
-
-        .header-table {
-            margin-bottom: 2pt;
-            border-bottom: 1px solid #000;
-        }
-
-        .header-table td {
-            border: none;
-            padding-bottom: 1pt !important;
-        }
-
-        .logo-cell {
-            width: 130pt;
+        table { width: 100%; border-collapse: collapse; table-layout: fixed; margin: 0; }
+        tr { page-break-inside: avoid; }
+        td { padding: 1.4pt 3pt 1.6pt; vertical-align: top; word-wrap: break-word; }
+        .bordered-section { border-bottom: 0.7pt solid #222; margin: 0; }
+        .first-section td { padding-bottom: 1pt; }
+        .label { display: block; font-size: 6.4pt; font-weight: bold; margin-bottom: 1pt; }
+        .value { font-size: 6.85pt; line-height: 1.18; font-weight: normal; }
+        .section-header {
+            width: 25%;
+            font-size: 7.1pt;
+            font-weight: bold;
             text-align: left;
-        }
-
-        .title-cell {
-            text-align: center;
             vertical-align: middle;
+            background: #ededed;
+            padding: 2pt 3pt;
         }
-
-        .municipality-cell {
-            width: 150pt;
-            text-align: left;
-            font-size: 5.5pt;
-            vertical-align: top;
-        }
-
-        .qr-container {
-            text-align: center;
-            position: absolute;
-            right: 0;
-            top: 0;
-        }
-
+        .section-title { font-size: 7.1pt; font-weight: bold; }
+        .header-table { background: #f3f3f3; border-bottom: 0.7pt solid #111; margin-bottom: 2pt; }
+        .header-table td { padding: 2pt 3pt 3pt; vertical-align: middle; }
+        .logo-cell { width: 32%; text-align: left; }
+        .title-cell { width: 42%; text-align: center; }
+        .municipality-cell { width: 26%; font-size: 5.7pt; text-align: left; }
+        .qr-container { text-align: center; }
+        .qr-notice { font-size: 5.6pt; line-height: 1.15; margin-top: 2pt; text-align: left; }
+        .access-key { white-space: nowrap; font-size: 6.6pt; }
+        .no-party { text-align: center; font-size: 6.4pt; padding: 2pt; border-bottom: 0.7pt solid #222; }
+        .value-highlight { font-weight: bold; background: #ededed; }
+        .footer-table { position: fixed; bottom: 0; left: 0; width: 100%; background: #fff; }
+        .footer-table td { border: 0.8pt solid #000; padding: 2pt 3pt; }
+        .footer-table .label { font-size: 5.8pt; }
+        .footer-table .value { font-size: 6pt; }
         .watermark {
             position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%) rotate(-45deg);
-            font-size: 48pt;
+            font-size: 45pt;
             font-weight: bold;
-            color: rgba(200, 200, 200, 0.3);
+            color: rgba(180, 180, 180, 0.2);
             z-index: -1;
             white-space: nowrap;
         }
@@ -150,11 +79,11 @@
         <tr>
             <td class="logo-cell">
                 <?php if ($logo): ?>
-                <img src="<?= htmlspecialchars($logo) ?>" alt="Logo" style="max-width: 130pt; max-height: 40pt;">
+                <img src="<?= htmlspecialchars($logo) ?>" alt="Logo NFS-e" style="max-width: 155pt; max-height: 37pt;">
                 <?php endif; ?>
             </td>
             <td class="title-cell">
-                <div style="font-size: 10pt; font-weight: bold;">DANFSe v2.0</div>
+                <div style="font-size: 8.7pt; font-weight: bold;">DANFSe v2.0</div>
                 <div style="font-size: 8pt; font-weight: bold;">Documento Auxiliar da NFS-e</div>
                 <?php if ($isHomologacao): ?>
                     <div style="color: red; font-weight: bold;">NFS-e SEM VALIDADE JURÍDICA</div>
@@ -173,16 +102,16 @@
 
     <!-- Grade de Identificação -->
     <div class="bordered-section first-section">
-        <table style="min-height: 110px;">
+        <table>
             <tr>
                 <td colspan="3">
-                    <span class="label">Chave de Acesso da NFS-e</span>
-                    <span class="value"><?= $data['chave_acesso'] ?></span>
+                    <span class="label">CHAVE DE ACESSO DA NFS-e</span>
+                    <span class="value access-key"><?= $data['chave_acesso'] ?></span>
                 </td>
-                <td style="width: 25%; position: relative;" rowspan="3">
+                <td style="width: 25%;" rowspan="3">
                     <div class="qr-container">
-                        <img src="<?= htmlspecialchars($qrCode) ?>" alt="QR Code" style="width: 70px; height: 70px; display: block; margin: 0 auto;" />
-                        <div style="font-size: 6pt; padding-top: 2pt; text-align: left; line-height: 1.2;">
+                        <img src="<?= htmlspecialchars($qrCode) ?>" alt="QR Code" style="width: 62px; height: 62px; display: block; margin: 0 auto;" />
+                        <div class="qr-notice">
                             A autenticidade desta NFS-e pode ser verificada pela leitura deste código QR ou pela consulta da chave de acesso no portal nacional da NFS-e
                         </div>
                     </div>
@@ -190,29 +119,29 @@
             </tr>
             <tr>
                 <td style="width: 25%;">
-                    <span class="label">Número da NFS-e</span>
+                    <span class="label">NÚMERO DA NFS-e</span>
                     <span class="value"><?= $data['numero_nfse'] ?></span>
                 </td>
                 <td style="width: 25%;">
-                    <span class="label">Competência da NFS-e</span>
+                    <span class="label">COMPETÊNCIA DA NFS-e</span>
                     <span class="value"><?= $data['competencia'] ?></span>
                 </td>
                 <td style="width: 25%;">
-                    <span class="label">Data e Hora da emissão da NFS-e</span>
+                    <span class="label">DATA E HORA DA EMISSÃO DA NFS-e</span>
                     <span class="value"><?= $data['emissao_nfse'] ?></span>
                 </td>
             </tr>
             <tr>
                 <td>
-                    <span class="label">Número do DPS</span>
+                    <span class="label">NÚMERO DA DPS</span>
                     <span class="value"><?= $data['numero_dps'] ?></span>
                 </td>
                 <td>
-                    <span class="label">Série do DPS</span>
+                    <span class="label">SÉRIE DA DPS</span>
                     <span class="value"><?= $data['serie_dps'] ?></span>
                 </td>
                 <td>
-                    <span class="label">Data e Hora da emissão da DPS</span>
+                    <span class="label">DATA E HORA DA EMISSÃO DA DPS</span>
                     <span class="value"><?= $data['emissao_dps'] ?></span>
                 </td>
             </tr>
@@ -220,15 +149,15 @@
         <table>
             <tr>
                 <td style="width: 33.33%;">
-                    <span class="label">Emitente da NFS-e</span>
+                    <span class="label">EMITENTE DA NFS-e</span>
                     <span class="value"><?= $data['emitente_nfse'] ?></span>
                 </td>
                 <td style="width: 33.33%;">
-                    <span class="label">Situação da NFS-e</span>
+                    <span class="label">SITUAÇÃO DA NFS-e</span>
                     <span class="value"><?= $data['situacao_nfse'] ?></span>
                 </td>
                 <td style="width: 33.33%;">
-                    <span class="label">Finalidade</span>
+                    <span class="label">FINALIDADE</span>
                     <span class="value"><?= $data['finalidade_nfse'] ?></span>
                 </td>
             </tr>
@@ -239,9 +168,8 @@
     <div class="bordered-section">
         <table>
             <tr>
-                <td style="width: 25%; font-weight: bold; font-size: 7pt;">
-                    <span class="label section-title">EMITENTE DA NFS-e</span>
-                    <span class="value">Prestador do Serviço</span>
+                <td class="section-header">
+                    <span class="label section-title">PRESTADOR / FORNECEDOR</span>
                 </td>
                 <td style="width: 25%;">
                     <span class="label">CNPJ / CPF / NIF</span>
@@ -297,8 +225,8 @@
     <div class="bordered-section">
         <table>
             <tr>
-                <td style="width: 25%; font-weight: bold; font-size: 7pt;">
-                    <span class="section-title">TOMADOR DO SERVIÇO</span>
+                <td class="section-header">
+                    <span class="section-title">TOMADOR / ADQUIRENTE</span>
                 </td>
                 <td style="width: 25%;">
                     <span class="label">CNPJ / CPF / NIF</span>
@@ -345,7 +273,7 @@
     <div class="bordered-section">
         <table>
             <tr>
-                <td style="width: 25%; font-weight: bold; font-size: 7pt;">
+                <td class="section-header">
                   <span class="section-title">INTERMEDIÁRIO DO SERVIÇO</span>
                 </td>
                 <td style="width: 25%;">
@@ -388,8 +316,8 @@
         </table>
     </div>
     <?php else: ?>
-    <div class="bordered-section" style="text-align: center; font-weight: normal; font-size: 7pt;">
-        INTERMEDIÁRIO DO SERVIÇO NÃO IDENTIFICADO NA NFS-e
+    <div class="no-party">DESTINATÁRIO DA OPERAÇÃO NÃO IDENTIFICADO NA NFS-e
+        <div>INTERMEDIÁRIO DA OPERAÇÃO NÃO IDENTIFICADO NA NFS-e</div>
     </div>
     <?php endif; ?>
 
@@ -397,33 +325,14 @@
     <div class="bordered-section">
         <table>
             <tr>
-                <td colspan="4" class="section-header">
-                  <span class="section-title">SERVIÇO PRESTADO</span>
-                </td>
+                <td class="section-header"><span class="section-title">SERVIÇO PRESTADO</span></td>
+                <td><span class="label">Código de Tributação Nacional/Municipal</span><span class="value"><?= $data['servico']['codigo_trib_nacional'] ?> / <?= $data['servico']['codigo_trib_municipal'] ?></span></td>
+                <td><span class="label">Código NBS</span><span class="value"><?= $data['servico']['codigo_nbs'] ?></span></td>
+                <td><span class="label">Local da Prestação / País</span><span class="value"><?= $data['servico']['local_prestacao'] ?> / <?= $data['servico']['pais_prestacao'] ?></span></td>
             </tr>
+            <tr><td colspan="4"><span class="value"><?= $data['servico']['desc_trib_nacional'] ?></span></td></tr>
             <tr>
-                <td style="width: 25%;">
-                    <span class="label">Código de Tributação Nacional</span>
-                    <span class="value"><?= $data['servico']['codigo_trib_nacional'] ?> - <?= $data['servico']['desc_trib_nacional'] ?></span>
-                </td>
-                <td style="width: 25%;">
-                    <span class="label">Código de Tributação Municipal</span>
-                    <span class="value"><?= $data['servico']['codigo_trib_municipal'] ?> - <?= $data['servico']['desc_trib_municipal'] ?></span>
-                </td>
-                <td style="width: 25%;">
-                    <span class="label">Local da Prestação</span>
-                    <span class="value"><?= $data['servico']['local_prestacao'] ?></span>
-                </td>
-                <td style="width: 25%;">
-                    <span class="label">País da Prestação</span>
-                    <span class="value"><?= $data['servico']['pais_prestacao'] ?></span>
-                </td>
-            </tr>
-            <tr>
-                <td colspan="4">
-                    <span class="label">Descrição do Serviço</span>
-                    <span class="value"><?= nl2br($data['servico']['descricao'], false) ?></span>
-                </td>
+                <td colspan="4"><span class="label">Descrição do Serviço</span><span class="value"><?= nl2br($data['servico']['descricao'], false) ?></span></td>
             </tr>
         </table>
     </div>
@@ -432,45 +341,16 @@
     <div class="bordered-section">
         <table>
             <tr>
-                <td colspan="4" class="section-header">
-                  <span class="section-title">TRIBUTAÇÃO MUNICIPAL</span>
-                </td>
+                <td class="section-header"><span class="section-title">TRIBUTAÇÃO MUNICIPAL (ISSQN)</span></td>
+                <td><span class="label">Tipo de Tributação do ISSQN</span><span class="value"><?= $data['tributacao_municipal']['tributacao_issqn'] ?></span></td>
+                <td><span class="label">Município de Incidência do ISSQN</span><span class="value"><?= $data['tributacao_municipal']['municipio_incidencia'] ?></span></td>
+                <td><span class="label">Regime Especial de Tributação</span><span class="value"><?= $data['tributacao_municipal']['regime_especial'] ?></span></td>
             </tr>
             <tr>
-                <td style="width: 25%;">
-                    <span class="label">Tributação do ISSQN</span>
-                    <span class="value"><?= $data['tributacao_municipal']['tributacao_issqn'] ?? '-' ?></span>
-                </td>
-                <td style="width: 25%;">
-                    <span class="label">Município de Incidência do ISSQN</span>
-                    <span class="value"><?= $data['tributacao_municipal']['municipio_incidencia'] ?? '-' ?></span>
-                </td>
-                <td style="width: 25%;">
-                    <span class="label">Regime Especial de Tributação</span>
-                    <span class="value"><?= $data['tributacao_municipal']['regime_especial'] ?? '-' ?></span>
-                </td>
-                <td style="width: 25%;">
-                    <span class="label">ISSQN Apurado</span>
-                    <span class="value"><?= $data['tributacao_municipal']['issqn_apurado'] ?? '-' ?></span>
-                </td>
-            </tr>
-            <tr>
-                <td>
-                    <span class="label">Valor do Serviço</span>
-                    <span class="value"><?= $data['tributacao_municipal']['valor_servico'] ?? '-' ?></span>
-                </td>
-                <td>
-                    <span class="label">BC ISSQN</span>
-                    <span class="value"><?= $data['tributacao_municipal']['bc_issqn'] ?? '-' ?></span>
-                </td>
-                <td>
-                    <span class="label">Alíquota Aplicada</span>
-                    <span class="value"><?= $data['tributacao_municipal']['aliquota'] ?? '-' ?></span>
-                </td>
-                <td>
-                    <span class="label">Retenção do ISSQN</span>
-                    <span class="value"><?= $data['tributacao_municipal']['retencao_issqn'] ?? '-' ?></span>
-                </td>
+                <td><span class="label">BC ISSQN</span><span class="value"><?= $data['tributacao_municipal']['bc_issqn'] ?></span></td>
+                <td><span class="label">Alíquota Aplicada</span><span class="value"><?= $data['tributacao_municipal']['aliquota'] ?></span></td>
+                <td><span class="label">Retenção do ISSQN</span><span class="value"><?= $data['tributacao_municipal']['retencao_issqn'] ?></span></td>
+                <td><span class="label">ISSQN Apurado</span><span class="value"><?= $data['tributacao_municipal']['issqn_apurado'] ?></span></td>
             </tr>
         </table>
     </div>
@@ -479,38 +359,15 @@
     <div class="bordered-section">
         <table>
             <tr>
-                <td colspan="4" class="section-header">
-                  <span class="section-title">TRIBUTAÇÃO FEDERAL</span>
-                </td>
+                <td class="section-header"><span class="section-title">TRIBUTAÇÃO FEDERAL (EXCETO CBS)</span></td>
+                <td><span class="label">IRRF</span><span class="value"><?= $data['tributacao_federal']['irrf'] ?></span></td>
+                <td><span class="label">Contribuição Previdenciária - Retida</span><span class="value"><?= $data['tributacao_federal']['cp'] ?></span></td>
+                <td><span class="label">Contribuições Sociais - Retidas</span><span class="value"><?= $data['tributacao_federal']['csll'] ?></span></td>
             </tr>
             <tr>
-                <td style="width: 25%;">
-                    <span class="label">IRRF</span>
-                    <span class="value"><?= $data['tributacao_federal']['irrf'] ?? '-' ?></span>
-                </td>
-                <td style="width: 25%;">
-                    <span class="label">Contribuição Previdenciária - Retida</span>
-                    <span class="value"><?= $data['tributacao_federal']['cp'] ?? '-' ?></span>
-                </td>
-                <td style="width: 25%;">
-                    <span class="label">Contribuições Sociais - Retidas</span>
-                    <span class="value"><?= $data['tributacao_federal']['csll'] ?? '-' ?></span>
-                </td>
-                <td style="width: 25%;"></td>
-            </tr>
-            <tr>
-                <td>
-                    <span class="label">PIS - Débito Apuração Própria</span>
-                    <span class="value"><?= $data['tributacao_federal']['pis'] ?? '-' ?></span>
-                </td>
-                <td>
-                    <span class="label">COFINS - Débito Apuração Própria</span>
-                    <span class="value"><?= $data['tributacao_federal']['cofins'] ?? '-' ?></span>
-                </td>
-                <td colspan="2">
-                    <span class="label">Tipo de retenção PIS/COFINS/CSLL</span>
-                    <span class="value"><?= $data['tributacao_federal']['descricao_retencao'] ?? '-' ?></span>
-                </td>
+                <td><span class="label">PIS - Débito Apuração Própria</span><span class="value"><?= $data['tributacao_federal']['pis'] ?></span></td>
+                <td><span class="label">COFINS - Débito Apuração Própria</span><span class="value"><?= $data['tributacao_federal']['cofins'] ?></span></td>
+                <td colspan="2"><span class="label">Tipo de retenção PIS/COFINS/CSLL</span><span class="value"><?= $data['tributacao_federal']['descricao_retencao'] ?></span></td>
             </tr>
         </table>
     </div>
@@ -584,45 +441,16 @@
     <div class="bordered-section">
         <table>
             <tr>
-                <td colspan="4" class="section-header">
-                  <span class="section-title">VALOR TOTAL DA NFS-e</span>
-                </td>
+                <td class="section-header"><span class="section-title">VALOR TOTAL DA NFS-e</span></td>
+                <td><span class="label">VALOR DA OPERAÇÃO / SERVIÇO</span><span class="value"><?= $data['totais']['valor_servico'] ?></span></td>
+                <td><span class="label">Desconto Incondicionado</span><span class="value"><?= $data['totais']['desconto_incondicionado'] ?></span></td>
+                <td><span class="label">Desconto Condicionado</span><span class="value"><?= $data['totais']['desconto_condicionado'] ?></span></td>
             </tr>
             <tr>
-                <td style="width: 25%;">
-                    <span class="label">Valor do Serviço</span>
-                    <span class="value"><?= $data['totais']['valor_servico'] ?></span>
-                </td>
-                <td style="width: 25%;">
-                    <span class="label">Desconto Condicionado</span>
-                    <span class="value"><?= $data['totais']['desconto_condicionado'] ?></span>
-                </td>
-                <td style="width: 25%;">
-                    <span class="label">Desconto Incondicionado</span>
-                    <span class="value"><?= $data['totais']['desconto_incondicionado'] ?></span>
-                </td>
-                <td style="width: 25%;">
-                    <span class="label">ISSQN Retido</span>
-                    <span class="value"><?= $data['totais']['issqn_retido'] ?></span>
-                </td>
-            </tr>
-            <tr>
-                <td>
-                    <span class="label">Total das Retenções Federais</span>
-                    <span class="value"><?= $data['totais']['retencoes_federais'] ?? '-' ?></span>
-                </td>
-                <td>
-                    <span class="label">Valor Líquido da NFS-e</span>
-                    <span class="value" style="font-weight: bold;"><?= $data['totais']['valor_liquido'] ?></span>
-                </td>
-                <td>
-                    <span class="label">Total do IBS/CBS</span>
-                    <span class="value"><?= $data['ibs_cbs']['total_ibs_cbs'] ?></span>
-                </td>
-                <td>
-                    <span class="label">Valor Líquido da NFS-e + IBS/CBS</span>
-                    <span class="value"><?= $data['ibs_cbs']['valor_total_nfse'] ?></span>
-                </td>
+                <td><span class="label">Retenções Federais</span><span class="value"><?= $data['totais']['retencoes_federais'] ?></span></td>
+                <td><span class="label">VALOR LÍQUIDO DA NFS-e</span><span class="value value-highlight"><?= $data['totais']['valor_liquido'] ?></span></td>
+                <td><span class="label">ISSQN Retido / Total IBS/CBS</span><span class="value"><?= $data['totais']['issqn_retido'] ?> / <?= $data['ibs_cbs']['total_ibs_cbs'] ?></span></td>
+                <td><span class="label">VALOR LÍQUIDO DA NFS-e + IBS/CBS</span><span class="value value-highlight"><?= $data['ibs_cbs']['valor_total_nfse'] ?></span></td>
             </tr>
         </table>
     </div>
@@ -636,8 +464,8 @@
                 </td>
             </tr>
             <tr>
-                <td style="min-height: 30pt; padding: 5pt;">
-                    <span class="value"><?= $data['informacoes_complementares'] ?></span>
+                <td style="min-height: 30pt; padding: 4pt;">
+                    <span class="value"><?= nl2br($data['informacoes_complementares'], false) ?></span>
                 </td>
             </tr>
         </table>

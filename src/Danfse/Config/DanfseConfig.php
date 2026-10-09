@@ -10,9 +10,10 @@ namespace LibreCodeCoop\NfsePHP\Danfse\Config;
 /**
  * Immutable presentation options for the DANFSe.
  *
- * The provider logo is optional: pass a ready data URI via $logoDataUri, or a
- * file path via $logoPath (a data URI takes precedence). When neither is given
- * the header logo area stays empty.
+ * Uses the bundled official horizontal NFS-e logo by default, without network
+ * access during PDF generation. A caller may override it with a data URI or
+ * local image file (data URI takes precedence). The mark is separately licensed
+ * from this PHP source; see the attribution next to the bundled asset.
  */
 final readonly class DanfseConfig
 {
@@ -23,6 +24,25 @@ final readonly class DanfseConfig
         ?string $logoPath = null,
         public ?MunicipalityBranding $municipality = null,
     ) {
-        $this->logoDataUri = LogoLoader::resolve($logoDataUri, $logoPath);
+        $this->logoDataUri = ($logoDataUri !== null || $logoPath !== null)
+            ? LogoLoader::resolve($logoDataUri, $logoPath)
+            : self::defaultOfficialLogo();
+    }
+
+    private static function defaultOfficialLogo(): ?string
+    {
+        // Text-encoded PNG is shipped as a non-executable local resource. The
+        // NFS-e identity artwork belongs to the official Brazilian project.
+        $asset = __DIR__ . '/../Assets/nfse-horizontal.png.base64';
+        if (!is_readable($asset)) {
+            return null;
+        }
+
+        $encoded = trim((string) file_get_contents($asset));
+        if ($encoded === '' || base64_decode($encoded, true) === false) {
+            return null;
+        }
+
+        return 'data:image/png;base64,' . $encoded;
     }
 }
