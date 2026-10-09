@@ -52,7 +52,8 @@
         .access-key { white-space: nowrap; font-size: 6.6pt; }
         .no-party { text-align: center; font-size: 6.4pt; padding: 2pt; border-bottom: 0.7pt solid #222; }
         .value-highlight { font-weight: bold; background: #ededed; }
-        .footer-table { position: fixed; bottom: 0; left: 0; width: 100%; background: #fff; }
+        .footer-container { position: fixed; bottom: 0; left: 0; width: 100%; }
+        .footer-table { width: 100%; background: #fff; }
         .footer-table td { border: 0.8pt solid #000; padding: 2pt 3pt; }
         .footer-table .label { font-size: 5.8pt; }
         .footer-table .value { font-size: 6pt; }
@@ -472,12 +473,14 @@
     </div>
 
     <!-- The XML has no acknowledgement timestamp or handwritten signature data. -->
-    <table class="footer-table">
-        <tr>
-            <td style="width: 25%;"><span class="label">DATA CIENTIFICAÇÃO</span><span class="value">-</span></td>
-            <td style="width: 35%;"><span class="label">IDENTIFICAÇÃO E ASSINATURA</span><span class="value">-</span></td>
-            <td style="width: 40%;"><span class="label">Nº NFS-e / CHAVE NFS-e</span><span class="value"><?= $data['numero_nfse'] ?> / <?= $data['chave_acesso'] ?></span></td>
-        </tr>
-    </table>
+    <div class="footer-container">
+        <table class="footer-table">
+            <tr>
+                <td style="width: 25%;"><span class="label">DATA CIENTIFICAÇÃO</span><span class="value">-</span></td>
+                <td style="width: 35%;"><span class="label">IDENTIFICAÇÃO E ASSINATURA</span><span class="value">-</span></td>
+                <td style="width: 40%;"><span class="label">Nº NFS-e / CHAVE NFS-e</span><span class="value"><?= $data['numero_nfse'] ?> / <?= $data['chave_acesso'] ?></span></td>
+            </tr>
+        </table>
+    </div>
 </body>
 </html>
