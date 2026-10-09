@@ -19,6 +19,7 @@ final readonly class Nt009DpsPreviewData
     /**
      * @param list<Nt009LinkedPaymentData> $pagamentosVinculados
      * @param list<Nt009MovableAssetData> $bensMoveis
+     * @param list<string> $notasPagamentoAntecipado
      */
     public function __construct(
         /** finNFSe: 0 regular, 1 credit, 2 debit. */
@@ -59,6 +60,14 @@ final readonly class Nt009DpsPreviewData
         public ?Nt009RealEstateData $imovel = null,
         /** Optional condominium billing, Annex VI rows 408-421. */
         public ?Nt009CondominiumData $condominios = null,
+        /** Official cClassTrib ind_gEstornoCred, supplied by the caller. */
+        public ?bool $exigeEstornoCredito = null,
+        /** IBS credit reversal amount (Anexo VI, row 439). */
+        public ?string $valorEstornoIbs = null,
+        /** CBS credit reversal amount (Anexo VI, row 440). */
+        public ?string $valorEstornoCbs = null,
+        /** 1-99 prior NFS-e payment-reference keys, 50 characters each. */
+        public array $notasPagamentoAntecipado = [],
     ) {
     }
 }

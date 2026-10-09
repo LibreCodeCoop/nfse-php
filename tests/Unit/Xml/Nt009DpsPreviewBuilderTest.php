@@ -1015,6 +1015,229 @@ final class Nt009DpsPreviewBuilderTest extends TestCase
         )->textContent);
     }
 
+    public function testNt009CreditReversalAndAdvanceReferencesFollowAnnexOrder(): void
+    {
+        $first = str_repeat('1', 50);
+        $second = str_repeat('2', 50);
+        $draft = $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                codigoIndicadorOperacao: '010101',
+                cst: '000',
+                classificacaoTributaria: '000001',
+                exigeGrupoIbsCbs: true,
+                exigeEstornoCredito: true,
+                valorEstornoIbs: '123456789012345.67',
+                valorEstornoCbs: '0.05',
+                notasPagamentoAntecipado: [$first, $second],
+            )
+        );
+        self::assertSame('123456789012345.67', $this->first(
+            $draft->xml,
+            '/n:DPS/n:infDPS/n:IBSCBS/n:valores/n:trib/n:gIBSCBS/n:gEstornoCred/n:vIBSEstCred'
+        )->textContent);
+        self::assertSame('0.05', $this->first(
+            $draft->xml,
+            '/n:DPS/n:infDPS/n:IBSCBS/n:valores/n:trib/n:gIBSCBS/n:gEstornoCred/n:vCBSEstCred'
+        )->textContent);
+        self::assertSame(2, $this->xpath($draft->xml)->query(
+            '/n:DPS/n:infDPS/n:IBSCBS/n:valores/n:trib/n:gIBSCBS/n:gPagAntecipado/n:refNFSe'
+        )?->length);
+        self::assertSame($first, $this->first(
+            $draft->xml,
+            '/n:DPS/n:infDPS/n:IBSCBS/n:valores/n:trib/n:gIBSCBS/n:gPagAntecipado/n:refNFSe[1]'
+        )->textContent);
+        self::assertLessThan(strpos($draft->xml, '<gPagAntecipado>'), strpos($draft->xml, '<gEstornoCred>'));
+    }
+
+    public function testCreditReversalRejectsMissingOfficialClassificationEvidence(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('caller-verified ind_gEstornoCred');
+        $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                codigoIndicadorOperacao: '010101',
+                cst: '000',
+                classificacaoTributaria: '000001',
+                exigeGrupoIbsCbs: true,
+                valorEstornoIbs: '10.00',
+                valorEstornoCbs: '20.00',
+            )
+        );
+    }
+
+    public function testCreditReversalRequiresAmountsWhenOfficialIndicatorIsTrue(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('ind_gEstornoCred requires both');
+        $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                codigoIndicadorOperacao: '010101',
+                cst: '000',
+                classificacaoTributaria: '000001',
+                exigeGrupoIbsCbs: true,
+                exigeEstornoCredito: true,
+            )
+        );
+    }
+
+    public function testCreditReversalRejectsIncompletePair(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('requires both vIBSEstCred and vCBSEstCred');
+        $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                codigoIndicadorOperacao: '010101',
+                cst: '000',
+                classificacaoTributaria: '000001',
+                exigeGrupoIbsCbs: true,
+                exigeEstornoCredito: true,
+                valorEstornoIbs: '10.00',
+            )
+        );
+    }
+
+    public function testCreditReversalRejectsFalseOfficialIndicator(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('requires caller-verified ind_gEstornoCred');
+        $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                codigoIndicadorOperacao: '010101',
+                cst: '000',
+                classificacaoTributaria: '000001',
+                exigeGrupoIbsCbs: true,
+                exigeEstornoCredito: false,
+                valorEstornoIbs: '10.00',
+                valorEstornoCbs: '20.00',
+            )
+        );
+    }
+
+    public function testCreditReversalRejectsMalformedAmount(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('requires decimal');
+        $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                codigoIndicadorOperacao: '010101',
+                cst: '000',
+                classificacaoTributaria: '000001',
+                exigeGrupoIbsCbs: true,
+                exigeEstornoCredito: true,
+                valorEstornoIbs: '10.001',
+                valorEstornoCbs: '20.00',
+            )
+        );
+    }
+
+    public function testCreditReversalIsAbsentWithVerifiedFalseIndicator(): void
+    {
+        $draft = $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                codigoIndicadorOperacao: '010101',
+                cst: '000',
+                classificacaoTributaria: '000001',
+                exigeGrupoIbsCbs: true,
+                exigeEstornoCredito: false,
+            )
+        );
+        self::assertSame(0, $this->xpath($draft->xml)->query(
+            '/n:DPS/n:infDPS/n:IBSCBS/n:valores/n:trib/n:gIBSCBS/n:gEstornoCred'
+        )?->length);
+    }
+
+    public function testAdvanceReferencesRejectIncompleteKeys(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('refNFSe must contain 50');
+        $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                codigoIndicadorOperacao: '010101',
+                cst: '000',
+                classificacaoTributaria: '000001',
+                exigeGrupoIbsCbs: true,
+                notasPagamentoAntecipado: [str_repeat('9', 49)],
+            )
+        );
+    }
+
+    public function testAdvanceReferencesRejectMoreThan99Keys(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('at most 99');
+        $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                codigoIndicadorOperacao: '010101',
+                cst: '000',
+                classificacaoTributaria: '000001',
+                exigeGrupoIbsCbs: true,
+                notasPagamentoAntecipado: array_fill(0, 100, str_repeat('9', 50)),
+            )
+        );
+    }
+
+    public function testAdvanceReferencesCannotAppearWhenGIBSCBSIsForbidden(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('forbids gIBSCBS children');
+        $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                cst: '000',
+                classificacaoTributaria: '000001',
+                exigeGrupoIbsCbs: false,
+                notasPagamentoAntecipado: [str_repeat('9', 50)],
+            )
+        );
+    }
+
+    public function testAdvanceReferencesAreOmittedWhenEmpty(): void
+    {
+        $draft = $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                codigoIndicadorOperacao: '010101',
+                cst: '000',
+                classificacaoTributaria: '000001',
+                exigeGrupoIbsCbs: true,
+            )
+        );
+        self::assertSame(0, $this->xpath($draft->xml)->query(
+            '/n:DPS/n:infDPS/n:IBSCBS/n:valores/n:trib/n:gIBSCBS/n:gPagAntecipado'
+        )?->length);
+    }
+
     private function makeDps(
         ?int $ibsCbsFinalidade = null,
         string $codigoTributacaoNacional = '010701',
