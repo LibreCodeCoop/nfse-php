@@ -191,3 +191,29 @@ php tools/bin/domains.php schema-packages --report=/tmp/nfse-xsd-comparison.json
 
 These packages cannot independently prove an NT009 v1.04.01 rollout, which
 is a separate contractual/effective-date gate.
+
+## Cross-publication discrepancies requiring official confirmation
+
+The live, checksum-pinned XSD ZIP comparison on 2026-10-08 (Brazil local
+date) reports **10 like-named XSDs with different contents** and **7 XSD
+basenames found only in the production archive**. This compares extracted XSD
+file bytes, not just ZIP metadata or folder prefixes, so a shared `v1.01`
+label is insufficient to select a compatible schema. The exact report is
+retained as `nt009-xsd-packages.json` in the NT009 Source Evidence job.
+**Neither compared archive establishes the October NT009 v1.04.01 contract
+as deployed.**
+
+There is also a documentary discrepancy concerning `gIBSCBSAjuste`.
+The NT009 v1.01 **PDF**, section 2.2 (page 4), shows the adjustment group
+directly below `IBSCBS/valores/trib`, while the subsequently published
+**Anexo VI v1.04.01** workbook identifies its parent as
+`IBSCBS/valores/trib/gIBSCBS` (original layout row 428). The review-only
+preview currently follows the later spreadsheet; **it must not be used for
+fiscal submission** until an applicable XSD and official validation contract
+resolve that disagreement. Do not silently infer a definitive parent path.
+
+Source PDF: https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/rtc/nota-tecnica-009-se-cgnfs-e-v-1-01.pdf
+
+Review status: code and document extraction are verifiable, but the live
+production schema/effective-date evidence is **not yet available**. This
+blocks a conformant final implementation and closure of issue #95.
