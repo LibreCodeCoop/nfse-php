@@ -558,6 +558,29 @@ final class Nt009DpsPreviewBuilderTest extends TestCase
         )->textContent);
     }
 
+    public function testLargeCondominiumAmountsReconcileWithoutIntegerOverflow(): void
+    {
+        $amount = '999999999999999.99';
+        $xml = $this->builder->previewNt009Dps(
+            $this->makeDps(codigoTributacaoNacional: '990501', valorServico: $amount),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                cst: '000',
+                classificacaoTributaria: '000001',
+                exigeGrupoIbsCbs: false,
+                condominios: new Nt009CondominiumData(
+                    '2026-11-10',
+                    [new Nt009CondominiumChargeData('01', $amount)],
+                ),
+            )
+        )->xml;
+        self::assertSame($amount, $this->first(
+            $xml,
+            '/n:DPS/n:infDPS/n:IBSCBS/n:condominios/n:gCobranca/n:vCobranca'
+        )->textContent);
+    }
+
     public function testCondominiumAmountsMustReconcileWithServiceValue(): void
     {
         $this->expectException(\InvalidArgumentException::class);
@@ -753,12 +776,13 @@ final class Nt009DpsPreviewBuilderTest extends TestCase
         ?int $ibsCbsFinalidade = null,
         string $codigoTributacaoNacional = '010701',
         ?DeductionReductionData $deducaoReducao = null,
+        string $valorServico = '150.00',
     ): DpsData {
         return new DpsData(
             cnpjPrestador: '11222333000181',
             municipioIbge: '3303302',
             itemListaServico: '0107',
-            valorServico: '150.00',
+            valorServico: $valorServico,
             aliquota: '5.00',
             discriminacao: 'Servico de tecnologia',
             serie: '00001',
