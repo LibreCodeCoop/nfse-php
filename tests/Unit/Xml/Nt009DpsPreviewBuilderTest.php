@@ -22,10 +22,10 @@ use LibreCodeCoop\NfsePHP\Dto\Nt009MovableAssetData;
 use LibreCodeCoop\NfsePHP\Dto\Nt009NationalInvoiceReference;
 use LibreCodeCoop\NfsePHP\Dto\Nt009OtherDocumentReference;
 use LibreCodeCoop\NfsePHP\Dto\Nt009OtherFiscalReference;
-use LibreCodeCoop\NfsePHP\Dto\Nt009RecipientAddressData;
 use LibreCodeCoop\NfsePHP\Dto\Nt009PropertyAdjustmentData;
 use LibreCodeCoop\NfsePHP\Dto\Nt009RealEstateData;
 use LibreCodeCoop\NfsePHP\Dto\Nt009RealEstateUnitData;
+use LibreCodeCoop\NfsePHP\Dto\Nt009RecipientAddressData;
 use LibreCodeCoop\NfsePHP\Dto\Nt009RecipientData;
 use LibreCodeCoop\NfsePHP\Tests\TestCase;
 use LibreCodeCoop\NfsePHP\Xml\DpsSchemaValidator;
@@ -503,7 +503,9 @@ final class Nt009DpsPreviewBuilderTest extends TestCase
             $xml,
             '/n:DPS/n:infDPS/n:IBSCBS/n:imovel/n:gUnidImob/n:gAjusteBCLocImoveis/n:vAjusteBCLocImoveis'
         )->textContent);
-        self::assertTrue(strpos($xml, '<imovel>') < strpos($xml, '<valores>'));
+        self::assertSame(1, $this->xpath($xml)->query(
+            '/n:DPS/n:infDPS/n:IBSCBS/n:imovel/following-sibling::n:valores'
+        )?->length);
     }
 
     public function testPropertyLeaseRejectsUnrelatedNationalServiceCode(): void

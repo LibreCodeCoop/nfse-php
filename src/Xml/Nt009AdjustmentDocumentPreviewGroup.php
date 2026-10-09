@@ -77,7 +77,9 @@ final class Nt009AdjustmentDocumentPreviewGroup
             $this->add($doc, $group, 'cMunDocFiscal', $reference->municipioIbge);
             $this->add($doc, $group, 'nDocFiscal', $reference->numeroDocumento);
             $this->add($doc, $group, 'xDocFiscal', $reference->descricaoDocumento);
-        } elseif ($reference instanceof Nt009OtherDocumentReference) {
+        } else {
+            // The DTO's discriminated union guarantees the final reference
+            // is Nt009OtherDocumentReference, not an arbitrary XML payload.
             if (!$this->text($reference->numero, 255)
                 || !$this->text($reference->descricao, 255)) {
                 throw new \InvalidArgumentException('Invalid NT009 docOutro reference');
@@ -85,8 +87,6 @@ final class Nt009AdjustmentDocumentPreviewGroup
             $group = $doc->createElement('docOutro');
             $this->add($doc, $group, 'nDoc', $reference->numero);
             $this->add($doc, $group, 'xDoc', $reference->descricao);
-        } else {
-            throw new \InvalidArgumentException('Unsupported NT009 document reference type');
         }
         $element->appendChild($group);
         if ($data->fornecedor !== null) {
