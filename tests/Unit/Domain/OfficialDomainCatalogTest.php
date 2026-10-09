@@ -74,6 +74,48 @@ final class OfficialDomainCatalogTest extends TestCase
         self::assertFalse($this->catalog->hasOperationIndicator('999999'));
     }
 
+    public function testAnnexViiCanBeSelectedWithoutChangingTheDefaultProductionDomain(): void
+    {
+        $nt009 = OfficialDomainCatalog::OPERATION_INDICATOR_NT009_VERSION;
+        self::assertNull($this->catalog->operationIndicator('010101'));
+        self::assertSame('010101', $this->catalog->operationIndicator('010101', $nt009)['code'] ?? null);
+        self::assertTrue($this->catalog->hasOperationIndicator('010101', $nt009));
+        self::assertFalse($this->catalog->hasOperationIndicator('010101'));
+        self::assertTrue($this->catalog->hasOperationIndicator('030103'));
+        self::assertFalse($this->catalog->hasOperationIndicator('030103', $nt009));
+        self::assertSame([
+            OfficialDomainCatalog::OPERATION_INDICATOR_VERSION,
+            OfficialDomainCatalog::OPERATION_INDICATOR_NT009_VERSION,
+        ], OfficialDomainCatalog::operationIndicatorVersions());
+    }
+
+    public function testUnknownIndicatorVersionsFailClosed(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Unsupported NFS-e operation-indicator version');
+        $this->catalog->operationIndicator('010101', 'future-unverified');
+    }
+
+    public function testAllFortyOfficialNt009IndicatorsAreAvailableOffline(): void
+    {
+        $table = dirname(__DIR__, 3) . '/resources/domains/indicadores-operacao-ibscbs-v1.03.00.tsv';
+        $lines = file($table, FILE_IGNORE_NEW_LINES);
+        self::assertIsArray($lines);
+        $found = [];
+        foreach ($lines as $line) {
+            if ($line === '' || str_starts_with($line, '#')) {
+                continue;
+            }
+            [$code, $characteristic, $location] = explode("\t", $line);
+            self::assertSame(
+                ['code' => $code, 'characteristic' => $characteristic, 'location' => $location],
+                $this->catalog->operationIndicator($code, OfficialDomainCatalog::OPERATION_INDICATOR_NT009_VERSION),
+            );
+            $found[$code] = true;
+        }
+        self::assertCount(40, $found);
+    }
+
     public function testCatalogVersionsNameTheOfficialAnnexes(): void
     {
         self::assertSame([
