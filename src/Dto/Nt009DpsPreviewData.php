@@ -16,6 +16,10 @@ namespace LibreCodeCoop\NfsePHP\Dto;
  */
 final readonly class Nt009DpsPreviewData
 {
+    /**
+     * @param list<Nt009LinkedPaymentData> $pagamentosVinculados
+     * @param list<Nt009MovableAssetData> $bensMoveis
+     */
     public function __construct(
         /** finNFSe: 0 regular, 1 credit, 2 debit. */
         public int $finalidade,
@@ -43,6 +47,14 @@ final readonly class Nt009DpsPreviewData
         public ?string $valorAjusteCbs = null,
         /** regApIBSCBSSN 1, 2 or 3, when applicable. */
         public ?int $regimeApuracaoSimples = null,
+        /** Recipient identity is required when indDest=1. */
+        public ?Nt009RecipientData $destinatario = null,
+        /** Explicit new base-adjustment form; never repurpose legacy vDedRed. */
+        public ?Nt009BaseAdjustmentData $ajusteBase = null,
+        /** Up to 1000 movable-rental items for cTribNac 99.04.01. */
+        public array $bensMoveis = [],
+        /** Up to 99 transaction records under IBSCBS/gPgtoVinc. */
+        public array $pagamentosVinculados = [],
     ) {
     }
 }
