@@ -142,8 +142,8 @@ class DanfseTemplateTest extends TestCase
         self::assertStringContainsString('Município:', $html);
         self::assertStringContainsString('Ambiente Gerador:', $html);
         self::assertStringContainsString('Tipo de Ambiente:', $html);
-        self::assertStringContainsString('Situação da NFS-e', $html);
-        self::assertStringContainsString('Finalidade', $html);
+        self::assertStringContainsString('SITUAÇÃO DA NFS-e', $html);
+        self::assertStringContainsString('FINALIDADE', $html);
         self::assertStringContainsString('3303302112233450000195000000000000100000000001', $html);
         self::assertStringContainsString('data:image/svg+xml;base64,', $html);
         // Production environment: no homologação watermark
