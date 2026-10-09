@@ -92,7 +92,7 @@ final class Nt009DpsPreviewBuilder
             $valores = $document->createElement('valores');
             $trib = $document->createElement('trib');
             // NT009: CST and cClassTrib moved directly beneath trib.
-            $trib->appendChild($document->createElement('CST', (string) $preview->cst));
+            $trib->appendChild($document->createElement('CST', $preview->cst));
             $trib->appendChild($document->createElement('cClassTrib', (string) $preview->classificacaoTributaria));
             if ($preview->exigeGrupoIbsCbs) {
                 $group = $document->createElement('gIBSCBS');
@@ -102,7 +102,7 @@ final class Nt009DpsPreviewBuilder
                 if ($preview->valorAjusteIbs !== null) {
                     $adjustment = $document->createElement('gIBSCBSAjuste');
                     $adjustment->appendChild($document->createElement('vIBS', $preview->valorAjusteIbs));
-                    $adjustment->appendChild($document->createElement('vCBS', $preview->valorAjusteCbs));
+                    $adjustment->appendChild($document->createElement('vCBS', (string) $preview->valorAjusteCbs));
                     $group->appendChild($adjustment);
                 }
                 $trib->appendChild($group);
