@@ -35,7 +35,8 @@ jobs:
         run: |
           php tools/bin/domains.php audit \
             --download-dir="${{ runner.temp }}/nt009" \
-            --report="${{ runner.temp }}/nt009-comparison.json"
+            --report="${{ runner.temp }}/nt009-comparison.json" \
+            --print-layout=yes
       - name: Verify versioned Annex VII against all published XLSX rows
         run: php tools/bin/domains.php verify-indicators --annex-vii="${{ runner.temp }}/nt009/annex-vii-nt009.xlsx"
       - name: Retain full evidence for manual review

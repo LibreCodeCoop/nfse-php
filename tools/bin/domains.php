@@ -121,6 +121,12 @@ try {
         );
         $json = json_encode($comparison, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE
             | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR) . "\n";
+        if (($options['print-layout'] ?? '') === 'yes') {
+            foreach ($comparison['layout_rows'] as $row) {
+                echo 'NT009_LAYOUT_ROW '
+                    . json_encode($row, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR) . "\n";
+            }
+        }
         if (isset($options['report'])) {
             if (file_put_contents($options['report'], $json) === false) {
                 throw new RuntimeException('Unable to save NT009 comparison');
