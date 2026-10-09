@@ -7,9 +7,26 @@ declare(strict_types=1);
 
 namespace LibreCodeCoop\NfsePHP\Tests\Unit\Xml;
 
+use LibreCodeCoop\NfsePHP\Dto\DeductionReductionData;
 use LibreCodeCoop\NfsePHP\Dto\DpsData;
+use LibreCodeCoop\NfsePHP\Dto\Nt009AdjustmentDocumentData;
+use LibreCodeCoop\NfsePHP\Dto\Nt009BaseAdjustmentData;
+use LibreCodeCoop\NfsePHP\Dto\Nt009CondominiumChargeData;
+use LibreCodeCoop\NfsePHP\Dto\Nt009CondominiumData;
+use LibreCodeCoop\NfsePHP\Dto\Nt009CondominiumDetailData;
 use LibreCodeCoop\NfsePHP\Dto\Nt009DpsPreview;
 use LibreCodeCoop\NfsePHP\Dto\Nt009DpsPreviewData;
+use LibreCodeCoop\NfsePHP\Dto\Nt009LeaseData;
+use LibreCodeCoop\NfsePHP\Dto\Nt009LinkedPaymentData;
+use LibreCodeCoop\NfsePHP\Dto\Nt009MovableAssetData;
+use LibreCodeCoop\NfsePHP\Dto\Nt009NationalInvoiceReference;
+use LibreCodeCoop\NfsePHP\Dto\Nt009OtherDocumentReference;
+use LibreCodeCoop\NfsePHP\Dto\Nt009OtherFiscalReference;
+use LibreCodeCoop\NfsePHP\Dto\Nt009PropertyAdjustmentData;
+use LibreCodeCoop\NfsePHP\Dto\Nt009RealEstateData;
+use LibreCodeCoop\NfsePHP\Dto\Nt009RealEstateUnitData;
+use LibreCodeCoop\NfsePHP\Dto\Nt009RecipientAddressData;
+use LibreCodeCoop\NfsePHP\Dto\Nt009RecipientData;
 use LibreCodeCoop\NfsePHP\Tests\TestCase;
 use LibreCodeCoop\NfsePHP\Xml\DpsSchemaValidator;
 use LibreCodeCoop\NfsePHP\Xml\XmlBuilder;
@@ -249,19 +266,532 @@ final class Nt009DpsPreviewBuilderTest extends TestCase
         self::assertLessThan(strpos($xml, '<valores>'), strpos($xml, '<serv>'));
     }
 
-    private function makeDps(?int $ibsCbsFinalidade = null): DpsData
+    public function testNewRecipientIsExplicitlyRepresentedAndXmlEscaped(): void
     {
+        $xml = $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 1,
+                destinatario: new Nt009RecipientData(
+                    nome: 'Ana & Associados',
+                    cnpj: '11222333000181',
+                    endereco: new Nt009RecipientAddressData(
+                        logradouro: 'Rua A & B',
+                        numero: '42',
+                        bairro: 'Centro',
+                        municipioIbge: '3304557',
+                        cep: '20000000',
+                    ),
+                ),
+            )
+        )->xml;
+
+        self::assertSame('Ana & Associados', $this->first(
+            $xml,
+            '/n:DPS/n:infDPS/n:dest/n:xNome'
+        )->textContent);
+        self::assertSame('Rua A & B', $this->first(
+            $xml,
+            '/n:DPS/n:infDPS/n:dest/n:end/n:xLgr'
+        )->textContent);
+        self::assertStringContainsString('Ana &amp; Associados', $xml);
+        self::assertTrue(strpos($xml, '<indDest>') < strpos($xml, '<dest>'));
+        self::assertTrue(strpos($xml, '<dest>') < strpos($xml, '<serv>'));
+    }
+
+    public function testRecipientCannotBeSeparateWhenIndDestIsZero(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('not allowed when indDest=0');
+        $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                destinatario: new Nt009RecipientData(nome: 'Teste', cpf: '12345678901'),
+            )
+        );
+    }
+
+    public function testRecipientIdentityAndAddressChoiceAreValidated(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('exactly one valid tax identity');
+        $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 1,
+                destinatario: new Nt009RecipientData(
+                    nome: 'Duplicated',
+                    cpf: '12345678901',
+                    cnpj: '11222333000181',
+                ),
+            )
+        );
+    }
+
+    public function testNewBaseAdjustmentDoesNotEmitLegacyDeductionGroup(): void
+    {
+        $xml = $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                ajusteBase: new Nt009BaseAdjustmentData(valorIssqn: '10.25'),
+            )
+        )->xml;
+
+        self::assertSame('10.25', $this->first(
+            $xml,
+            '/n:DPS/n:infDPS/n:valores/n:vAjusteBC/n:vAjusteBCISSQN'
+        )->textContent);
+        self::assertStringNotContainsString('<vDedRed>', $xml);
+        self::assertTrue(strpos($xml, '<vAjusteBC>') < strpos($xml, '<trib>'));
+    }
+
+    public function testLegacyDeductionIsRejectedInsteadOfPassingThrough(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('cannot reuse legacy vDedRed');
+        $this->builder->previewNt009Dps(
+            $this->makeDps(
+                deducaoReducao: new DeductionReductionData(valor: '15.00')
+            ),
+            new Nt009DpsPreviewData(finalidade: 0, indicadorDestinatario: 0)
+        );
+    }
+
+    public function testTwoBaseAdjustmentAlternativesAreRejected(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('requires exactly one');
+        $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                ajusteBase: new Nt009BaseAdjustmentData(
+                    percentualIssqn: '5.00',
+                    valorIssqn: '5.00',
+                ),
+            )
+        );
+    }
+
+    public function testLinkedPaymentsUseSourceOrderAndEscapeTransactionText(): void
+    {
+        $xml = $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                codigoIndicadorOperacao: '010101',
+                cst: '000',
+                classificacaoTributaria: '000001',
+                exigeGrupoIbsCbs: true,
+                pagamentosVinculados: [
+                    new Nt009LinkedPaymentData(
+                        numeroPagamento: '001',
+                        identificadorTransacao: 'PIX&TX-01',
+                        tipoMeioPagamento: '17',
+                        cnpjRecebedor: '11222333000181',
+                        cnpjBasePsp: '11222333',
+                    ),
+                ],
+            )
+        )->xml;
+
+        self::assertSame('PIX&TX-01', $this->first(
+            $xml,
+            '/n:DPS/n:infDPS/n:IBSCBS/n:gPgtoVinc/n:pgto/n:idTransacao'
+        )->textContent);
+        self::assertStringContainsString('PIX&amp;TX-01', $xml);
+        self::assertTrue(strpos($xml, '<valores>') < strpos($xml, '<gPgtoVinc>'));
+    }
+
+    public function testDuplicatedPaymentNumbersAreRejectedEvenWithLeadingZeroes(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('must be unique');
+        $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                codigoIndicadorOperacao: '010101',
+                cst: '000',
+                classificacaoTributaria: '000001',
+                exigeGrupoIbsCbs: true,
+                pagamentosVinculados: [
+                    new Nt009LinkedPaymentData('1', 'TX-A', '17', '11222333000181', '11222333'),
+                    new Nt009LinkedPaymentData('001', 'TX-B', '17', '11222333000181', '11222333'),
+                ],
+            )
+        );
+    }
+
+    public function testMovableItemsRequireRelevantTaxCodeAndHaveBoundedQuantity(): void
+    {
+        $item = new Nt009MovableAssetData('12345678', 'Bem móvel', 2);
+        $draft = $this->builder->previewNt009Dps(
+            $this->makeDps(codigoTributacaoNacional: '990401'),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                cst: '000',
+                classificacaoTributaria: '000001',
+                exigeGrupoIbsCbs: false,
+                bensMoveis: [$item],
+            )
+        );
+        self::assertSame('12345678', $this->first(
+            $draft->xml,
+            '/n:DPS/n:infDPS/n:IBSCBS/n:bensMoveis/n:cNCMBemMovel'
+        )->textContent);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('exclusive to cTribNac');
+        $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                cst: '000',
+                classificacaoTributaria: '000001',
+                exigeGrupoIbsCbs: false,
+                bensMoveis: [$item],
+            )
+        );
+    }
+
+    public function testPropertyLeaseAndUnitsFollowOfficialGroupOrder(): void
+    {
+        $xml = $this->builder->previewNt009Dps(
+            $this->makeDps(codigoTributacaoNacional: '990301'),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                cst: '000',
+                classificacaoTributaria: '000001',
+                exigeGrupoIbsCbs: false,
+                imovel: new Nt009RealEstateData(
+                    municipioIbge: '3304557',
+                    locacao: new Nt009LeaseData('40.00', '150.00'),
+                    unidades: [
+                        new Nt009RealEstateUnitData(
+                            cib: '12345678',
+                            cep: '20000000',
+                            logradouro: 'Rua Um',
+                            numero: '42',
+                            ajustes: [new Nt009PropertyAdjustmentData('01', '10.00')],
+                        ),
+                    ],
+                ),
+            )
+        )->xml;
+        self::assertSame('150.00', $this->first(
+            $xml,
+            '/n:DPS/n:infDPS/n:IBSCBS/n:imovel/n:gLocacao/n:vTotOper'
+        )->textContent);
+        self::assertSame('12345678', $this->first(
+            $xml,
+            '/n:DPS/n:infDPS/n:IBSCBS/n:imovel/n:gUnidImob/n:cCIB'
+        )->textContent);
+        self::assertSame('10.00', $this->first(
+            $xml,
+            '/n:DPS/n:infDPS/n:IBSCBS/n:imovel/n:gUnidImob/n:gAjusteBCLocImoveis/n:vAjusteBCLocImoveis'
+        )->textContent);
+        self::assertSame(1, $this->xpath($xml)->query(
+            '/n:DPS/n:infDPS/n:IBSCBS/n:imovel/following-sibling::n:valores'
+        )?->length);
+    }
+
+    public function testPropertyLeaseRejectsUnrelatedNationalServiceCode(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('gLocacao requires cTribNac');
+        $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                cst: '000',
+                classificacaoTributaria: '000001',
+                exigeGrupoIbsCbs: false,
+                imovel: new Nt009RealEstateData(
+                    municipioIbge: '3304557',
+                    locacao: new Nt009LeaseData('30.00', '150.00'),
+                ),
+            )
+        );
+    }
+
+    public function testCondominiumChargesAndDetailsUseExactCentArithmetic(): void
+    {
+        $xml = $this->builder->previewNt009Dps(
+            $this->makeDps(codigoTributacaoNacional: '990501'),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                cst: '000',
+                classificacaoTributaria: '000001',
+                exigeGrupoIbsCbs: false,
+                condominios: new Nt009CondominiumData(
+                    vencimentoOriginal: '2026-11-10',
+                    cobrancas: [
+                        new Nt009CondominiumChargeData(
+                            tipo: '01',
+                            valor: '150.00',
+                            detalhes: [new Nt009CondominiumDetailData('001', '150.00')],
+                        ),
+                    ],
+                ),
+            )
+        )->xml;
+        self::assertSame('150.00', $this->first(
+            $xml,
+            '/n:DPS/n:infDPS/n:IBSCBS/n:condominios/n:gCobranca/n:gDetCobranca/n:vDetCobranca'
+        )->textContent);
+        self::assertSame('2026-11-10', $this->first(
+            $xml,
+            '/n:DPS/n:infDPS/n:IBSCBS/n:condominios/n:dVencOrig'
+        )->textContent);
+    }
+
+    public function testLargeCondominiumAmountsReconcileWithoutIntegerOverflow(): void
+    {
+        $amount = '999999999999999.99';
+        $xml = $this->builder->previewNt009Dps(
+            $this->makeDps(codigoTributacaoNacional: '990501', valorServico: $amount),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                cst: '000',
+                classificacaoTributaria: '000001',
+                exigeGrupoIbsCbs: false,
+                condominios: new Nt009CondominiumData(
+                    '2026-11-10',
+                    [new Nt009CondominiumChargeData('01', $amount)],
+                ),
+            )
+        )->xml;
+        self::assertSame($amount, $this->first(
+            $xml,
+            '/n:DPS/n:infDPS/n:IBSCBS/n:condominios/n:gCobranca/n:vCobranca'
+        )->textContent);
+    }
+
+    public function testCondominiumAmountsMustReconcileWithServiceValue(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('charges must sum to service value');
+        $this->builder->previewNt009Dps(
+            $this->makeDps(codigoTributacaoNacional: '990501'),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                cst: '000',
+                classificacaoTributaria: '000001',
+                exigeGrupoIbsCbs: false,
+                condominios: new Nt009CondominiumData(
+                    '2026-11-10',
+                    [new Nt009CondominiumChargeData('01', '149.99')],
+                ),
+            )
+        );
+    }
+
+    public function testDocumentBasedAdjustmentRendersEachExclusiveReferenceType(): void
+    {
+        $xml = $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                ajusteBase: new Nt009BaseAdjustmentData(
+                    documentos: [
+                        new Nt009AdjustmentDocumentData(
+                            tipo: '1',
+                            valorTotalDocumento: '120.00',
+                            valorAjustado: '25.00',
+                            referencia: new Nt009NationalInvoiceReference('1', 'NATIONAL-KEY-123'),
+                            dataEmissao: '2026-10-07',
+                        ),
+                        new Nt009AdjustmentDocumentData(
+                            tipo: '2',
+                            valorTotalDocumento: '200.00',
+                            valorAjustado: '15.00',
+                            referencia: new Nt009OtherFiscalReference(
+                                '3304557',
+                                'DOC-55',
+                                'Serviço público & fiscal'
+                            ),
+                        ),
+                        new Nt009AdjustmentDocumentData(
+                            tipo: '3',
+                            valorTotalDocumento: '80.00',
+                            valorAjustado: '10.00',
+                            referencia: new Nt009OtherDocumentReference('OTHER-01', 'Contrato & aviso'),
+                        ),
+                    ],
+                ),
+            )
+        )->xml;
+
+        self::assertSame(3, $this->xpath($xml)->query(
+            '/n:DPS/n:infDPS/n:valores/n:vAjusteBC/n:documentos/n:docAjusteBC'
+        )?->length);
+        self::assertSame('NATIONAL-KEY-123', $this->first(
+            $xml,
+            '/n:DPS/n:infDPS/n:valores/n:vAjusteBC/n:documentos/n:docAjusteBC/n:dFeNacional/n:chaveDFe'
+        )->textContent);
+        self::assertSame('Serviço público & fiscal', $this->first(
+            $xml,
+            '/n:DPS/n:infDPS/n:valores/n:vAjusteBC/n:documentos/n:docAjusteBC/n:docFiscalOutro/n:xDocFiscal'
+        )->textContent);
+        self::assertSame('Contrato & aviso', $this->first(
+            $xml,
+            '/n:DPS/n:infDPS/n:valores/n:vAjusteBC/n:documentos/n:docAjusteBC/n:docOutro/n:xDoc'
+        )->textContent);
+        self::assertStringContainsString('Contrato &amp; aviso', $xml);
+        self::assertStringNotContainsString('<vDedRed>', $xml);
+    }
+
+    public function testDocumentAdjustmentCanPreserveVettedSupplierDetails(): void
+    {
+        $xml = $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                ajusteBase: new Nt009BaseAdjustmentData(
+                    documentos: [
+                        new Nt009AdjustmentDocumentData(
+                            tipo: '1',
+                            valorTotalDocumento: '150.00',
+                            valorAjustado: '50.00',
+                            referencia: new Nt009OtherDocumentReference('C-7', 'Contract'),
+                            fornecedor: new Nt009RecipientData(
+                                nome: 'Fornecedor & Filhos',
+                                cpf: '12345678901',
+                                endereco: new Nt009RecipientAddressData(
+                                    logradouro: 'Rua & Filiais',
+                                    numero: '10',
+                                    bairro: 'Centro',
+                                    municipioIbge: '3304557',
+                                    cep: '20000000',
+                                ),
+                            ),
+                        ),
+                    ],
+                ),
+            )
+        )->xml;
+        self::assertSame('Fornecedor & Filhos', $this->first(
+            $xml,
+            '/n:DPS/n:infDPS/n:valores/n:vAjusteBC/n:documentos/n:docAjusteBC/n:fornec/n:xNome'
+        )->textContent);
+        self::assertSame('Rua & Filiais', $this->first(
+            $xml,
+            '/n:DPS/n:infDPS/n:valores/n:vAjusteBC/n:documentos/n:docAjusteBC/n:fornec/n:xLgr'
+        )->textContent);
+        self::assertSame(0, $this->xpath($xml)->query(
+            '/n:DPS/n:infDPS/n:valores/n:vAjusteBC/n:documentos/n:docAjusteBC/n:fornec/n:end/n:xLgr'
+        )?->length);
+        self::assertStringContainsString('Rua &amp; Filiais', $xml);
+    }
+
+    public function testDocumentAdjustmentCannotBeCombinedWithValueMode(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('requires exactly one');
+        $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                ajusteBase: new Nt009BaseAdjustmentData(
+                    valorIssqn: '5.00',
+                    documentos: [
+                        new Nt009AdjustmentDocumentData(
+                            tipo: '1',
+                            valorTotalDocumento: '150.00',
+                            valorAjustado: '50.00',
+                            referencia: new Nt009OtherDocumentReference('C-7', 'Contract'),
+                        ),
+                    ],
+                ),
+            )
+        );
+    }
+
+    public function testDocumentAdjustmentRejectsInvalidDate(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid NT009 date field');
+        $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                ajusteBase: new Nt009BaseAdjustmentData(
+                    documentos: [
+                        new Nt009AdjustmentDocumentData(
+                            tipo: '1',
+                            valorTotalDocumento: '150.00',
+                            valorAjustado: '50.00',
+                            referencia: new Nt009OtherDocumentReference('C-7', 'Contract'),
+                            dataEmissao: '2026-02-30',
+                        ),
+                    ],
+                ),
+            )
+        );
+    }
+
+    public function testDocumentAdjustmentRejectsInvalidFinancialPrecision(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid NT009 decimal field');
+        $this->builder->previewNt009Dps(
+            $this->makeDps(),
+            new Nt009DpsPreviewData(
+                finalidade: 0,
+                indicadorDestinatario: 0,
+                ajusteBase: new Nt009BaseAdjustmentData(
+                    documentos: [
+                        new Nt009AdjustmentDocumentData(
+                            tipo: '1',
+                            valorTotalDocumento: '150.00',
+                            valorAjustado: '50.001',
+                            referencia: new Nt009OtherDocumentReference('C-7', 'Contract'),
+                        ),
+                    ],
+                ),
+            )
+        );
+    }
+
+    private function makeDps(
+        ?int $ibsCbsFinalidade = null,
+        string $codigoTributacaoNacional = '010701',
+        ?DeductionReductionData $deducaoReducao = null,
+        string $valorServico = '150.00',
+    ): DpsData {
         return new DpsData(
             cnpjPrestador: '11222333000181',
             municipioIbge: '3303302',
             itemListaServico: '0107',
-            valorServico: '150.00',
+            valorServico: $valorServico,
             aliquota: '5.00',
             discriminacao: 'Servico de tecnologia',
             serie: '00001',
             numeroDps: '17',
-            codigoTributacaoNacional: '010701',
+            codigoTributacaoNacional: $codigoTributacaoNacional,
             ibsCbsFinalidade: $ibsCbsFinalidade,
+            deducaoReducao: $deducaoReducao,
         );
     }
 

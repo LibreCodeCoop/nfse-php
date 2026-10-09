@@ -112,9 +112,40 @@ verified `ind_gIBSCBS` flag is false, and required in the appropriate
 conditional form if it is true.
 
 **The preview deliberately cannot model the complete 450-row new contract.**
-In particular the new `vAjusteBC` structure, detailed `dest` group,
-`gPgtoVinc`, `imovel`, `bensMoveis`, `condominios` and other conditional
-groups are not implemented for production serialization. The builder rejects
+It now includes explicitly typed, separately validated structural drafts for:
+
+- `infDPS/dest` (Annex VI rows 180-200): one identity, optional national or
+  foreign address; identifiers and textual values are validated before
+  insertion, with DOM text nodes used for safe XML escaping.
+- `infDPS/valores/vAjusteBC` (rows 293-336): exactly one ISSQN
+  percentage, monetary or document-backed mode. The document mode accepts
+  up to 1,000 typed `docAjusteBC` entries with a choice of
+  `dFeNacional`, `docFiscalOutro` or `docOutro`, optional dates and
+  explicit `fornec` identity. An optional externally justified
+  `vAjusteBCIBSCBSComExt` may be provided; fiscal applicability is not
+  inferred by the SDK.
+- `IBSCBS/bensMoveis` (rows 404-407): up to 1,000 records, restricted to
+  `cTribNac=99.04.01`, preserving the 8-digit NCM and bounded quantities.
+- `IBSCBS/gPgtoVinc/pgto` (rows 443-449): up to 99 records, with distinct
+  transaction IDs and payment numbers and the published payment method codes.
+- `IBSCBS/imovel` (rows 383-403): explicit municipality, the
+  classification-restricted optional `gLocacao`, and up to 99 units with
+  bounded address and per-unit adjustment data.
+- `IBSCBS/condominios` (rows 408-421): source-coded charge categories and
+  optional detail and discount records, with exact-cent reconciliation of
+  `gDetCobranca` to the charge and total charge values to `vServ`.
+
+The builder now rejects legacy `DpsData::deducaoReducao` in NT009 preview
+instead of silently copying the obsolete `vDedRed` group. This prevents
+mistaking old deduction rules for the new, not-yet-effective schema.
+No taxpayer identity or payment values are inferred.
+
+Still missing are independently confirmed adjustment-type domains
+and tax-code repercussions, externally verified tax-code correlations,
+specialized conditional groups not yet modeled, and — most importantly —
+validation against a published,
+environment-specific **effective NT009 XSD**. None of these review-only
+structures is enabled in the real emission path. The builder rejects
 mixing legacy IBS fields and the new preview options. It removes the obsolete
 `xsi:schemaLocation` reference, without claiming that it matches a new
 schema. The existing `DpsSchemaValidator` remains bound to the February
