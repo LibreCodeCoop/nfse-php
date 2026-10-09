@@ -113,6 +113,32 @@ final class OfficialAnnexDownloaderTest extends TestCase
         $downloader->sources($manifest, ['annex-x']);
     }
 
+    public function testUnpinnedObservationOnlyAcceptsAnOfficialXlsxAndReportsItsHash(): void
+    {
+        $payload = "PK\x03\x04" . 'official workbook fixture';
+        $file = $this->directory . '/observed.xlsx';
+        $url = 'https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/documentacao-atual/annex.xlsx';
+        $sha = (new OfficialAnnexDownloader())->observe(
+            $url,
+            $file,
+            static fn (string $source): string => $payload
+        );
+        self::assertSame(hash('sha256', $payload), $sha);
+        self::assertSame($payload, file_get_contents($file));
+        unlink($file);
+    }
+
+    public function testUnpinnedObservationRejectsExternalSourcesBeforeNetwork(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('official NFS-e URL');
+        (new OfficialAnnexDownloader())->observe(
+            'https://example.com/annex.xlsx',
+            $this->directory . '/untrusted.xlsx',
+            static fn (string $source): string => 'must not be fetched'
+        );
+    }
+
     public function testRejectsDuplicateRequestedIdsBeforeFetching(): void
     {
         $manifest = $this->manifest([$this->entry('annex-a', "PK\x03\x04official")]);

@@ -71,6 +71,19 @@ try {
             }
         }
         echo "Verified " . count($outputs) . " deterministic snapshots\n";
+    } elseif ($command === 'observe-source') {
+        if (!isset($options['url'], $options['output'])
+            || ($options['acknowledge-unpinned'] ?? '') !== 'yes') {
+            throw new InvalidArgumentException(
+                'Observation requires --url= --output= --acknowledge-unpinned=yes'
+            );
+        }
+        $sha = (new OfficialAnnexDownloader())->observe(
+            $options['url'],
+            $options['output'],
+            SourceVerifier::fetchOfficial(...)
+        );
+        echo "UNPINNED source: {$sha}; review provenance before adding to trusted manifest\n";
     } elseif ($command === 'contract-matrix') {
         foreach (['legacy-annex', 'annex-vi', 'output'] as $name) {
             if (!isset($options[$name])) {
@@ -222,7 +235,7 @@ try {
         }
     } else {
         throw new InvalidArgumentException(
-            "Usage: php tools/bin/domains.php {generate|check|contract-matrix|download|audit|verify-indicators|watch} --name=PATH\n"
+            "Usage: php tools/bin/domains.php {generate|check|observe-source|contract-matrix|download|audit|verify-indicators|watch} --name=PATH\n"
             . "generate/check: --annex-a= --annex-b= --annex-c= --output= [--annex-vii= --expected-vii=N]\n"
             . "contract-matrix: --legacy-annex=PATH --annex-vi=PATH --output=PATH\n"
             . "download: --ids=annex-a,annex-b,... --output=DIR [--manifest=PATH]\n"
