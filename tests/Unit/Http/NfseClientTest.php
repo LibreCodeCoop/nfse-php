@@ -81,6 +81,105 @@ class NfseClientTest extends TestCase
         self::assertSame('<NFS-e>ok</NFS-e>', $receipt->rawXml);
     }
 
+
+    public function testEmitReadsNfseNumberFromDocumentedGatewayXmlResponse(): void
+    {
+        $authorizedXml = file_get_contents(__DIR__ . '/../../fixtures/nfse_exemplo.xml');
+        self::assertIsString($authorizedXml);
+        $payload = json_encode([
+            'tipoAmbiente' => 2,
+            'versaoAplicativo' => 'SefinNacional_1.6.0',
+            'dataHoraProcessamento' => '2026-10-09T09:30:00-03:00',
+            'idDps' => 'DPS-EXAMPLE',
+            'chaveAcesso' => str_repeat('9', 50),
+            'nfseXmlGZipB64' => base64_encode(gzencode($authorizedXml)),
+        ], JSON_THROW_ON_ERROR);
+        self::$server->setResponseOfPath(
+            '/SefinNacional/nfse',
+            new Response($payload, ['Content-Type' => 'application/json'], 201)
+        );
+
+        $receipt = $this->makeClient($this->signer)->emit($this->makeDps());
+
+        self::assertSame('10', $receipt->nfseNumber);
+        self::assertSame(str_repeat('9', 50), $receipt->chaveAcesso);
+        self::assertSame($authorizedXml, $receipt->rawXml);
+        self::assertSame('2026-10-09T09:30:00-03:00', $receipt->dataEmissao);
+    }
+
+    public function testQueryReadsNfseNumberFromAuthorizedXmlWhenJsonDoesNotContainIt(): void
+    {
+        $authorizedXml = file_get_contents(__DIR__ . '/../../fixtures/nfse_exemplo.xml');
+        self::assertIsString($authorizedXml);
+        $payload = json_encode([
+            'chaveAcesso' => 'existing-nfse',
+            'nfseXmlGZipB64' => base64_encode(gzencode($authorizedXml)),
+            'dataHoraProcessamento' => '2026-10-09T09:31:00-03:00',
+        ], JSON_THROW_ON_ERROR);
+        self::$server->setResponseOfPath(
+            '/SefinNacional/nfse/existing-nfse',
+            new Response($payload, ['Content-Type' => 'application/json'], 200)
+        );
+
+        $receipt = $this->makeClient($this->signer)->query('existing-nfse');
+
+        self::assertSame('10', $receipt->nfseNumber);
+        self::assertSame('existing-nfse', $receipt->chaveAcesso);
+        self::assertSame($authorizedXml, $receipt->rawXml);
+    }
+
+    public function testEmitRejectsSuccessStatusWithoutAuthorizedFiscalIdentity(): void
+    {
+        $payload = json_encode([
+            'tipoAmbiente' => 2,
+            'dataHoraProcessamento' => '2026-10-09T09:32:00-03:00',
+            'erros' => [['codigo' => 'E0312', 'descricao' => 'Operacao nao autorizada']],
+        ], JSON_THROW_ON_ERROR);
+        self::$server->setResponseOfPath(
+            '/SefinNacional/nfse',
+            new Response($payload, ['Content-Type' => 'application/json'], 200)
+        );
+
+        try {
+            $this->makeClient($this->signer)->emit($this->makeDps());
+            self::fail('An incomplete 2xx response must not become an authorized receipt.');
+        } catch (\LibreCodeCoop\NfsePHP\Exception\NetworkException $error) {
+            self::assertSame(NfseErrorCode::InvalidResponse, $error->errorCode);
+            self::assertStringContainsString('chaveAcesso', $error->getMessage());
+            self::assertStringContainsString('Recover using the DPS identifier', $error->getMessage());
+        }
+    }
+
+    public function testEmitDoesNotAcceptKeyWithoutInvoiceNumberOrDocument(): void
+    {
+        $payload = json_encode(['chaveAcesso' => str_repeat('1', 50)], JSON_THROW_ON_ERROR);
+        self::$server->setResponseOfPath(
+            '/SefinNacional/nfse',
+            new Response($payload, ['Content-Type' => 'application/json'], 201)
+        );
+
+        $this->expectException(\LibreCodeCoop\NfsePHP\Exception\NetworkException::class);
+        $this->expectExceptionMessage('missing nNFSe');
+        $this->makeClient($this->signer)->emit($this->makeDps());
+    }
+
+    public function testEmitDoesNotParseNumberFromAnUnrelatedXmlElement(): void
+    {
+        $unrelated = '<untrusted><nNFSe>999</nNFSe></untrusted>';
+        $payload = json_encode([
+            'chaveAcesso' => str_repeat('1', 50),
+            'nfseXmlGZipB64' => base64_encode(gzencode($unrelated)),
+        ], JSON_THROW_ON_ERROR);
+        self::$server->setResponseOfPath(
+            '/SefinNacional/nfse',
+            new Response($payload, ['Content-Type' => 'application/json'], 201)
+        );
+
+        $this->expectException(\LibreCodeCoop\NfsePHP\Exception\NetworkException::class);
+        $this->expectExceptionMessage('missing nNFSe');
+        $this->makeClient($this->signer)->emit($this->makeDps());
+    }
+
     public function testEmitBuildsXmlWithTpAmbBeforeMunicipalityFields(): void
     {
         $payload = json_encode([

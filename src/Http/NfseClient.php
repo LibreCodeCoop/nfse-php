@@ -496,6 +496,15 @@ class NfseClient implements NfseClientInterface, CancellationClientInterface, De
     }
 
     /**
+     * The documented SEFIN 201 response provides chaveAcesso and
+     * nfseXmlGZipB64, not a top-level nNFSe. Read the number from the
+     * authorized NFSe/infNFSe/nNFSe rather than treating a blank number as
+     * successful issuance.
+     *
+     * An incomplete 2xx receipt is an ambiguous result, not a fiscal
+     * rejection or authorization. Callers must recover by DPS before any
+     * further POST, just like a transport timeout.
+     *
      * @param array<string, mixed> $response
      */
     private function parseReceiptResponse(array $response): ReceiptData
@@ -506,12 +515,59 @@ class NfseClient implements NfseClientInterface, CancellationClientInterface, De
             $rawXml = GzipBase64::decode($response['nfseXmlGZipB64'], 'SEFIN NFS-e XML response');
         }
 
+        $number = trim((string) ($response['nNFSe'] ?? $response['numero'] ?? ''));
+        if ($number === '') {
+            $number = $this->invoiceNumberFromXml($rawXml);
+        }
+        $accessKey = is_string($response['chaveAcesso'] ?? null)
+            ? trim($response['chaveAcesso'])
+            : '';
+
+        if ($accessKey === '' || $number === '') {
+            throw new NetworkException(
+                'SEFIN returned an incomplete NFS-e receipt (missing '
+                    . ($accessKey === '' ? 'chaveAcesso' : 'nNFSe')
+                    . '). Recover using the DPS identifier before attempting another emission.',
+                NfseErrorCode::InvalidResponse,
+            );
+        }
+
         return new ReceiptData(
-            nfseNumber:        (string) ($response['nNFSe'] ?? $response['numero'] ?? ''),
-            chaveAcesso:       (string) ($response['chaveAcesso'] ?? ''),
+            nfseNumber:        $number,
+            chaveAcesso:       $accessKey,
             dataEmissao:       (string) ($response['dhEmi'] ?? $response['dataHoraProcessamento'] ?? $response['dataEmissao'] ?? ''),
             codigoVerificacao: isset($response['codigoVerificacao']) ? (string) $response['codigoVerificacao'] : null,
             rawXml:            $rawXml,
         );
+    }
+
+    private function invoiceNumberFromXml(?string $xml): string
+    {
+        if ($xml === null || trim($xml) === '') {
+            return '';
+        }
+
+        $previous = libxml_use_internal_errors(true);
+        libxml_clear_errors();
+
+        try {
+            $document = new \DOMDocument();
+            if (!$document->loadXML($xml, LIBXML_NONET)) {
+                return '';
+            }
+
+            $xpath = new \DOMXPath($document);
+            $numberNodes = $xpath->query(
+                '/*[local-name()="NFSe"]/*[local-name()="infNFSe"]/*[local-name()="nNFSe"]'
+            );
+            if ($numberNodes === false) {
+                return '';
+            }
+
+            return trim((string) $numberNodes->item(0)?->textContent);
+        } finally {
+            libxml_clear_errors();
+            libxml_use_internal_errors($previous);
+        }
     }
 }

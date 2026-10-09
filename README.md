@@ -15,7 +15,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 ## Scope
 
-- Emit NFS-e (`emit`)
+- Emit NFS-e (`emit`) with official receipt XML number extraction and fail-closed handling of incomplete responses
 - Query NFS-e (`query`)
 - Cancel NFS-e (`cancel`)
 - Generate the DANFSe PDF locally from the NFS-e XML (`getDanfse` / `Danfse\DanfseGenerator`)
@@ -56,6 +56,22 @@ $dps = new DpsData(
 $receipt = $client->emit($dps);
 echo $receipt->nfseNumber; // NFS-e number returned by the SEFIN gateway
 ```
+
+## Current production issuance contract
+
+The supported production issuance path is `NfseClient::emit(DpsData)` against
+the officially deployed DPS v1.01 layout. The API's successful `POST /nfse`
+response provides `chaveAcesso` and the authorized `nfseXmlGZipB64`.
+The invoice number `nNFSe` is read from the authorized XML when it is not
+duplicated in the JSON response. An incomplete 2xx response is **ambiguous**,
+not proof of issuance: reconcile using `queryDps` then `query` before any
+new POST. The signer and mTLS certificate must be configured for the target
+environment; tests do not replace actual SEFIN acceptance.
+
+NT009 draft preview APIs remain strictly non-emitting until an effective
+environment-specific official XSD and activation have been verified. Do not
+pass their XML to `emit()` or update a downstream version pin based only
+on a draft layout.
 
 ## Secret Storage with OpenBao
 
