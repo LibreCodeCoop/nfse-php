@@ -648,7 +648,17 @@ final class Nt009DpsPreviewBuilderTest extends TestCase
                             valorTotalDocumento: '150.00',
                             valorAjustado: '50.00',
                             referencia: new Nt009OtherDocumentReference('C-7', 'Contract'),
-                            fornecedor: new Nt009RecipientData(nome: 'Fornecedor & Filhos', cpf: '12345678901'),
+                            fornecedor: new Nt009RecipientData(
+                                nome: 'Fornecedor & Filhos',
+                                cpf: '12345678901',
+                                endereco: new Nt009RecipientAddressData(
+                                    logradouro: 'Rua & Filiais',
+                                    numero: '10',
+                                    bairro: 'Centro',
+                                    municipioIbge: '3304557',
+                                    cep: '20000000',
+                                ),
+                            ),
                         ),
                     ],
                 ),
@@ -658,6 +668,14 @@ final class Nt009DpsPreviewBuilderTest extends TestCase
             $xml,
             '/n:DPS/n:infDPS/n:valores/n:vAjusteBC/n:documentos/n:docAjusteBC/n:fornec/n:xNome'
         )->textContent);
+        self::assertSame('Rua & Filiais', $this->first(
+            $xml,
+            '/n:DPS/n:infDPS/n:valores/n:vAjusteBC/n:documentos/n:docAjusteBC/n:fornec/n:xLgr'
+        )->textContent);
+        self::assertSame(0, $this->xpath($xml)->query(
+            '/n:DPS/n:infDPS/n:valores/n:vAjusteBC/n:documentos/n:docAjusteBC/n:fornec/n:end/n:xLgr'
+        )?->length);
+        self::assertStringContainsString('Rua &amp; Filiais', $xml);
     }
 
     public function testDocumentAdjustmentCannotBeCombinedWithValueMode(): void
