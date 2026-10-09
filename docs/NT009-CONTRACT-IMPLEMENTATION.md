@@ -112,9 +112,30 @@ verified `ind_gIBSCBS` flag is false, and required in the appropriate
 conditional form if it is true.
 
 **The preview deliberately cannot model the complete 450-row new contract.**
-In particular the new `vAjusteBC` structure, detailed `dest` group,
-`gPgtoVinc`, `imovel`, `bensMoveis`, `condominios` and other conditional
-groups are not implemented for production serialization. The builder rejects
+It now includes explicitly typed, separately validated structural drafts for:
+
+- `infDPS/dest` (Annex VI rows 180-200): one identity, optional national or
+  foreign address; identifiers and textual values are validated before
+  insertion, with DOM text nodes used for safe XML escaping.
+- `infDPS/valores/vAjusteBC` (rows 293-296, 336): the mutually exclusive
+  ISSQN percentage or monetary mode, with optional externally justified
+  `vAjusteBCIBSCBSComExt`. The full document-backed adjustment mode
+  (rows 297-335) is not yet modeled.
+- `IBSCBS/bensMoveis` (rows 404-407): up to 1,000 records, restricted to
+  `cTribNac=99.04.01`, preserving the 8-digit NCM and bounded quantities.
+- `IBSCBS/gPgtoVinc/pgto` (rows 443-449): up to 99 records, with distinct
+  transaction IDs and payment numbers and the published payment method codes.
+
+The builder now rejects legacy `DpsData::deducaoReducao` in NT009 preview
+instead of silently copying the obsolete `vDedRed` group. This prevents
+mistaking old deduction rules for the new, not-yet-effective schema.
+No taxpayer identity or payment values are inferred.
+
+Still missing are document-backed `vAjusteBC`, `imovel`,
+`condominios`, more specialized adjustment branches, other NT009 conditional
+groups and — most importantly — validation against a published,
+environment-specific **effective NT009 XSD**. None of these review-only
+structures is enabled in the real emission path. The builder rejects
 mixing legacy IBS fields and the new preview options. It removes the obsolete
 `xsi:schemaLocation` reference, without claiming that it matches a new
 schema. The existing `DpsSchemaValidator` remains bound to the February
