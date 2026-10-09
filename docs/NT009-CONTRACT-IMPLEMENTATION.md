@@ -117,10 +117,13 @@ It now includes explicitly typed, separately validated structural drafts for:
 - `infDPS/dest` (Annex VI rows 180-200): one identity, optional national or
   foreign address; identifiers and textual values are validated before
   insertion, with DOM text nodes used for safe XML escaping.
-- `infDPS/valores/vAjusteBC` (rows 293-296, 336): the mutually exclusive
-  ISSQN percentage or monetary mode, with optional externally justified
-  `vAjusteBCIBSCBSComExt`. The full document-backed adjustment mode
-  (rows 297-335) is not yet modeled.
+- `infDPS/valores/vAjusteBC` (rows 293-336): exactly one ISSQN
+  percentage, monetary or document-backed mode. The document mode accepts
+  up to 1,000 typed `docAjusteBC` entries with a choice of
+  `dFeNacional`, `docFiscalOutro` or `docOutro`, optional dates and
+  explicit `fornec` identity. An optional externally justified
+  `vAjusteBCIBSCBSComExt` may be provided; fiscal applicability is not
+  inferred by the SDK.
 - `IBSCBS/bensMoveis` (rows 404-407): up to 1,000 records, restricted to
   `cTribNac=99.04.01`, preserving the 8-digit NCM and bounded quantities.
 - `IBSCBS/gPgtoVinc/pgto` (rows 443-449): up to 99 records, with distinct
@@ -137,9 +140,10 @@ instead of silently copying the obsolete `vDedRed` group. This prevents
 mistaking old deduction rules for the new, not-yet-effective schema.
 No taxpayer identity or payment values are inferred.
 
-Still missing are document-backed `vAjusteBC`, externally verified
-tax-code correlations, other specialized adjustment branches, other NT009
-conditional groups and — most importantly — validation against a published,
+Still missing are independently confirmed adjustment-type domains
+and tax-code repercussions, externally verified tax-code correlations,
+specialized conditional groups not yet modeled, and — most importantly —
+validation against a published,
 environment-specific **effective NT009 XSD**. None of these review-only
 structures is enabled in the real emission path. The builder rejects
 mixing legacy IBS fields and the new preview options. It removes the obsolete
