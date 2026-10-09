@@ -837,7 +837,9 @@ final class Nt009DpsPreviewBuilderTest extends TestCase
                 ajusteBase: new Nt009BaseAdjustmentData(
                     documentos: [
                         new Nt009AdjustmentDocumentData(
-                            '100', '50.00', '20.00',
+                            '100',
+                            '50.00',
+                            '20.00',
                             new Nt009OtherDocumentReference('CON-1', 'Contrato'),
                         ),
                     ],
@@ -858,7 +860,9 @@ final class Nt009DpsPreviewBuilderTest extends TestCase
                 ajusteBase: new Nt009BaseAdjustmentData(
                     documentos: [
                         new Nt009AdjustmentDocumentData(
-                            '1', '50.00', '20.00',
+                            '1',
+                            '50.00',
+                            '20.00',
                             new Nt009OtherDocumentReference('CON-1', 'Contrato'),
                             descricaoTipo: 'Descrição não prevista',
                         ),
@@ -880,7 +884,9 @@ final class Nt009DpsPreviewBuilderTest extends TestCase
                 ajusteBase: new Nt009BaseAdjustmentData(
                     documentos: [
                         new Nt009AdjustmentDocumentData(
-                            '1', '50.00', '20.00',
+                            '1',
+                            '50.00',
+                            '20.00',
                             new Nt009NationalInvoiceReference('4', 'KEY-123'),
                         ),
                     ],
@@ -901,7 +907,9 @@ final class Nt009DpsPreviewBuilderTest extends TestCase
                 ajusteBase: new Nt009BaseAdjustmentData(
                     documentos: [
                         new Nt009AdjustmentDocumentData(
-                            '1', '50.00', '20.00',
+                            '1',
+                            '50.00',
+                            '20.00',
                             new Nt009NationalInvoiceReference('1', 'KEY-123', 'Outra espécie'),
                         ),
                     ],
@@ -920,7 +928,9 @@ final class Nt009DpsPreviewBuilderTest extends TestCase
                 ajusteBase: new Nt009BaseAdjustmentData(
                     documentos: [
                         new Nt009AdjustmentDocumentData(
-                            '1', '50.00', '20.00',
+                            '1',
+                            '50.00',
+                            '20.00',
                             new Nt009NationalInvoiceReference('9', 'KEY-123', 'Outro documento'),
                         ),
                     ],
