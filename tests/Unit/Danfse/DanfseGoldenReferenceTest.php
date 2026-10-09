@@ -40,7 +40,9 @@ final class DanfseGoldenReferenceTest extends TestCase
 
     public function testRetainedIssReferenceKeepsAuthorizedRetentionValues(): void
     {
-        $data = (new DanfseTemplate())->buildData($this->fixtureData());
+        $fixture = $this->fixtureData();
+        $fixture['infNFSe']['valores']['vISSQN'] = '27.00';
+        $data = (new DanfseTemplate())->buildData($fixture);
 
         self::assertSame('Retido pelo Tomador', $data['tributacao_municipal']['retencao_issqn']);
         self::assertNotSame('-', $data['totais']['issqn_retido']);
@@ -135,7 +137,7 @@ final class DanfseGoldenReferenceTest extends TestCase
             '4 - PIS/COFINS Retidos, CSLL Não Retido',
             $data['tributacao_federal']['descricao_retencao'],
         );
-        self::assertStringContainsString('CSLL - Retida', $html);
+        self::assertStringContainsString('Contribuições Sociais - Retidas', $html);
         self::assertStringContainsString('Tipo de retenção PIS/COFINS/CSLL', $html);
     }
 

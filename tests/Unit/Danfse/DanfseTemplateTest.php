@@ -68,6 +68,50 @@ class DanfseTemplateTest extends TestCase
         self::assertSame('R$ 1.292,75', $data['totais']['valor_liquido']);
     }
 
+    public function testAuthorizedMunicipalTotalsUseNfseValuesNotDpsTaxFlags(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        $nfse['infNFSe']['valores'] = [
+            'vBC' => '31500.00',
+            'pAliqAplic' => '2.00',
+            'vISSQN' => '630.00',
+        ];
+        $nfse['infNFSe']['DPS']['infDPS']['valores']['trib']['tribMun']['vBC'] = '100.00';
+
+        $data = (new DanfseTemplate())->buildData($nfse);
+
+        self::assertSame('R$ 31.500,00', $data['tributacao_municipal']['bc_issqn']);
+        self::assertSame('2.00%', $data['tributacao_municipal']['aliquota']);
+        self::assertSame('R$ 630,00', $data['tributacao_municipal']['issqn_apurado']);
+    }
+
+    public function testDescriptionPreservesNewlinesWithoutRenderingMarkup(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        $nfse['infNFSe']['DPS']['infDPS']['serv']['cServ']['xDescServ'] = "Primeira linha\nSegunda <script>";
+
+        $html = (new DanfseTemplate())->render($nfse, new DanfseConfig());
+
+        self::assertStringContainsString('Primeira linha<br>', $html);
+        self::assertStringContainsString('Segunda &lt;script&gt;', $html);
+        self::assertStringContainsString('Nº NFS-e / CHAVE NFS-e', $html);
+        self::assertStringContainsString('Contribuições Sociais - Retidas', $html);
+    }
+
+    public function testTomadorAddressKeepsComplementAndOfficialMunicipalityCode(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        $end = & $nfse['infNFSe']['DPS']['infDPS']['toma']['end'];
+        $end['xCpl'] = 'Conjunto 10';
+        $end['endNac']['cMun'] = '3550308';
+        $end['endNac']['CEP'] = '04578000';
+
+        $data = (new DanfseTemplate())->buildData($nfse);
+
+        self::assertStringContainsString('Conjunto 10', $data['tomador']['endereco']);
+        self::assertSame('3550308 / 04578-000', $data['tomador']['ibge_cep']);
+    }
+
     public function testIntermediarioIsNullWhenAbsent(): void
     {
         $nfseData = $this->fixtureNfseData();
