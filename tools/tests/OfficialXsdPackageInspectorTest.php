@@ -63,6 +63,39 @@ final class OfficialXsdPackageInspectorTest extends TestCase
         self::assertSame('restricted-only', $comparison['file_comparison']['B/DPS_v1.01.xsd']);
     }
 
+    public function testPinnedManifestRejectsChangedOfficialArchiveBytes(): void
+    {
+        $production = $this->zip(['DPS_v1.01.xsd' => '<xs:schema>prod</xs:schema>']);
+        $restricted = $this->zip(['DPS_v1.01.xsd' => '<xs:schema>test</xs:schema>']);
+        $file = tempnam(sys_get_temp_dir(), 'nfse-schema-source');
+        self::assertIsString($file);
+        try {
+            file_put_contents($file, json_encode([
+                'sources' => [
+                    ['id' => 'xsd-production-20260209', 'type' => 'zip',
+                        'url' => 'https://www.gov.br/nfse/p.zip',
+                        'observed_sha256' => hash('sha256', $production)],
+                    ['id' => 'xsd-restricted-20260727', 'type' => 'zip',
+                        'url' => 'https://www.gov.br/nfse/r.zip',
+                        'observed_sha256' => hash('sha256', $restricted)],
+                ],
+            ], JSON_THROW_ON_ERROR));
+            $inspector = new OfficialXsdPackageInspector();
+            $fetch = static fn (string $url): string => str_ends_with($url, '/p.zip') ? $production : $restricted;
+            self::assertSame('different', $inspector->comparePinned($file, $fetch)[
+                'basename_comparison'
+            ]['DPS_v1.01.xsd']);
+            $this->expectException(\UnexpectedValueException::class);
+            $this->expectExceptionMessage('XSD bytes changed');
+            $inspector->comparePinned(
+                $file,
+                static fn (string $url): string => $restricted
+            );
+        } finally {
+            unlink($file);
+        }
+    }
+
     public function testForbidsUntrustedSchemaSource(): void
     {
         $this->expectException(\InvalidArgumentException::class);

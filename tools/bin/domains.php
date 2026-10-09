@@ -86,14 +86,11 @@ try {
         );
         echo "UNPINNED source: {$sha}; review provenance before adding to trusted manifest\n";
     } elseif ($command === 'schema-packages') {
-        foreach (['production-url', 'restricted-url', 'report'] as $name) {
-            if (!isset($options[$name])) {
-                throw new InvalidArgumentException("Missing --{$name}=VALUE");
-            }
+        if (!isset($options['report'])) {
+            throw new InvalidArgumentException('Missing --report=PATH');
         }
-        $comparison = (new OfficialXsdPackageInspector())->compareOfficial(
-            $options['production-url'],
-            $options['restricted-url'],
+        $comparison = (new OfficialXsdPackageInspector())->comparePinned(
+            $options['manifest'] ?? $root . '/resources/domains/sources.json',
             SourceVerifier::fetchOfficial(...)
         );
         $json = json_encode($comparison, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES
@@ -103,8 +100,8 @@ try {
         }
         echo 'Production XSD package: ' . $comparison['production']['sha256']
             . '; Restricted XSD package: ' . $comparison['restricted']['sha256'] . "\n";
-        echo 'File comparison: ' . json_encode(array_count_values(
-            $comparison['file_comparison']
+        echo 'XSD byte comparison by filename: ' . json_encode(array_count_values(
+            $comparison['basename_comparison']
         ), JSON_THROW_ON_ERROR) . "\n";
     } elseif ($command === 'contract-matrix') {
         foreach (['legacy-annex', 'annex-vi', 'output'] as $name) {

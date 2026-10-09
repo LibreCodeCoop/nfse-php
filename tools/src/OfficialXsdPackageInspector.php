@@ -82,6 +82,61 @@ final class OfficialXsdPackageInspector
     }
 
     /**
+     * Compare only the explicitly pinned official production and restricted
+     * packages. The manifest is the single source of URLs and observed hashes.
+     *
+     * @param callable(string): string $fetch
+     * @return array<string,mixed>
+     */
+    public function comparePinned(string $manifestPath, callable $fetch): array
+    {
+        $json = @file_get_contents($manifestPath);
+        if ($json === false) {
+            throw new \RuntimeException('Missing official schema provenance manifest');
+        }
+        $manifest = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
+        if (!is_array($manifest) || !is_array($manifest['sources'] ?? null)) {
+            throw new \UnexpectedValueException('Malformed official source manifest');
+        }
+
+        $ids = ['xsd-production-20260209', 'xsd-restricted-20260727'];
+        $found = [];
+        foreach ($manifest['sources'] as $entry) {
+            if (!is_array($entry) || !in_array($entry['id'] ?? null, $ids, true)) {
+                continue;
+            }
+            $id = $entry['id'];
+            if (isset($found[$id]) || ($entry['type'] ?? null) !== 'zip'
+                || !is_string($entry['url'] ?? null)
+                || !is_string($entry['observed_sha256'] ?? null)
+                || preg_match('/^[a-f0-9]{64}$/D', $entry['observed_sha256']) !== 1) {
+                throw new \UnexpectedValueException('Invalid or duplicate pinned XSD source: ' . $id);
+            }
+            $found[$id] = $entry;
+        }
+        foreach ($ids as $id) {
+            if (!isset($found[$id])) {
+                throw new \UnexpectedValueException('Missing pinned official XSD source: ' . $id);
+            }
+        }
+        $result = $this->compareOfficial(
+            $found[$ids[0]]['url'],
+            $found[$ids[1]]['url'],
+            $fetch
+        );
+        foreach (['production', 'restricted'] as $index => $environment) {
+            $expected = $found[$ids[$index]]['observed_sha256'];
+            if (!hash_equals($expected, $result[$environment]['sha256'])) {
+                throw new \UnexpectedValueException(
+                    'Published ' . $environment . ' XSD bytes changed from the reviewed manifest'
+                );
+            }
+        }
+
+        return $result;
+    }
+
+    /**
      * @param array<string, string> $files
      * @return array<string, list<string>>
      */

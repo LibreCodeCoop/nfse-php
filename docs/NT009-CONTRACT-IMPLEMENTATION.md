@@ -166,3 +166,28 @@ staging environment. Do not pin this unmerged PR's SHA in the consumer.
 
 **Issue #95 must remain open.** Offline tests and a structural preview prove
 the library can express part of NT009; they do not establish fiscal conformity.
+
+## Official XSD ZIP provenance
+
+Two distinct v1.01 packages have now been independently downloaded and
+their archive bytes recorded:
+
+| Environment | Published archive | Observed SHA-256 |
+| --- | --- | --- |
+| Production | `nfse-esquemas_xsd-v1-01-20260209.zip` | `e7935cbd9470527c6cc32984c1b2263e614183bf0139ce2733eaaed2de9a8072` |
+| Restricted production | `esquemas-nfse-rtc-v1-01-20260727.zip` | `6c7e0510d3ecff4454f291f4e10b742d27a4818f23aab181494f96d0ea79f3dc` |
+
+The `schema-packages` PHP command downloads only these pinned official
+manifest URLs, validates both ZIP hashes and compares the hash of each XSD
+by its full relative ZIP path and by basename (allowing repeated basenames
+in separate folders). Raw ZIP metadata differences do not establish
+semantic differences between equivalent XSD files; the per-file hashes
+are the evidence for actual schema-byte differences. Run:
+
+```sh
+composer domains:install
+php tools/bin/domains.php schema-packages --report=/tmp/nfse-xsd-comparison.json
+```
+
+These packages cannot independently prove an NT009 v1.04.01 rollout, which
+is a separate contractual/effective-date gate.
