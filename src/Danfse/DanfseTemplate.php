@@ -152,6 +152,7 @@ final class DanfseTemplate
                 'codigo_trib_nacional'  => $this->formatter->codTribNacional($this->val($cServ, 'cTribNac')),
                 'desc_trib_nacional'    => $this->formatter->limit(trim($this->val($infNfse, 'xTribNac')), 60),
                 'codigo_trib_municipal' => $this->val($cServ, 'cTribMun') ?: '-',
+                'codigo_nbs'           => $this->val($cServ, 'cNBS') ?: '-',
                 'desc_trib_municipal'   => $this->formatter->limit(trim($this->val($infNfse, 'xTribMun')), 60),
                 'local_prestacao'       => $this->val($infNfse, 'xLocPrestacao') ?: '-',
                 'pais_prestacao'        => $this->val($serv, 'locPrest', 'cPaisPrestacao') ?: '-',
