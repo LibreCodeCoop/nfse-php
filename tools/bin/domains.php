@@ -8,8 +8,8 @@ declare(strict_types=1);
 
 use LibreCodeCoop\NfsePHP\Tools\AnnexReader;
 use LibreCodeCoop\NfsePHP\Tools\DomainTableGenerator;
-use LibreCodeCoop\NfsePHP\Tools\Nt009Inspector;
 use LibreCodeCoop\NfsePHP\Tools\Nt009ContractMatrix;
+use LibreCodeCoop\NfsePHP\Tools\Nt009Inspector;
 use LibreCodeCoop\NfsePHP\Tools\OfficialAnnexDownloader;
 use LibreCodeCoop\NfsePHP\Tools\PortalIndexDiscovery;
 use LibreCodeCoop\NfsePHP\Tools\SourceVerifier;

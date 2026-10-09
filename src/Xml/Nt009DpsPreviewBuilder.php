@@ -197,8 +197,8 @@ final class Nt009DpsPreviewBuilder
             if (!$allowed) {
                 throw new \InvalidArgumentException('NT009 gIBSCBSAjuste is forbidden for this adjustment-note type');
             }
-            if (preg_match('/^[0-9]{1,15}\\.[0-9]{2}$/D', $preview->valorAjusteIbs) !== 1
-                || preg_match('/^[0-9]{1,15}\\.[0-9]{2}$/D', (string) $preview->valorAjusteCbs) !== 1) {
+            if (preg_match('/^[0-9]{1,15}\.[0-9]{2}$/D', $preview->valorAjusteIbs) !== 1
+                || preg_match('/^[0-9]{1,15}\.[0-9]{2}$/D', (string) $preview->valorAjusteCbs) !== 1) {
                 throw new \InvalidArgumentException('NT009 gIBSCBSAjuste requires decimal vIBS and vCBS strings');
             }
         }

@@ -45,8 +45,10 @@ final class Nt009ContractMatrixTest extends TestCase
         $matrix = new Nt009ContractMatrix();
         $rows = $matrix->compare($old, $new);
         self::assertCount(5, $rows);
-        self::assertSame(['added', 'added', 'changed', 'removed', 'removed'],
-            array_column($rows, 'status'));
+        self::assertSame(
+            ['added', 'added', 'changed', 'removed', 'removed'],
+            array_column($rows, 'status')
+        );
         self::assertSame('1-1', $rows[2]['old_occurrence']);
         self::assertSame('0-1', $rows[2]['new_occurrence']);
         self::assertSame('Condicional', $rows[2]['new_condition']);
