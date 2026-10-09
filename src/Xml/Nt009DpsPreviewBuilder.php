@@ -73,13 +73,35 @@ final class Nt009DpsPreviewBuilder
             }
         }
 
-        // In Annex VI, indDest and dest are outside IBSCBS, after toma and
-        // before interm/serv. No speculative recipient identity is inferred.
-        $beforeService = $this->child($infDps, 'serv');
-        if ($beforeService === null) {
-            throw new \LogicException('Missing legacy service group');
+        // indDest and dest precede the intermediary and service groups.
+        $beforeRecipient = $this->child($infDps, 'interm') ?? $this->child($infDps, 'serv');
+        if (!$beforeRecipient instanceof \DOMElement) {
+            throw new \LogicException('Missing NT009 recipient insertion anchor');
         }
-        $infDps->insertBefore($document->createElement('indDest', (string) $preview->indicadorDestinatario), $beforeService);
+        $infDps->insertBefore(
+            $document->createElement('indDest', (string) $preview->indicadorDestinatario),
+            $beforeRecipient
+        );
+        if ($preview->destinatario !== null) {
+            if ($preview->indicadorDestinatario !== 1) {
+                throw new \InvalidArgumentException('NT009 dest is not allowed when indDest=0');
+            }
+            $recipient = (new Nt009RecipientPreviewGroup())->build($document, $preview->destinatario);
+            $infDps->insertBefore($recipient, $beforeRecipient);
+        }
+
+        // The new vAjusteBC replaces the old vDedRed, which is rejected above.
+        if ($preview->ajusteBase !== null) {
+            $rootValues = $this->child($infDps, 'valores');
+            $municipalTax = $rootValues instanceof \DOMElement ? $this->child($rootValues, 'trib') : null;
+            if (!$rootValues instanceof \DOMElement || !$municipalTax instanceof \DOMElement) {
+                throw new \LogicException('Missing NT009 valores/trib insertion anchor');
+            }
+            $rootValues->insertBefore(
+                (new Nt009BaseAdjustmentPreviewGroup())->build($document, $preview->ajusteBase),
+                $municipalTax
+            );
+        }
 
         if ($preview->cst !== null) {
             $ibs = $document->createElement('IBSCBS');
@@ -88,6 +110,13 @@ final class Nt009DpsPreviewBuilder
             }
             if ($preview->codigoIndicadorOperacao !== null) {
                 $ibs->appendChild($document->createElement('cIndOp', $preview->codigoIndicadorOperacao));
+            }
+            foreach ((new Nt009MovableAssetsPreviewGroup())->build(
+                $document,
+                $preview->bensMoveis,
+                $dps->codigoTributacaoNacional
+            ) as $asset) {
+                $ibs->appendChild($asset);
             }
             $valores = $document->createElement('valores');
             $trib = $document->createElement('trib');
@@ -109,6 +138,11 @@ final class Nt009DpsPreviewBuilder
             }
             $valores->appendChild($trib);
             $ibs->appendChild($valores);
+            if ($preview->pagamentosVinculados !== []) {
+                $ibs->appendChild(
+                    (new Nt009LinkedPaymentsPreviewGroup())->build($document, $preview->pagamentosVinculados)
+                );
+            }
             $infDps->appendChild($ibs);
         }
 
@@ -156,7 +190,9 @@ final class Nt009DpsPreviewBuilder
             || $preview->codigoCreditoPresumido !== null
             || $preview->valorAjusteIbs !== null
             || $preview->valorAjusteCbs !== null
-            || $preview->exigeGrupoIbsCbs !== null;
+            || $preview->exigeGrupoIbsCbs !== null
+            || $preview->bensMoveis !== []
+            || $preview->pagamentosVinculados !== [];
 
         if (!$hasIbs) {
             return;
