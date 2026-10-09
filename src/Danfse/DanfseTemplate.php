@@ -164,9 +164,9 @@ final class DanfseTemplate
                 'regime_especial'      => RegimeEspecialTributacao::labelFor($this->val($regTrib, 'regEspTrib')),
                 'valor_servico'        => $this->formatter->currency($this->val($valores, 'vServPrest', 'vServ')),
                 'bc_issqn'             => $this->currencyOrDash($this->val($authorizedValues, 'vBC')),
-                'aliquota'             => $this->percentOrDash($this->val($authorizedValues, 'pAliqAplic')), 
+                'aliquota'             => $this->percentOrDash($this->val($authorizedValues, 'pAliqAplic')),
                 'retencao_issqn'       => TipoRetencaoISSQN::labelFor($this->val($tribMun, 'tpRetISSQN')),
-                'issqn_apurado'        => $this->currencyOrDash($this->val($authorizedValues, 'vISSQN')), 
+                'issqn_apurado'        => $this->currencyOrDash($this->val($authorizedValues, 'vISSQN')),
             ],
 
             'tributacao_federal' => [
