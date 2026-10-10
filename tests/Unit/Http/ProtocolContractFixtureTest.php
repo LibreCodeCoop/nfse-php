@@ -144,6 +144,23 @@ final class ProtocolContractFixtureTest extends TestCase
         $this->nfseClient($transport)->query('ACCESS-42');
     }
 
+    public function testInvalidGatewayResponseDoesNotExposeBodyInException(): void
+    {
+        $sensitiveMarker = 'SYNTHETIC_SECRET_DO_NOT_LOG';
+        $body = '<html><p>' . $sensitiveMarker . '</p></html>';
+        $transport = new FakeHttpTransport(new HttpResponseData(status: 200, body: $body));
+
+        try {
+            $this->nfseClient($transport)->query('ACCESS-42');
+            self::fail('Expected unparseable gateway response to be rejected.');
+        } catch (NetworkException $error) {
+            self::assertSame(NfseErrorCode::InvalidResponse, $error->errorCode);
+            self::assertSame('Unexpected non-JSON response from SEFIN gateway', $error->getMessage());
+            self::assertStringNotContainsString($sensitiveMarker, $error->getMessage());
+            self::assertStringNotContainsString('<html>', $error->getMessage());
+        }
+    }
+
     public function testAdnDistributionFixtureDecodesDistributedDocument(): void
     {
         $fixture = $this->fixture('adn/distribution-one-document.json');

@@ -359,10 +359,10 @@ class NfseClient implements NfseClientInterface, CancellationClientInterface, De
         try {
             $decoded = json_decode($body, true, 512, JSON_THROW_ON_ERROR);
         } catch (\JsonException $e) {
-            $responsePreview = trim(substr(strip_tags($body), 0, 180));
-
+            // Upstream responses can contain personal data or secrets.
+            // Never include an untrusted response body in exception messages.
             throw new NetworkException(
-                'Unexpected non-JSON response from SEFIN gateway' . ($responsePreview !== '' ? ': ' . $responsePreview : ''),
+                'Unexpected non-JSON response from SEFIN gateway',
                 NfseErrorCode::InvalidResponse,
                 $e,
             );
