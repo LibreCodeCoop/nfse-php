@@ -44,11 +44,13 @@ final class NativeStreamTransport implements HttpTransportInterface
         ]);
 
         $http_response_header = [];
-        $body = file_get_contents($request->url, false, $context);
+        // PHP stream warnings may contain full URLs, including fiscal identifiers.
+        // Do not expose those values through logs or error messages.
+        $body = @file_get_contents($request->url, false, $context);
         $status = $this->parseHttpStatus($http_response_header);
 
         if ($body === false && $status === 0) {
-            throw new NetworkException('Failed to connect to fiscal gateway at ' . $request->url);
+            throw new NetworkException('Failed to connect to fiscal gateway');
         }
 
         return new HttpResponseData(

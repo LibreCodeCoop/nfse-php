@@ -38,30 +38,31 @@ class SandboxMtlsHeadTest extends TestCase
             self::markTestSkipped('Configured PFX file does not exist for mTLS test.');
         }
 
-        $cmd = sprintf(
-            'curl --silent --show-error --output /dev/null --write-out "%%{http_code}" --head --cert-type P12 --cert %s %s; echo "|exit:$?"',
-            escapeshellarg($pfxPath . ':' . $pfxPassword),
-            escapeshellarg($url)
-        );
-
-        $result = shell_exec($cmd);
-
-        self::assertNotFalse($result, 'curl execution failed');
-
-        $result = trim((string) $result);
-
-        if (!str_contains($result, '|exit:')) {
-            self::fail('Unexpected curl result format.');
+        // Use the PHP curl API so the PFX password never appears on a
+        // shell command line or in a process argument list.
+        if (!extension_loaded('curl')) {
+            self::markTestSkipped('The optional ext-curl extension is required for the mTLS smoke test.');
         }
 
-        [$httpCode, $exitPart] = explode('|exit:', $result, 2);
-        $httpCode = trim($httpCode);
-        $exitCode = (int) trim($exitPart);
+        $handle = curl_init($url);
+        self::assertInstanceOf(\CurlHandle::class, $handle);
+        curl_setopt_array($handle, [
+            CURLOPT_NOBODY => true,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_SSLCERT => $pfxPath,
+            CURLOPT_SSLCERTTYPE => 'P12',
+            CURLOPT_KEYPASSWD => $pfxPassword,
+            CURLOPT_TIMEOUT => 20,
+        ]);
 
-        if ($exitCode !== 0) {
-            self::markTestSkipped('mTLS curl failed in local runtime (likely OpenSSL/PFX compatibility).');
+        $result = curl_exec($handle);
+        $httpCode = (int) curl_getinfo($handle, CURLINFO_HTTP_CODE);
+        curl_close($handle);
+
+        if ($result === false) {
+            self::markTestSkipped('mTLS connectivity is unavailable in this local test environment.');
         }
 
-        self::assertContains($httpCode, ['200', '401', '403', '404']);
+        self::assertContains($httpCode, [200, 401, 403, 404]);
     }
 }

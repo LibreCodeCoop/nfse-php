@@ -16,6 +16,7 @@ use LibreCodeCoop\NfsePHP\Dto\DpsData;
 use LibreCodeCoop\NfsePHP\Dto\HttpResponseData;
 use LibreCodeCoop\NfsePHP\Exception\GatewayException;
 use LibreCodeCoop\NfsePHP\Exception\NetworkException;
+use LibreCodeCoop\NfsePHP\Exception\NfseErrorCode;
 use LibreCodeCoop\NfsePHP\Http\AdnClient;
 use LibreCodeCoop\NfsePHP\Http\MunicipalParametersClient;
 use LibreCodeCoop\NfsePHP\Http\NfseClient;
@@ -142,6 +143,23 @@ final class ProtocolContractFixtureTest extends TestCase
         $this->expectExceptionMessage('Unexpected non-JSON response');
 
         $this->nfseClient($transport)->query('ACCESS-42');
+    }
+
+    public function testInvalidGatewayResponseDoesNotExposeBodyInException(): void
+    {
+        $sensitiveMarker = 'SYNTHETIC_SECRET_DO_NOT_LOG';
+        $body = '<html><p>' . $sensitiveMarker . '</p></html>';
+        $transport = new FakeHttpTransport(new HttpResponseData(status: 200, body: $body));
+
+        try {
+            $this->nfseClient($transport)->query('ACCESS-42');
+            self::fail('Expected unparseable gateway response to be rejected.');
+        } catch (NetworkException $error) {
+            self::assertSame(NfseErrorCode::InvalidResponse, $error->errorCode);
+            self::assertSame('Unexpected non-JSON response from SEFIN gateway', $error->getMessage());
+            self::assertStringNotContainsString($sensitiveMarker, $error->getMessage());
+            self::assertStringNotContainsString('<html>', $error->getMessage());
+        }
     }
 
     public function testAdnDistributionFixtureDecodesDistributedDocument(): void

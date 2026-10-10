@@ -3,125 +3,51 @@ SPDX-FileCopyrightText: 2026 LibreCode coop and contributors
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
-# nfse-php
+# NFS-e Nacional em PHP — nfse-php
 
-> Framework-agnostic PHP library for issuing, querying, and cancelling **Nota Fiscal de Serviço Eletrônica (NFS-e)** via SEFIN Nacional (ABRASF 2.04 / SEFIN 1.0).
+**Biblioteca PHP livre para integrar a Nota Fiscal de Serviço Eletrônica (NFS-e) no padrão nacional**, sem exigir Laravel, Akaunting ou outro framework.
 
-[![Latest Version](https://img.shields.io/packagist/v/librecodeoop/nfse-php?style=flat-square)](https://packagist.org/packages/librecodeoop/nfse-php)
-[![PHP Version](https://img.shields.io/packagist/php-v/librecodeoop/nfse-php?style=flat-square)](https://packagist.org/packages/librecodeoop/nfse-php)
-[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg?style=flat-square)](https://www.gnu.org/licenses/agpl-3.0)
+[![Packagist](https://img.shields.io/packagist/v/librecodeoop/nfse-php)](https://packagist.org/packages/librecodeoop/nfse-php)
+[![PHP](https://img.shields.io/packagist/php-v/librecodeoop/nfse-php)](https://packagist.org/packages/librecodeoop/nfse-php)
 [![CI](https://github.com/LibreCodeCoop/nfse-php/actions/workflows/phpunit.yml/badge.svg)](https://github.com/LibreCodeCoop/nfse-php/actions/workflows/phpunit.yml)
-[![codecov](https://codecov.io/gh/LibreCodeCoop/nfse-php/branch/main/graph/badge.svg)](https://codecov.io/gh/LibreCodeCoop/nfse-php)
 
-## Scope
+> **English:** Framework-agnostic PHP library for Brazil's National Electronic Service Invoice (NFS-e): DPS submission, consultation, cancellation, digital signing and DANFSe PDF generation.
 
-- Emit NFS-e (`emit`) with official receipt XML number extraction and fail-closed handling of incomplete responses
-- Query NFS-e (`query`)
-- Cancel NFS-e (`cancel`)
-- Generate the DANFSe PDF locally from the NFS-e XML (`getDanfse` / `Danfse\DanfseGenerator`)
-- Sign DPS XML with PFX credentials
-- Read secrets from OpenBao/Vault or an in-memory store
+## Integre a NFS-e sem reimplementar o protocolo fiscal
 
-## Installation
+Integrar aplicações ao Sistema Nacional NFS-e envolve XML, assinatura digital, certificados, comunicação com a SEFIN e interpretação dos documentos autorizados. O **nfse-php** reúne essas responsabilidades em componentes PHP reutilizáveis, para que equipes concentrem esforços nas funcionalidades do seu sistema.
+
+O projeto é útil para desenvolvedores de ERP, sistemas de gestão, plataformas SaaS e integrações que precisam incorporar fluxos de NFS-e Nacional.
+
+## O que a biblioteca oferece
+
+- **Emissão, consulta e cancelamento de NFS-e** por meio dos contratos de integração SEFIN implementados.
+- **Assinatura digital da DPS**, com certificado e recursos de proteção de credenciais.
+- **Geração local da DANFSe em PDF**, a partir do XML autorizado, sem depender da aparência de um sistema de gestão específico.
+- **Integração com OpenBao/HashiCorp Vault**, além de interfaces que permitem adaptar o armazenamento de segredos.
+- **Consulta de documentos e eventos via ADN**, separada do fluxo de emissão SEFIN.
+- **Validação de XML e assinaturas** com distinção explícita entre integridade criptográfica e confiança na cadeia de certificados.
+
+A biblioteca não decide automaticamente o enquadramento tributário de cada operação, não substitui orientação fiscal e não presume que novos leiautes publicados já estejam ativos em produção.
+
+## Comece pelo Composer
 
 ```bash
 composer require librecodeoop/nfse-php
 ```
 
-## Quick Start
+Veja a [integração PHP](docs/integracao.md), os [contratos de emissão](docs/nt009.md) e as [garantias da DANFSe](docs/danfse-v2-rendering.md) antes de conectar um ambiente de produção.
 
-```php
-use LibreCodeCoop\NfsePHP\Config\CertConfig;
-use LibreCodeCoop\NfsePHP\Config\EnvironmentConfig;
-use LibreCodeCoop\NfsePHP\Dto\DpsData;
-use LibreCodeCoop\NfsePHP\Http\NfseClient;
-use LibreCodeCoop\NfsePHP\SecretStore\OpenBaoSecretStore;
+## Para quem é
 
-$store  = new OpenBaoSecretStore(addr: 'http://localhost:8200', token: getenv('VAULT_TOKEN'));
-$env    = new EnvironmentConfig(sandboxMode: true);
-$cert   = new CertConfig(
-    cnpj: '11222333000181',
-    pfxPath: '/secure/path/certificate.pfx',
-    vaultPath: 'pfx/11222333000181',
-);
+Esta é uma **biblioteca independente**: não precisa do Akaunting e não exige que uma aplicação utilize os mesmos componentes de infraestrutura da LibreCode. Quem desenvolve módulos, conectores ou sistemas próprios pode usar os contratos públicos e adaptar as dependências ao seu contexto.
 
-$client = new NfseClient(environment: $env, cert: $cert, secretStore: $store);
+Para integrar NFS-e diretamente no **Akaunting**, conheça o [módulo akaunting-nfse](https://github.com/LibreCodeCoop/akaunting-nfse), mantido separadamente.
 
-$dps = new DpsData(
-    cnpjPrestador: '11222333000181', // Example only: configure with your provider CNPJ
-    municipioIbge: '3303302',
-    // ... other fields
-);
+## Suporte profissional e evolução do projeto
 
-$receipt = $client->emit($dps);
-echo $receipt->nfseNumber; // NFS-e number returned by the SEFIN gateway
-```
+A [LibreCode](https://librecodecoop.org.br) desenvolve soluções livres e oferece consultoria, integração, adaptações, suporte técnico e manutenção para equipes que precisam operar NFS-e em seus sistemas.
 
-## Current production issuance contract
+**Contato comercial:** [comercial@librecodecoop.org.br](mailto:comercial@librecodecoop.org.br)
 
-The supported production issuance path is `NfseClient::emit(DpsData)` against
-the officially deployed DPS v1.01 layout. The API's successful `POST /nfse`
-response provides `chaveAcesso` and the authorized `nfseXmlGZipB64`.
-The invoice number `nNFSe` is read from the authorized XML when it is not
-duplicated in the JSON response. An incomplete 2xx response is **ambiguous**,
-not proof of issuance: reconcile using `queryDps` then `query` before any
-new POST. The signer and mTLS certificate must be configured for the target
-environment; tests do not replace actual SEFIN acceptance.
-
-NT009 draft preview APIs remain strictly non-emitting until an effective
-environment-specific official XSD and activation have been verified. Do not
-pass their XML to `emit()` or update a downstream version pin based only
-on a draft layout.
-
-For supported preview APIs, source verification and the activation boundary,
-see [NT009 contract guide](docs/nt009.md).
-
-## Secret Storage with OpenBao
-
-PFX passwords are stored in OpenBao (or Vault) KV v2, for example in `nfse/pfx/{cnpj}`.
-
-```php
-use LibreCodeCoop\NfsePHP\SecretStore\OpenBaoSecretStore;
-
-$store = new OpenBaoSecretStore(
-    addr:      getenv('VAULT_ADDR'),   // e.g. http://openbao:8200
-    roleId:    getenv('VAULT_ROLE_ID'),
-    secretId:  getenv('VAULT_SECRET_ID'),
-    mount:     'nfse',               // KV v2 mount
-);
-
-// Store the PFX password after upload
-$store->put('pfx/11222333000181', ['password' => 'secret']);
-
-// Retrieve during signing
-$password = $store->get('pfx/11222333000181')['password'];
-```
-
-For development/CI without OpenBao, use `NoOpSecretStore` (in-memory only, no server calls).
-
-## Contributing
-
-All commits must use [Conventional Commits](https://www.conventionalcommits.org/) and be signed off (`git commit -s`).
-
-## Give us a star!
-
-If this library saves you hours of integration pain, please ⭐ the repository.  
-It helps other developers discover the project and motivates the team to keep improving it.
-
-## ADN contributor distribution
-
-Use `Http\\AdnClient` for the contributor ADN API. It is intentionally separate from `NfseClient`: SEFIN handles issuance/query/cancellation, while ADN distributes NFS-e, DPS and event documents by NSU or access key.
-
-
-### XML signature integrity vs certificate trust
-
-`XmlSignatureVerifier` answers only whether XMLDSig references and the signature
-are cryptographically consistent with the certificate embedded in `KeyInfo`.
-It does **not** establish ICP-Brasil trust.
-
-Use `CertificateTrustValidator` separately when consuming signed documents. The
-caller supplies its trust-anchor files and may inject a bounded
-`CertificateRevocationCheckerInterface` implementation. The structured result
-keeps signature integrity, certificate validity dates, chain trust and
-revocation status separate. Deterministic tests can therefore use generated
-certificates without claiming ICP-Brasil trust.
+O código é aberto à comunidade. Contribuições, relatos de problemas e melhorias são bem-vindos; consulte [CONTRIBUTING.md](CONTRIBUTING.md) e as [issues](https://github.com/LibreCodeCoop/nfse-php/issues).
