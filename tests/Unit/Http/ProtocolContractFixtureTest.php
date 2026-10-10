@@ -16,6 +16,7 @@ use LibreCodeCoop\NfsePHP\Dto\DpsData;
 use LibreCodeCoop\NfsePHP\Dto\HttpResponseData;
 use LibreCodeCoop\NfsePHP\Exception\GatewayException;
 use LibreCodeCoop\NfsePHP\Exception\NetworkException;
+use LibreCodeCoop\NfsePHP\Exception\NfseErrorCode;
 use LibreCodeCoop\NfsePHP\Http\AdnClient;
 use LibreCodeCoop\NfsePHP\Http\MunicipalParametersClient;
 use LibreCodeCoop\NfsePHP\Http\NfseClient;
