@@ -115,8 +115,8 @@ final class DanfseTemplate
                 'nome'            => $this->val($emit, 'xNome') ?: '-',
                 'cnpj_cpf'        => $this->formattedDocument($emit),
                 'im'              => $this->val($prest, 'IM') ?: '-',
-                'telefone'        => $this->formatter->phone($this->val($emit, 'fone')),
-                'email'           => strtolower($this->val($emit, 'email')),
+                'telefone'        => $this->formatter->phone($this->val($prest, 'fone') ?: $this->val($emit, 'fone')),
+                'email'           => strtolower($this->val($prest, 'email') ?: $this->val($emit, 'email')),
                 'endereco'        => $this->address($enderEmit),
                 'municipio'       => $this->cityWithUf($this->val($infNfse, 'xLocEmi'), $this->val($enderEmit, 'UF')),
                 'cep'             => $this->formatter->cep($this->val($enderEmit, 'CEP')),
@@ -152,16 +152,24 @@ final class DanfseTemplate
                 'codigo_trib_nacional'  => $this->formatter->codTribNacional($this->val($cServ, 'cTribNac')),
                 'desc_trib_nacional'    => $this->formatter->limit(trim($this->val($infNfse, 'xTribNac')), 60),
                 'codigo_trib_municipal' => $this->val($cServ, 'cTribMun') ?: '-',
-                'codigo_nbs'           => $this->val($cServ, 'cNBS') ?: '-',
+                'codigo_nbs'           => $this->formattedNbs($this->val($cServ, 'cNBS')),
                 'desc_trib_municipal'   => $this->formatter->limit(trim($this->val($infNfse, 'xTribMun')), 60),
-                'local_prestacao'       => $this->val($infNfse, 'xLocPrestacao') ?: '-',
+                'local_prestacao'       => $this->locationWithUfAndCountry(
+                    $this->val($infNfse, 'xLocPrestacao'),
+                    $this->val($serv, 'locPrest', 'cLocPrestacao'),
+                    $this->val($serv, 'locPrest', 'cPaisPrestacao'),
+                ),
                 'pais_prestacao'        => $this->val($serv, 'locPrest', 'cPaisPrestacao') ?: '-',
                 'descricao'             => $this->val($cServ, 'xDescServ') ?: '-',
             ],
 
             'tributacao_municipal' => [
                 'tributacao_issqn'     => TributacaoISSQN::labelFor($this->val($tribMun, 'tribISSQN')),
-                'municipio_incidencia' => $this->val($infNfse, 'xLocIncid') ?: '-',
+                'municipio_incidencia' => $this->locationWithUfAndCountry(
+                    $this->val($infNfse, 'xLocIncid'),
+                    $this->val($infNfse, 'cLocIncid'),
+                    '',
+                ),
                 'regime_especial'      => RegimeEspecialTributacao::labelFor($this->val($regTrib, 'regEspTrib')),
                 'valor_servico'        => $this->formatter->currency($this->val($valores, 'vServPrest', 'vServ')),
                 'bc_issqn'             => $this->currencyOrDash($this->val($authorizedValues, 'vBC')),
@@ -314,6 +322,35 @@ final class DanfseTemplate
         ], static fn (string $value): bool => $value !== '');
 
         return $parts === [] ? '-' : implode(', ', $parts);
+    }
+
+    /**
+     * Show the municipality, UF and an optional country only when present in
+     * the authorized XML. The UF is resolved from the official IBGE code.
+     */
+    private function locationWithUfAndCountry(string $city, string $ibge, string $country): string
+    {
+        $city = trim($city);
+        $uf = '';
+        if (preg_match('/^\\d{7}$/D', $ibge) === 1) {
+            $resolved = Municipios::lookup($ibge);
+            if ($resolved !== $ibge && str_contains($resolved, ' - ')) {
+                $uf = substr($resolved, (int) strrpos($resolved, ' - ') + 3);
+            }
+        }
+
+        return ($city !== '' ? $city : '-') . ' / ' . ($uf !== '' ? $uf : '-') . ' / '
+            . ($country !== '' ? $country : '-');
+    }
+
+    private function formattedNbs(string $code): string
+    {
+        if (preg_match('/^\\d{9}$/D', $code) !== 1) {
+            return $code !== '' ? $code : '-';
+        }
+
+        return substr($code, 0, 1) . '.' . substr($code, 1, 4) . '.'
+            . substr($code, 5, 2) . '.' . substr($code, 7, 2);
     }
 
     private function cityWithUf(string $city, string $uf): string
