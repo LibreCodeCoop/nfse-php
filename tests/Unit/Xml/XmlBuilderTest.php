@@ -29,6 +29,27 @@ class XmlBuilderTest extends TestCase
         $this->builder = new XmlBuilder();
     }
 
+    public function testOptionalProviderMunicipalRegistrationUsesOfficialPrestSequence(): void
+    {
+        $xml = $this->builder->buildDps($this->makeDps(prestadorInscricaoMunicipal: '12345678'));
+
+        $doc = new \DOMDocument();
+        self::assertTrue($doc->loadXML($xml));
+
+        $xpath = new \DOMXPath($doc);
+        $xpath->registerNamespace('n', 'http://www.sped.fazenda.gov.br/nfse');
+        self::assertSame('12345678', trim((string) $xpath->evaluate('string(//n:prest/n:IM)')));
+        self::assertStringContainsString('<IM>12345678</IM>', $xml);
+        self::assertLessThan(strpos($xml, '<fone>') ?: strlen($xml), strpos($xml, '<IM>'));
+    }
+
+    public function testProviderMunicipalRegistrationRejectsOversizedValueBeforeXmlIsEmitted(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+
+        $this->builder->buildDps($this->makeDps(prestadorInscricaoMunicipal: str_repeat('1', 16)));
+    }
+
     public function testBuildDpsReturnsWellFormedXml(): void
     {
         $dps = $this->makeDps();

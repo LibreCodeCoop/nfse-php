@@ -69,6 +69,13 @@ class XmlBuilder
         $cnpj  = $doc->createElement('CNPJ', $dps->cnpjPrestador);
         $prest->appendChild($cnpj);
 
+        if ($dps->prestadorInscricaoMunicipal !== '') {
+            if (mb_strlen($dps->prestadorInscricaoMunicipal) > 15) {
+                throw new \InvalidArgumentException('Provider municipal registration exceeds the official 15-character limit.');
+            }
+            $prest->appendChild($doc->createElement('IM', $dps->prestadorInscricaoMunicipal));
+        }
+
         if ($dps->prestadorTelefone !== '') {
             $prest->appendChild($doc->createElement('fone', $dps->prestadorTelefone));
         }
