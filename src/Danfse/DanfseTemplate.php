@@ -114,7 +114,7 @@ final class DanfseTemplate
             'emitente' => [
                 'nome'            => $this->val($emit, 'xNome') ?: '-',
                 'cnpj_cpf'        => $this->formattedDocument($emit),
-                'im'              => $this->val($prest, 'IM') ?: '-',
+                'im'              => $this->val($prest, 'IM') ?: $this->val($emit, 'IM') ?: '-',
                 'telefone'        => $this->formatter->phone($this->val($prest, 'fone') ?: $this->val($emit, 'fone')),
                 'email'           => strtolower($this->val($prest, 'email') ?: $this->val($emit, 'email')),
                 'endereco'        => $this->address($enderEmit),

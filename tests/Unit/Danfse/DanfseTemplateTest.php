@@ -72,6 +72,7 @@ class DanfseTemplateTest extends TestCase
     {
         $nfse = $this->fixtureNfseData();
         $dps = & $nfse['infNFSe']['DPS']['infDPS'];
+        $dps['prest']['IM'] = '12345678';
         $dps['prest']['fone'] = '21969203370';
         $dps['prest']['email'] = 'fiscal@example.org';
         unset($nfse['infNFSe']['emit']['fone'], $nfse['infNFSe']['emit']['email']);
@@ -83,6 +84,7 @@ class DanfseTemplateTest extends TestCase
 
         $data = (new DanfseTemplate())->buildData($nfse);
 
+        self::assertSame('12345678', $data['emitente']['im']);
         self::assertSame('(21) 96920-3370', $data['emitente']['telefone']);
         self::assertSame('fiscal@example.org', $data['emitente']['email']);
         self::assertSame('Niterói / RJ / -', $data['servico']['local_prestacao']);
