@@ -181,6 +181,8 @@ final class DanfseTemplate
             'tributacao_federal' => [
                 'irrf'   => $this->currencyOrDash($this->val($tribFed, 'vRetIRRF')),
                 'cp'     => $this->currencyOrDash($this->val($tribFed, 'vRetCP')),
+                'contribuicoes_sociais' => $this->currencyOrDash($this->val($tribFed, 'vRetCSLL')),
+                // Alias de compatibilidade para consumidores de buildData().
                 'csll'   => $this->currencyOrDash($this->val($tribFed, 'vRetCSLL')),
                 'pis'    => $this->currencyOrDash($this->val($tribFed, 'piscofins', 'vPis')),
                 'cofins' => $this->currencyOrDash($this->val($tribFed, 'piscofins', 'vCofins')),
@@ -426,6 +428,10 @@ final class DanfseTemplate
             '3' => '3 - PIS/COFINS/CSLL Retidos',
             '4' => '4 - PIS/COFINS Retidos, CSLL Não Retido',
             '5' => '5 - PIS Retido, COFINS/CSLL Não Retido',
+            '6' => '6 - COFINS Retido, PIS/CSLL Não Retido',
+            '7' => '7 - PIS Não Retido, COFINS/CSLL Retidos',
+            '8' => '8 - PIS/COFINS Não Retidos, CSLL Retido',
+            '9' => '9 - COFINS Não Retido, PIS/CSLL Retidos',
             default => '-',
         };
     }

@@ -364,7 +364,7 @@
                 <td class="section-header"><span class="section-title">TRIBUTAÇÃO FEDERAL (EXCETO CBS)</span></td>
                 <td><span class="label">IRRF</span><span class="value"><?= $data['tributacao_federal']['irrf'] ?></span></td>
                 <td><span class="label">Contribuição Previdenciária - Retida</span><span class="value"><?= $data['tributacao_federal']['cp'] ?></span></td>
-                <td><span class="label">Contribuições Sociais - Retidas</span><span class="value"><?= $data['tributacao_federal']['csll'] ?></span></td>
+                <td><span class="label">Contribuições Sociais - Retidas</span><span class="value"><?= $data['tributacao_federal']['contribuicoes_sociais'] ?></span></td>
             </tr>
             <tr>
                 <td><span class="label">PIS - Débito Apuração Própria</span><span class="value"><?= $data['tributacao_federal']['pis'] ?></span></td>

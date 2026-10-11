@@ -155,23 +155,51 @@ final class DanfseGoldenReferenceTest extends TestCase
         self::assertStringContainsString('DANFSe v2.0', $html);
     }
 
-    public function testFederalRetentionKeepsCsllSeparateFromPisAndCofins(): void
+    public function testFederalRetentionDisplaysConsolidatedPisCofinsWithoutCsll(): void
     {
         $nfse = $this->fixtureData();
         $nfse['infNFSe']['DPS']['infDPS']['valores']['trib']['tribFed']['piscofins']['tpRetPisCofins'] = '4';
-        unset($nfse['infNFSe']['DPS']['infDPS']['valores']['trib']['tribFed']['vRetCSLL']);
+        $nfse['infNFSe']['DPS']['infDPS']['valores']['trib']['tribFed']['vRetCSLL'] = '1149.75';
 
         $template = new DanfseTemplate();
         $data = $template->buildData($nfse);
         $html = $template->render($nfse, new DanfseConfig());
 
-        self::assertSame('-', $data['tributacao_federal']['csll']);
+        self::assertSame('R$ 1.149,75', $data['tributacao_federal']['contribuicoes_sociais']);
         self::assertSame(
             '4 - PIS/COFINS Retidos, CSLL Não Retido',
             $data['tributacao_federal']['descricao_retencao'],
         );
         self::assertStringContainsString('Contribuições Sociais - Retidas', $html);
+        self::assertStringContainsString('R$ 1.149,75', $html);
         self::assertStringContainsString('Tipo de retenção PIS/COFINS/CSLL', $html);
+    }
+
+    public function testNonRetainedSocialContributionsDoNotDisplayAnInventedAmount(): void
+    {
+        $nfse = $this->fixtureData();
+        $nfse['infNFSe']['DPS']['infDPS']['valores']['trib']['tribFed']['piscofins']['tpRetPisCofins'] = '0';
+        unset($nfse['infNFSe']['DPS']['infDPS']['valores']['trib']['tribFed']['vRetCSLL']);
+
+        $data = (new DanfseTemplate())->buildData($nfse);
+
+        self::assertSame('-', $data['tributacao_federal']['contribuicoes_sociais']);
+    }
+
+    public function testSocialRetentionLabelsSupportAllNt007Codes(): void
+    {
+        $nfse = $this->fixtureData();
+        $labels = [
+            '6' => '6 - COFINS Retido, PIS/CSLL Não Retido',
+            '7' => '7 - PIS Não Retido, COFINS/CSLL Retidos',
+            '8' => '8 - PIS/COFINS Não Retidos, CSLL Retido',
+            '9' => '9 - COFINS Não Retido, PIS/CSLL Retidos',
+        ];
+
+        foreach ($labels as $code => $label) {
+            $nfse['infNFSe']['DPS']['infDPS']['valores']['trib']['tribFed']['piscofins']['tpRetPisCofins'] = $code;
+            self::assertSame($label, (new DanfseTemplate())->buildData($nfse)['tributacao_federal']['descricao_retencao']);
+        }
     }
 
     public function testHomologationReferenceCarriesVisibleMarker(): void
