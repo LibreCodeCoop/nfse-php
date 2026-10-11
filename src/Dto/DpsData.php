@@ -39,6 +39,9 @@ final readonly class DpsData
         /** Optional provider e-mail published in the DPS. */
         public string $prestadorEmail = '',
 
+        /** Optional municipal registration of the provider (TSInscMun, 1-15 chars). */
+        public string $prestadorInscricaoMunicipal = '',
+
         /** Tipo de ambiente (1-Produção | 2-Homologação). */
         public int $tipoAmbiente = 2,
 

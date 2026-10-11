@@ -29,6 +29,27 @@ class XmlBuilderTest extends TestCase
         $this->builder = new XmlBuilder();
     }
 
+    public function testOptionalProviderMunicipalRegistrationUsesOfficialPrestSequence(): void
+    {
+        $xml = $this->builder->buildDps($this->makeDps(prestadorInscricaoMunicipal: '12345678'));
+
+        $doc = new \DOMDocument();
+        self::assertTrue($doc->loadXML($xml));
+
+        $xpath = new \DOMXPath($doc);
+        $xpath->registerNamespace('n', 'http://www.sped.fazenda.gov.br/nfse');
+        self::assertSame('12345678', trim((string) $xpath->evaluate('string(//n:prest/n:IM)')));
+        self::assertStringContainsString('<IM>12345678</IM>', $xml);
+        self::assertLessThan(strpos($xml, '<fone>') ?: strlen($xml), strpos($xml, '<IM>'));
+    }
+
+    public function testProviderMunicipalRegistrationRejectsOversizedValueBeforeXmlIsEmitted(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+
+        $this->builder->buildDps($this->makeDps(prestadorInscricaoMunicipal: str_repeat('1', 16)));
+    }
+
     public function testBuildDpsReturnsWellFormedXml(): void
     {
         $dps = $this->makeDps();
@@ -90,14 +111,14 @@ class XmlBuilderTest extends TestCase
     public function testBuildDpsPublishesOptionalProviderContact(): void
     {
         $xml = $this->builder->buildDps($this->makeDps(
-            prestadorTelefone: '21969203370',
-            prestadorEmail: 'adm@librecode.coop',
+            prestadorTelefone: '00900000000',
+            prestadorEmail: 'issuer@example.org',
         ));
 
         $normalized = str_replace(["\n", '  '], '', $xml);
 
         self::assertStringContainsString(
-            '<prest><CNPJ>11222333000181</CNPJ><fone>21969203370</fone><email>adm@librecode.coop</email><regTrib>',
+            '<prest><CNPJ>11222333000181</CNPJ><fone>00900000000</fone><email>issuer@example.org</email><regTrib>',
             $normalized,
         );
     }
@@ -944,6 +965,7 @@ class XmlBuilderTest extends TestCase
         string $discriminacao = 'Consultoria em TI',
         string $prestadorTelefone = '',
         string $prestadorEmail = '',
+        string $prestadorInscricaoMunicipal = '',
         string $serie = '00001',
         string $numeroDps = '1',
         bool $issRetido = false,
@@ -1002,6 +1024,7 @@ class XmlBuilderTest extends TestCase
             discriminacao:            $discriminacao,
             prestadorTelefone:         $prestadorTelefone,
             prestadorEmail:            $prestadorEmail,
+            prestadorInscricaoMunicipal: $prestadorInscricaoMunicipal,
             serie:                    $serie,
             numeroDps:                $numeroDps,
             codigoTributacaoNacional: $codigoTributacaoNacional,
