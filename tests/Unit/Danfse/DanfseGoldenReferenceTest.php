@@ -38,6 +38,9 @@ final class DanfseGoldenReferenceTest extends TestCase
         self::assertStringContainsString('TRIBUTAÇÃO MUNICIPAL (ISSQN)', $html);
         self::assertStringContainsString('BC ISSQN', $html);
         self::assertStringContainsString('VALOR LÍQUIDO DA NFS-e', $html);
+        // A Brazilian municipality authorizes deriving BR for display only;
+        // cPaisPrestacao remains absent from the issued domestic DPS XML.
+        self::assertStringContainsString('Niterói / RJ / BR', $html);
         self::assertStringContainsString('Nº NFS-e / CHAVE NFS-e', $html);
     }
 
