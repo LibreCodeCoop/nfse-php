@@ -111,14 +111,14 @@ class XmlBuilderTest extends TestCase
     public function testBuildDpsPublishesOptionalProviderContact(): void
     {
         $xml = $this->builder->buildDps($this->makeDps(
-            prestadorTelefone: '21969203370',
-            prestadorEmail: 'adm@librecode.coop',
+            prestadorTelefone: '00900000000',
+            prestadorEmail: 'issuer@example.org',
         ));
 
         $normalized = str_replace(["\n", '  '], '', $xml);
 
         self::assertStringContainsString(
-            '<prest><CNPJ>11222333000181</CNPJ><fone>21969203370</fone><email>adm@librecode.coop</email><regTrib>',
+            '<prest><CNPJ>11222333000181</CNPJ><fone>00900000000</fone><email>issuer@example.org</email><regTrib>',
             $normalized,
         );
     }
