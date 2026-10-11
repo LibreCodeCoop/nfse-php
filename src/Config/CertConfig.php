@@ -23,7 +23,7 @@ final readonly class CertConfig
         /** Absolute filesystem path to the PFX certificate bundle. */
         public string $pfxPath,
 
-        /** OpenBao KV path for the PFX password (e.g. "secret/nfse/29842527000145"). */
+        /** OpenBao KV path for the PFX password (e.g. "secret/nfse/11222333000181"). */
         public string $vaultPath,
 
         /** Optional PEM certificate path used for mTLS transport. */

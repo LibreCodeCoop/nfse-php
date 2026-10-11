@@ -18,16 +18,16 @@ class CertConfigTest extends TestCase
     public function testStoresAllProperties(): void
     {
         $config = new CertConfig(
-            cnpj:      '29842527000145',
+            cnpj:      '11222333000181',
             pfxPath:   '/etc/nfse/certs/company.pfx',
-            vaultPath: 'secret/nfse/29842527000145',
+            vaultPath: 'secret/nfse/11222333000181',
             transportCertificatePath: '/etc/nfse/certs/client.crt.pem',
             transportPrivateKeyPath: '/etc/nfse/certs/client.key.pem',
         );
 
-        self::assertSame('29842527000145', $config->cnpj);
+        self::assertSame('11222333000181', $config->cnpj);
         self::assertSame('/etc/nfse/certs/company.pfx', $config->pfxPath);
-        self::assertSame('secret/nfse/29842527000145', $config->vaultPath);
+        self::assertSame('secret/nfse/11222333000181', $config->vaultPath);
         self::assertSame('/etc/nfse/certs/client.crt.pem', $config->transportCertificatePath);
         self::assertSame('/etc/nfse/certs/client.key.pem', $config->transportPrivateKeyPath);
     }
@@ -35,9 +35,9 @@ class CertConfigTest extends TestCase
     public function testCnpjIsReadonly(): void
     {
         $config = new CertConfig(
-            cnpj:      '29842527000145',
+            cnpj:      '11222333000181',
             pfxPath:   '/etc/nfse/certs/company.pfx',
-            vaultPath: 'secret/nfse/29842527000145',
+            vaultPath: 'secret/nfse/11222333000181',
         );
 
         $this->expectException(\Error::class);
@@ -48,9 +48,9 @@ class CertConfigTest extends TestCase
     public function testPfxPathIsReadonly(): void
     {
         $config = new CertConfig(
-            cnpj:      '29842527000145',
+            cnpj:      '11222333000181',
             pfxPath:   '/etc/nfse/certs/company.pfx',
-            vaultPath: 'secret/nfse/29842527000145',
+            vaultPath: 'secret/nfse/11222333000181',
         );
 
         $this->expectException(\Error::class);
@@ -61,9 +61,9 @@ class CertConfigTest extends TestCase
     public function testVaultPathIsReadonly(): void
     {
         $config = new CertConfig(
-            cnpj:      '29842527000145',
+            cnpj:      '11222333000181',
             pfxPath:   '/etc/nfse/certs/company.pfx',
-            vaultPath: 'secret/nfse/29842527000145',
+            vaultPath: 'secret/nfse/11222333000181',
         );
 
         $this->expectException(\Error::class);
@@ -74,9 +74,9 @@ class CertConfigTest extends TestCase
     public function testTransportCertificatePathIsReadonly(): void
     {
         $config = new CertConfig(
-            cnpj:      '29842527000145',
+            cnpj:      '11222333000181',
             pfxPath:   '/etc/nfse/certs/company.pfx',
-            vaultPath: 'secret/nfse/29842527000145',
+            vaultPath: 'secret/nfse/11222333000181',
             transportCertificatePath: '/etc/nfse/certs/client.crt.pem',
         );
 
@@ -88,9 +88,9 @@ class CertConfigTest extends TestCase
     public function testTransportPrivateKeyPathIsReadonly(): void
     {
         $config = new CertConfig(
-            cnpj:      '29842527000145',
+            cnpj:      '11222333000181',
             pfxPath:   '/etc/nfse/certs/company.pfx',
-            vaultPath: 'secret/nfse/29842527000145',
+            vaultPath: 'secret/nfse/11222333000181',
             transportPrivateKeyPath: '/etc/nfse/certs/client.key.pem',
         );
 
