@@ -73,23 +73,25 @@ class DanfseTemplateTest extends TestCase
         $nfse = $this->fixtureNfseData();
         $dps = & $nfse['infNFSe']['DPS']['infDPS'];
         $dps['prest']['IM'] = '12345678';
-        $dps['prest']['fone'] = '21969203370';
+        // Deliberately invalid Brazilian DDD 00: never use a real person's phone in fixtures.
+        $dps['prest']['fone'] = '00900000000';
         $dps['prest']['email'] = 'fiscal@example.org';
         unset($nfse['infNFSe']['emit']['fone'], $nfse['infNFSe']['emit']['email']);
-        $nfse['infNFSe']['xLocPrestacao'] = 'Niterói';
-        $dps['serv']['locPrest']['cLocPrestacao'] = '3303302';
-        $nfse['infNFSe']['xLocIncid'] = 'Niterói';
-        $nfse['infNFSe']['cLocIncid'] = '3303302';
-        $dps['serv']['cServ']['cNBS'] = '115022000';
+        $nfse['infNFSe']['xLocPrestacao'] = 'Curitiba';
+        $dps['serv']['locPrest']['cLocPrestacao'] = '4106902';
+        $nfse['infNFSe']['xLocIncid'] = 'Curitiba';
+        $nfse['infNFSe']['cLocIncid'] = '4106902';
+        // Format-only fixture; deliberately not an official service classification.
+        $dps['serv']['cServ']['cNBS'] = '000000000';
 
         $data = (new DanfseTemplate())->buildData($nfse);
 
         self::assertSame('12345678', $data['emitente']['im']);
-        self::assertSame('(21) 96920-3370', $data['emitente']['telefone']);
+        self::assertSame('(00) 90000-0000', $data['emitente']['telefone']);
         self::assertSame('fiscal@example.org', $data['emitente']['email']);
-        self::assertSame('Niterói / RJ / -', $data['servico']['local_prestacao']);
-        self::assertSame('Niterói / RJ / -', $data['tributacao_municipal']['municipio_incidencia']);
-        self::assertSame('1.1502.20.00', $data['servico']['codigo_nbs']);
+        self::assertSame('Curitiba / PR / -', $data['servico']['local_prestacao']);
+        self::assertSame('Curitiba / PR / -', $data['tributacao_municipal']['municipio_incidencia']);
+        self::assertSame('0.0000.00.00', $data['servico']['codigo_nbs']);
     }
 
     public function testUnknownMunicipalityDoesNotInventAStateOrCountry(): void
