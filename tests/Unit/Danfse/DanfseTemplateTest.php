@@ -61,11 +61,61 @@ class DanfseTemplateTest extends TestCase
         self::assertSame('Operação Tributável', $data['tributacao_municipal']['tributacao_issqn']);
         self::assertSame('Retido pelo Tomador', $data['tributacao_municipal']['retencao_issqn']);
         self::assertSame('Sociedade de Profissionais', $data['tributacao_municipal']['regime_especial']);
-        self::assertSame('Niterói', $data['tributacao_municipal']['municipio_incidencia']);
+        self::assertSame('Niterói / RJ / -', $data['tributacao_municipal']['municipio_incidencia']);
 
         // Totais
         self::assertSame('R$ 1.500,00', $data['totais']['valor_servico']);
         self::assertSame('R$ 1.292,75', $data['totais']['valor_liquido']);
+    }
+
+    public function testOfficialLocationsAndProviderContactUseOnlyDpsData(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        $dps = & $nfse['infNFSe']['DPS']['infDPS'];
+        $dps['prest']['IM'] = '12345678';
+        // Deliberately invalid Brazilian DDD 00: never use a real person's phone in fixtures.
+        $dps['prest']['fone'] = '00900000000';
+        $dps['prest']['email'] = 'fiscal@example.org';
+        unset($nfse['infNFSe']['emit']['fone'], $nfse['infNFSe']['emit']['email']);
+        $nfse['infNFSe']['xLocPrestacao'] = 'Curitiba';
+        $dps['serv']['locPrest']['cLocPrestacao'] = '4106902';
+        $nfse['infNFSe']['xLocIncid'] = 'Curitiba';
+        $nfse['infNFSe']['cLocIncid'] = '4106902';
+        // Format-only fixture; deliberately not an official service classification.
+        $dps['serv']['cServ']['cNBS'] = '000000000';
+
+        $data = (new DanfseTemplate())->buildData($nfse);
+
+        self::assertSame('12345678', $data['emitente']['im']);
+        self::assertSame('(00) 90000-0000', $data['emitente']['telefone']);
+        self::assertSame('fiscal@example.org', $data['emitente']['email']);
+        self::assertSame('Curitiba / PR / -', $data['servico']['local_prestacao']);
+        self::assertSame('Curitiba / PR / -', $data['tributacao_municipal']['municipio_incidencia']);
+        self::assertSame('0.0000.00.00', $data['servico']['codigo_nbs']);
+    }
+
+    public function testUnknownMunicipalityDoesNotInventAStateOrCountry(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        $nfse['infNFSe']['cLocIncid'] = '9999999';
+        $nfse['infNFSe']['xLocIncid'] = 'Municipio Desconhecido';
+
+        $data = (new DanfseTemplate())->buildData($nfse);
+
+        self::assertSame('Municipio Desconhecido / - / -', $data['tributacao_municipal']['municipio_incidencia']);
+    }
+
+    public function testLayoutHasAlignedDpsMetadataAndNT008GrayShadingOnlyWhereRequired(): void
+    {
+        $html = (new DanfseTemplate())->render($this->fixtureNfseData(), new DanfseConfig());
+
+        self::assertStringContainsString('rowspan="4"', $html);
+        self::assertStringContainsString('class="emitter-cell"', $html);
+        self::assertStringContainsString('class="total-emphasis"', $html);
+        self::assertStringContainsString('Local da Prestação / Sigla UF / País', $html);
+        self::assertStringContainsString('Município / Sigla UF / País de Incidência do ISSQN', $html);
+        self::assertStringNotContainsString('colspan="4" class="section-header"', $html);
+        self::assertSame(1, substr_count($html, 'class="value value-highlight"'));
     }
 
     public function testAuthorizedMunicipalTotalsUseNfseValuesNotDpsTaxFlags(): void
