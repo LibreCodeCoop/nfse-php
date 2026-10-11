@@ -51,7 +51,7 @@ class DanfseGeneratorTest extends TestCase
             municipality: new MunicipalityBranding(
                 name: 'Prefeitura de Niterói',
                 department: 'Secretaria Municipal de Fazenda',
-                email: 'iss@fazenda.niteroi.rj.gov.br',
+                email: 'issuer@example.org',
             ),
         );
 

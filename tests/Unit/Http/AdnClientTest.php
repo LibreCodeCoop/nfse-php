@@ -179,9 +179,9 @@ final class AdnClientTest extends TestCase
                 timeoutSeconds: 5,
             ),
             cert: new CertConfig(
-                cnpj: '29842527000145',
+                cnpj: '11222333000181',
                 pfxPath: '/dev/null',
-                vaultPath: 'secret/nfse/29842527000145',
+                vaultPath: 'secret/nfse/11222333000181',
             ),
         );
     }

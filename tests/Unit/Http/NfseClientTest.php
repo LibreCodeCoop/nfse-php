@@ -718,9 +718,9 @@ class NfseClientTest extends TestCase
                 baseUrl: self::$server->getServerRoot() . '/SefinNacional',
             ),
             cert:        new CertConfig(
-                cnpj:      '29842527000145',
+                cnpj:      '11222333000181',
                 pfxPath:   '/dev/null',
-                vaultPath: 'secret/nfse/29842527000145',
+                vaultPath: 'secret/nfse/11222333000181',
                 transportCertificatePath: '/tmp/client.crt.pem',
                 transportPrivateKeyPath: '/tmp/client.key.pem',
             ),

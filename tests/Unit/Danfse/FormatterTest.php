@@ -58,7 +58,7 @@ class FormatterTest extends TestCase
     {
         return [
             'eight-digit local' => ['2130001234', '(21) 3000-1234'],
-            'nine-digit mobile' => ['11987654321', '(11) 98765-4321'],
+            'nine-digit mobile' => ['00900000000', '(00) 90000-0000'],
         ];
     }
 
