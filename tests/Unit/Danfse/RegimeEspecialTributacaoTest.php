@@ -35,6 +35,7 @@ class RegimeEspecialTributacaoTest extends TestCase
             'notário ou registrador' => ['4', 'Notário ou Registrador'],
             'profissional autônomo' => ['5', 'Profissional Autônomo'],
             'sociedade de profissionais' => ['6', 'Sociedade de Profissionais'],
+            'outros' => ['9', 'Outros'],
         ];
     }
 

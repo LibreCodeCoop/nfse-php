@@ -339,15 +339,33 @@
         </table>
     </div>
 
-    <!-- Tributação Municipal -->
+    <!-- Tributação Municipal: NT 008 note 4 and optional rows from note 5 -->
     <div class="bordered-section">
+        <?php if ($data['tributacao_municipal']['nao_sujeito_issqn']): ?>
+        <div class="no-party">TRIBUTAÇÃO MUNICIPAL (ISSQN) - OPERAÇÃO NÃO SUJEITA AO ISSQN</div>
+        <?php else: ?>
         <table>
             <tr>
                 <td class="section-header"><span class="section-title">TRIBUTAÇÃO MUNICIPAL (ISSQN)</span></td>
                 <td><span class="label">Tipo de Tributação do ISSQN</span><span class="value"><?= $data['tributacao_municipal']['tributacao_issqn'] ?></span></td>
-                <td><span class="label">Município / Sigla UF / País de Incidência do ISSQN</span><span class="value"><?= $data['tributacao_municipal']['municipio_incidencia'] ?></span></td>
-                <td><span class="label">Regime Especial de Tributação</span><span class="value"><?= $data['tributacao_municipal']['regime_especial'] ?></span></td>
+                <td colspan="2"><span class="label">Município / Sigla UF / País de Incidência do ISSQN</span><span class="value"><?= $data['tributacao_municipal']['municipio_incidencia'] ?></span></td>
             </tr>
+            <?php if ($data['tributacao_municipal']['mostrar_linha_regime']): ?>
+            <tr class="municipal-conditional-regime">
+                <td><span class="label">Regime Especial de Tributação do ISSQN</span><span class="value"><?= $data['tributacao_municipal']['regime_especial'] ?></span></td>
+                <td><span class="label">Tipo de Imunidade do ISSQN</span><span class="value"><?= $data['tributacao_municipal']['tipo_imunidade'] ?></span></td>
+                <td><span class="label">Suspensão da Exigibilidade do ISSQN</span><span class="value"><?= $data['tributacao_municipal']['suspensao_issqn'] ?></span></td>
+                <td><span class="label">Número Processo Suspensão</span><span class="value"><?= $data['tributacao_municipal']['numero_processo'] ?></span></td>
+            </tr>
+            <?php endif; ?>
+            <?php if ($data['tributacao_municipal']['mostrar_linha_beneficio']): ?>
+            <tr class="municipal-conditional-benefit">
+                <td><span class="label">Benefício Municipal</span><span class="value"><?= $data['tributacao_municipal']['beneficio_municipal'] ?></span></td>
+                <td><span class="label">Cálculo do BM</span><span class="value"><?= $data['tributacao_municipal']['calculo_bm'] ?></span></td>
+                <td><span class="label">Total Deduções/Reduções</span><span class="value"><?= $data['tributacao_municipal']['total_deducoes'] ?></span></td>
+                <td><span class="label">Desconto Incondicionado</span><span class="value"><?= $data['tributacao_municipal']['desconto_incondicionado'] ?></span></td>
+            </tr>
+            <?php endif; ?>
             <tr>
                 <td><span class="label">BC ISSQN</span><span class="value"><?= $data['tributacao_municipal']['bc_issqn'] ?></span></td>
                 <td><span class="label">Alíquota Aplicada</span><span class="value"><?= $data['tributacao_municipal']['aliquota'] ?></span></td>
@@ -355,6 +373,7 @@
                 <td><span class="label">ISSQN Apurado</span><span class="value"><?= $data['tributacao_municipal']['issqn_apurado'] ?></span></td>
             </tr>
         </table>
+        <?php endif; ?>
     </div>
 
     <!-- Tributação Federal -->

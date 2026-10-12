@@ -93,6 +93,25 @@ final class DanfseTemplate
         $ibsCbsValores = $this->node($ibsCbs, 'valores');
         $ibsCbsTotais = $this->node($ibsCbs, 'totCIBS');
 
+        // NT 008 note 5: each optional municipal row is suppressed only
+        // when all four of its source fields are absent. A literal '0' is
+        // supplied data and must not be treated as absent.
+        $regimeEspecial = $this->val($regTrib, 'regEspTrib');
+        $tipoImunidade = $this->val($tribMun, 'tpImunidade');
+        $tipoSuspensao = $this->val($tribMun, 'exigSusp', 'tpSusp');
+        $numeroProcesso = $this->val($tribMun, 'exigSusp', 'nProcesso');
+
+        $tipoBeneficio = $this->val($authorizedValues, 'tpBM');
+        $calculoBeneficio = $this->firstPresent(
+            $this->val($authorizedValues, 'vCalcBM'),
+            $this->val($tribMun, 'BM', 'vRedBCBM'),
+        );
+        $totalDeducoes = $this->firstPresent(
+            $this->val($valores, 'vDedRed', 'vDR'),
+            $this->val($authorizedValues, 'vCalcDR'),
+        );
+        $descontoIncondicionado = $this->val($valores, 'vDescCondIncond', 'vDescIncond');
+
         $id          = $this->val($infNfse, 'Id');
         $chaveAcesso = str_starts_with($id, 'NFS') ? substr($id, 3) : $id;
 
@@ -170,7 +189,19 @@ final class DanfseTemplate
                     $this->val($infNfse, 'cLocIncid'),
                     '',
                 ),
-                'regime_especial'      => RegimeEspecialTributacao::labelFor($this->val($regTrib, 'regEspTrib')),
+                'regime_especial'      => RegimeEspecialTributacao::labelFor($regimeEspecial),
+                'tipo_imunidade'       => $this->immunityLabel($tipoImunidade),
+                'suspensao_issqn'      => $this->suspensionLabel($tipoSuspensao),
+                'numero_processo'      => $numeroProcesso !== '' ? $numeroProcesso : '-',
+                'mostrar_linha_regime' => $this->hasAnyPresent($regimeEspecial, $tipoImunidade, $tipoSuspensao, $numeroProcesso),
+                'beneficio_municipal'  => $this->municipalBenefitLabel($tipoBeneficio),
+                'calculo_bm'           => $this->currencyOrDash($calculoBeneficio),
+                'total_deducoes'       => $this->currencyOrDash($totalDeducoes),
+                'desconto_incondicionado' => $this->currencyOrDash($descontoIncondicionado),
+                'mostrar_linha_beneficio' => $this->hasAnyPresent($tipoBeneficio, $calculoBeneficio, $totalDeducoes, $descontoIncondicionado),
+                // Note 4 permits the concise no-ISS block when the XML
+                // expressly identifies the operation as not incident.
+                'nao_sujeito_issqn' => $this->val($tribMun, 'tribISSQN') === '4',
                 'valor_servico'        => $this->formatter->currency($this->val($valores, 'vServPrest', 'vServ')),
                 'bc_issqn'             => $this->currencyOrDash($this->val($authorizedValues, 'vBC')),
                 'aliquota'             => $this->percentOrDash($this->val($authorizedValues, 'pAliqAplic')),
@@ -366,6 +397,64 @@ final class DanfseTemplate
     private function city(string $cMun): string
     {
         return $cMun !== '' ? Municipios::lookup($cMun) : '-';
+    }
+
+    private function firstPresent(string ...$values): string
+    {
+        foreach ($values as $value) {
+            if ($value !== '') {
+                return $value;
+            }
+        }
+
+        return '';
+    }
+
+    private function hasAnyPresent(string ...$values): bool
+    {
+        foreach ($values as $value) {
+            if ($value !== '') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function immunityLabel(string $value): string
+    {
+        $label = match ($value) {
+            '1' => 'Patrimônio, renda ou serviços de entes públicos',
+            '2' => 'Entidades religiosas e templos de qualquer culto',
+            '3' => 'Partidos, sindicatos, educação e assistência social',
+            '4' => 'Livros, jornais, periódicos e o papel destinado à impressão',
+            '5' => 'Fonogramas e videofonogramas musicais brasileiros',
+            default => '',
+        };
+
+        return $label !== '' ? $this->formatter->limit($label, 37) : '-';
+    }
+
+    private function suspensionLabel(string $value): string
+    {
+        $label = match ($value) {
+            '1' => 'Exigibilidade Suspensa por Decisão Judicial',
+            '2' => 'Exigibilidade Suspensa por Processo Administrativo',
+            default => '',
+        };
+
+        return $label !== '' ? $this->formatter->limit($label, 37) : '-';
+    }
+
+    private function municipalBenefitLabel(string $value): string
+    {
+        return match ($value) {
+            '1' => 'Isenção',
+            '2' => 'Redução da BC em percentual',
+            '3' => 'Redução da BC em reais',
+            '4' => 'Alíquota Diferenciada',
+            default => '-',
+        };
     }
 
     private function currencyOrDash(string $value): string

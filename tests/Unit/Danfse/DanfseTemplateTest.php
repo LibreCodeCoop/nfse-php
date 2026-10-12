@@ -162,6 +162,83 @@ class DanfseTemplateTest extends TestCase
         self::assertSame('3550308 / 04578-000', $data['tomador']['ibge_cep']);
     }
 
+
+    public function testMunicipalRegimeZeroIsPresentButMissingCodeIsNot(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        $regTrib = & $nfse['infNFSe']['DPS']['infDPS']['prest']['regTrib'];
+        $regTrib['regEspTrib'] = '0';
+        $template = new DanfseTemplate();
+        $data = $template->buildData($nfse);
+
+        self::assertSame('Nenhum', $data['tributacao_municipal']['regime_especial']);
+        self::assertTrue($data['tributacao_municipal']['mostrar_linha_regime']);
+        self::assertStringContainsString('class="municipal-conditional-regime"', $template->render($nfse, new DanfseConfig()));
+
+        unset($regTrib['regEspTrib']);
+        $data = $template->buildData($nfse);
+        self::assertSame('-', $data['tributacao_municipal']['regime_especial']);
+        self::assertFalse($data['tributacao_municipal']['mostrar_linha_regime']);
+        self::assertStringNotContainsString('class="municipal-conditional-regime"', $template->render($nfse, new DanfseConfig()));
+    }
+
+    public function testMunicipalRegimeOtherIsRenderedWithoutChangingFiscalEligibility(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        $nfse['infNFSe']['DPS']['infDPS']['prest']['regTrib']['regEspTrib'] = '9';
+        $data = (new DanfseTemplate())->buildData($nfse);
+
+        self::assertSame('Outros', $data['tributacao_municipal']['regime_especial']);
+        self::assertTrue($data['tributacao_municipal']['mostrar_linha_regime']);
+        self::assertStringContainsString('>Outros</span>', (new DanfseTemplate())->render($nfse, new DanfseConfig()));
+    }
+
+    public function testMunicipalConditionalRegimeRowRemainsWhenSiblingHasData(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        $trib = & $nfse['infNFSe']['DPS']['infDPS']['valores']['trib']['tribMun'];
+        unset($nfse['infNFSe']['DPS']['infDPS']['prest']['regTrib']['regEspTrib']);
+        $trib['tpImunidade'] = '4';
+        $trib['exigSusp'] = ['tpSusp' => '1', 'nProcesso' => 'PROCESSO-SINTETICO-123'];
+
+        $template = new DanfseTemplate();
+        $data = $template->buildData($nfse);
+        self::assertTrue($data['tributacao_municipal']['mostrar_linha_regime']);
+        self::assertSame('PROCESSO-SINTETICO-123', $data['tributacao_municipal']['numero_processo']);
+        $html = $template->render($nfse, new DanfseConfig());
+        self::assertStringContainsString('Tipo de Imunidade do ISSQN', $html);
+        self::assertStringContainsString('PROCESSO-SINTETICO-123', $html);
+        self::assertSame(1, substr_count($html, 'class="municipal-conditional-regime"'));
+    }
+
+    public function testMunicipalBenefitZeroIsNotSuppressedAndAbsenceIsDifferent(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        $template = new DanfseTemplate();
+        self::assertFalse($template->buildData($nfse)['tributacao_municipal']['mostrar_linha_beneficio']);
+
+        $nfse['infNFSe']['valores']['vCalcBM'] = '0.00';
+        $data = $template->buildData($nfse);
+        self::assertTrue($data['tributacao_municipal']['mostrar_linha_beneficio']);
+        self::assertSame('R$ 0,00', $data['tributacao_municipal']['calculo_bm']);
+        self::assertStringContainsString('class="municipal-conditional-benefit"', $template->render($nfse, new DanfseConfig()));
+
+        unset($nfse['infNFSe']['valores']['vCalcBM']);
+        $nfse['infNFSe']['valores']['tpBM'] = '1';
+        self::assertSame('Isenção', $template->buildData($nfse)['tributacao_municipal']['beneficio_municipal']);
+    }
+
+    public function testExplicitNonIncidenceUsesConciseMunicipalMessage(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        $nfse['infNFSe']['DPS']['infDPS']['valores']['trib']['tribMun']['tribISSQN'] = '4';
+
+        $html = (new DanfseTemplate())->render($nfse, new DanfseConfig());
+        self::assertStringContainsString('TRIBUTAÇÃO MUNICIPAL (ISSQN) - OPERAÇÃO NÃO SUJEITA AO ISSQN', $html);
+        self::assertStringNotContainsString('class="municipal-conditional-regime"', $html);
+        self::assertStringContainsString('TRIBUTAÇÃO FEDERAL (EXCETO CBS)', $html);
+    }
+
     public function testIntermediarioIsNullWhenAbsent(): void
     {
         $nfseData = $this->fixtureNfseData();

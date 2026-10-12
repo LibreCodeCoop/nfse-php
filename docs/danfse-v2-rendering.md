@@ -14,6 +14,7 @@ The stable contract covered by tests is:
 - authorized NFS-e identity, access key and QR-code presence;
 - provider, taker and intermediary identity fields;
 - retained ISS labels from the DPS and municipal base/rate/assessed tax from the authorized `infNFSe/valores` (not the DPS `tribMun`);
+- municipal special regime codes `0` (Nenhum), `9` (Outros) and missing values retain distinct presentation; the two optional municipal rows are omitted only if every field of that row is absent, and a present numeric zero is displayed;
 - foreign taker NIF without inventing a Brazilian CPF/CNPJ;
 - 60-character taxation-description content with an ellipsis suffix when truncated;
 - IBS/CBS block rendered only when the authorized XML contains it;
