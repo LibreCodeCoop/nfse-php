@@ -7,6 +7,7 @@
 /** @var string $qrCode */
 /** @var bool $isHomologacao */
 /** @var ?\LibreCodeCoop\NfsePHP\Danfse\Config\DanfseFiscalState $fiscalState */
+/** @var string $fontFaces */
 /** @var ?\LibreCodeCoop\NfsePHP\Danfse\Config\MunicipalityBranding $municipality */
 ?>
 <!DOCTYPE html>
@@ -15,35 +16,49 @@
     <meta charset="UTF-8">
     <title>DANFSe - <?= $data['numero_nfse'] ?></title>
     <style>
-        @page { margin: 7pt 7pt 65pt; }
+        <?= $fontFaces ?>
+        /* NT008 2.2: 0.15–0.20 cm margins, 1pt perimeter, 0.5pt sections. */
+        @page { margin: 5pt; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: Arial, Helvetica, sans-serif;
-            font-size: 6.5pt;
+            font-family: Arial, "Liberation Sans", Helvetica, sans-serif;
+            font-size: 7pt;
             line-height: 1.14;
-            color: #111;
-            margin: 4pt;
-            padding: 3pt 4pt;
-            border: 0.7pt solid #111;
+            color: #000;
+            margin: 0;
+            padding: 1pt 1pt 65pt;
+        }
+        /* Fixed page border includes footer and uses the full A4 frame.
+           This is not a text container border that ends after its content. */
+        .page-border {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border: 1pt solid #000;
+            z-index: -2;
         }
         table { width: 100%; border-collapse: collapse; table-layout: fixed; margin: 0; }
         tr { page-break-inside: avoid; }
         td { padding: 1.4pt 3pt 1.6pt; vertical-align: top; word-wrap: break-word; }
-        .bordered-section { border-bottom: 0.7pt solid #222; margin: 0; }
+        .bordered-section { border-bottom: 0.5pt solid #000; margin: 0; }
         .first-section td { padding-bottom: 1pt; }
-        .label { display: block; font-size: 6.4pt; font-weight: bold; margin-bottom: 1pt; }
-        .value { font-size: 6.85pt; line-height: 1.18; font-weight: normal; }
+        /* NT008 2.4.2: identification labels require 7pt. */
+        .first-section .label { font-size: 7pt; text-transform: uppercase; }
+        .label { display: block; font-family: Arial, "Liberation Sans", Helvetica, sans-serif; font-size: 6pt; font-weight: bold; margin-bottom: 1pt; }
+        .value { font-family: "Microsoft Sans Serif", "Liberation Sans", Arial, sans-serif; font-size: 7pt; line-height: 1.18; font-weight: normal; }
         .section-header {
             width: 25%;
             font-size: 7.1pt;
             font-weight: bold;
             text-align: left;
             vertical-align: middle;
-            background: #ededed;
+            background: #f2f2f2;
             padding: 2pt 3pt;
         }
         .section-title { font-size: 7.1pt; font-weight: bold; }
-        .header-table { background: #f3f3f3; border-bottom: 0.7pt solid #111; margin-bottom: 2pt; }
+        .header-table { background: #f2f2f2; border-bottom: 0.5pt solid #000; margin-bottom: 2pt; }
         .header-table td { padding: 2pt 3pt 3pt; vertical-align: middle; }
         .logo-cell { width: 32%; text-align: left; }
         .title-cell { width: 42%; text-align: center; }
@@ -51,18 +66,18 @@
         .municipality-name { font-size: 8pt; font-weight: normal; }
         .municipality-environment { font-size: 6pt; font-weight: normal; }
         .qr-container { text-align: center; }
-        .qr-notice { font-size: 5.6pt; line-height: 1.15; margin-top: 2pt; text-align: left; }
-        .access-key { white-space: nowrap; font-size: 6.6pt; }
-        .no-party { text-align: center; font-size: 6.4pt; padding: 2pt; border-bottom: 0.7pt solid #222; }
+        .qr-notice { font-size: 6pt; line-height: 1.15; margin-top: 2pt; text-align: left; }
+        .access-key { white-space: nowrap; font-size: 7pt; }
+        .no-party { text-align: center; font-size: 6pt; padding: 2pt; border-bottom: 0.5pt solid #000; }
         .no-party div { border-top: 0.5pt solid #222; margin-top: 2pt; padding-top: 2pt; }
         .value-highlight { font-weight: bold; }
-        .total-emphasis { background: #f3f3f3; }
-        .emitter-cell { background: #f3f3f3; }
-        .footer-container { position: fixed; bottom: 0; left: 4pt; right: 4pt; }
+        .total-emphasis { background: #f2f2f2; }
+        .emitter-cell { background: #f2f2f2; }
+        .footer-container { position: fixed; bottom: 2pt; left: 1pt; right: 1pt; }
         .footer-table { width: 100%; background: #fff; }
-        .footer-table td { border: 0.8pt solid #000; padding: 2pt 3pt; }
-        .footer-table .label { font-size: 5.8pt; }
-        .footer-table .value { font-size: 6pt; }
+        .footer-table td { border: 0.5pt solid #000; padding: 2pt 3pt; }
+        .footer-table .label { font-size: 6pt; }
+        .footer-table .value { font-size: 7pt; }
         .fiscal-state-watermark {
             position: fixed;
             top: 46%;
@@ -82,7 +97,7 @@
             transform: translate(-50%, -50%) rotate(-45deg);
             font-size: 45pt;
             font-weight: bold;
-            color: rgba(180, 180, 180, 0.2);
+            color: #a6a6a6;
             z-index: -1;
             white-space: nowrap;
         }
@@ -92,6 +107,7 @@
     <?php if ($fiscalState !== null): ?>
         <div class="fiscal-state-watermark"><?= htmlspecialchars($fiscalState->value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></div>
     <?php endif; ?>
+    <div class="page-border"></div>
     <?php if ($isHomologacao): ?>
     <div class="watermark">HOMOLOGAÇÃO</div>
     <?php endif; ?>
@@ -105,10 +121,10 @@
                 <?php endif; ?>
             </td>
             <td class="title-cell">
-                <div style="font-size: 8.7pt; font-weight: bold;">DANFSe v2.0</div>
-                <div style="font-size: 8pt; font-weight: bold;">Documento Auxiliar da NFS-e</div>
+                <div style="font-size: 9pt; font-weight: bold;">DANFSe v2.0</div>
+                <div style="font-size: 9pt; font-weight: bold;">Documento Auxiliar da NFS-e</div>
                 <?php if ($isHomologacao): ?>
-                    <div style="color: red; font-weight: bold;">NFS-e SEM VALIDADE JURÍDICA</div>
+                    <div style="color: red; font-size: 9pt; font-weight: bold;">NFS-e SEM VALIDADE JURÍDICA</div>
                 <?php endif; ?>
             </td>
             <td class="municipality-cell">
@@ -349,15 +365,33 @@
         </table>
     </div>
 
-    <!-- Tributação Municipal -->
+    <!-- Tributação Municipal: NT 008 note 4 and optional rows from note 5 -->
     <div class="bordered-section">
+        <?php if ($data['tributacao_municipal']['nao_sujeito_issqn']): ?>
+        <div class="no-party">TRIBUTAÇÃO MUNICIPAL (ISSQN) - OPERAÇÃO NÃO SUJEITA AO ISSQN</div>
+        <?php else: ?>
         <table>
             <tr>
                 <td class="section-header"><span class="section-title">TRIBUTAÇÃO MUNICIPAL (ISSQN)</span></td>
                 <td><span class="label">Tipo de Tributação do ISSQN</span><span class="value"><?= $data['tributacao_municipal']['tributacao_issqn'] ?></span></td>
-                <td><span class="label">Município / Sigla UF / País de Incidência do ISSQN</span><span class="value"><?= $data['tributacao_municipal']['municipio_incidencia'] ?></span></td>
-                <td><span class="label">Regime Especial de Tributação</span><span class="value"><?= $data['tributacao_municipal']['regime_especial'] ?></span></td>
+                <td colspan="2"><span class="label">Município / Sigla UF / País de Incidência do ISSQN</span><span class="value"><?= $data['tributacao_municipal']['municipio_incidencia'] ?></span></td>
             </tr>
+            <?php if ($data['tributacao_municipal']['mostrar_linha_regime']): ?>
+            <tr class="municipal-conditional-regime">
+                <td><span class="label">Regime Especial de Tributação do ISSQN</span><span class="value"><?= $data['tributacao_municipal']['regime_especial'] ?></span></td>
+                <td><span class="label">Tipo de Imunidade do ISSQN</span><span class="value"><?= $data['tributacao_municipal']['tipo_imunidade'] ?></span></td>
+                <td><span class="label">Suspensão da Exigibilidade do ISSQN</span><span class="value"><?= $data['tributacao_municipal']['suspensao_issqn'] ?></span></td>
+                <td><span class="label">Número Processo Suspensão</span><span class="value"><?= $data['tributacao_municipal']['numero_processo'] ?></span></td>
+            </tr>
+            <?php endif; ?>
+            <?php if ($data['tributacao_municipal']['mostrar_linha_beneficio']): ?>
+            <tr class="municipal-conditional-benefit">
+                <td><span class="label">Benefício Municipal</span><span class="value"><?= $data['tributacao_municipal']['beneficio_municipal'] ?></span></td>
+                <td><span class="label">Cálculo do BM</span><span class="value"><?= $data['tributacao_municipal']['calculo_bm'] ?></span></td>
+                <td><span class="label">Total Deduções/Reduções</span><span class="value"><?= $data['tributacao_municipal']['total_deducoes'] ?></span></td>
+                <td><span class="label">Desconto Incondicionado</span><span class="value"><?= $data['tributacao_municipal']['desconto_incondicionado'] ?></span></td>
+            </tr>
+            <?php endif; ?>
             <tr>
                 <td><span class="label">BC ISSQN</span><span class="value"><?= $data['tributacao_municipal']['bc_issqn'] ?></span></td>
                 <td><span class="label">Alíquota Aplicada</span><span class="value"><?= $data['tributacao_municipal']['aliquota'] ?></span></td>
@@ -365,6 +399,7 @@
                 <td><span class="label">ISSQN Apurado</span><span class="value"><?= $data['tributacao_municipal']['issqn_apurado'] ?></span></td>
             </tr>
         </table>
+        <?php endif; ?>
     </div>
 
     <!-- Tributação Federal -->
@@ -386,68 +421,31 @@
         </table>
     </div>
 
-    <!-- Tributação IBS / CBS (NT 008 v1.02) -->
+    <!-- Tributação IBS/CBS: Anexo I grid and official authorized XML fields -->
     <div class="bordered-section">
         <table>
             <tr>
-                <td class="section-header">
-                    <span class="section-title">TRIBUTAÇÃO IBS / CBS</span>
-                </td>
-                <td>
-                    <span class="label">CST / cClassTrib</span>
-                    <span class="value"><?= $data['ibs_cbs']['cst_classificacao'] ?></span>
-                </td>
-                <td>
-                    <span class="label">Indicador de Operação</span>
-                    <span class="value"><?= $data['ibs_cbs']['indicador_operacao'] ?></span>
-                </td>
-                <td>
-                    <span class="label">Localidade de Incidência</span>
-                    <span class="value"><?= $data['ibs_cbs']['localidade_incidencia'] ?></span>
-                </td>
+                <td class="section-header"><span class="section-title">TRIBUTAÇÃO IBS / CBS</span></td>
+                <td><span class="label">CST / cClassTrib</span><span class="value"><?= $data['ibs_cbs']['cst_classificacao'] ?></span></td>
+                <td colspan="2"><span class="label">Indicador de Operação / Código IBGE / Município Incidência / Sigla UF</span><span class="value"><?= $data['ibs_cbs']['indicador_operacao'] ?></span></td>
             </tr>
             <tr>
-                <td>
-                    <span class="label">Exclusões e Reduções da Base de Cálculo</span>
-                    <span class="value"><?= $data['ibs_cbs']['exclusoes_reducoes'] ?></span>
-                </td>
-                <td>
-                    <span class="label">Base de Cálculo</span>
-                    <span class="value"><?= $data['ibs_cbs']['base_calculo'] ?></span>
-                </td>
-                <td>
-                    <span class="label">Alíquota IBS UF</span>
-                    <span class="value"><?= $data['ibs_cbs']['aliquota_ibs_uf'] ?></span>
-                </td>
-                <td>
-                    <span class="label">Alíquota IBS Município</span>
-                    <span class="value"><?= $data['ibs_cbs']['aliquota_ibs_municipal'] ?></span>
-                </td>
+                <td><span class="label">Exclusões e Reduções da Base de Cálculo</span><span class="value"><?= $data['ibs_cbs']['exclusoes_reducoes'] ?></span></td>
+                <td><span class="label">Base de Cálculo Após Exclusões e Reduções</span><span class="value"><?= $data['ibs_cbs']['base_calculo'] ?></span></td>
+                <td><span class="label">Red. Alíquota IBS / Red. Alíquota CBS</span><span class="value"><?= $data['ibs_cbs']['reducao_aliquotas'] ?></span></td>
+                <td><span class="label">Alíquota - IBS UF / IBS Mun</span><span class="value"><?= $data['ibs_cbs']['aliquota_ibs'] ?></span></td>
             </tr>
             <tr>
-                <td>
-                    <span class="label">Reduções de Alíquota IBS/CBS</span>
-                    <span class="value">-</span>
-                </td>
-                <td>
-                    <span class="label">Alíquota CBS</span>
-                    <span class="value"><?= $data['ibs_cbs']['aliquota_cbs'] ?></span>
-                </td>
-                <td>
-                    <span class="label">Total IBS</span>
-                    <span class="value"><?= $data['ibs_cbs']['total_ibs'] ?></span>
-                </td>
-                <td>
-                    <span class="label">Total CBS</span>
-                    <span class="value"><?= $data['ibs_cbs']['total_cbs'] ?></span>
-                </td>
+                <td><span class="label">Alíq. Efetiva Municipal - IBS</span><span class="value"><?= $data['ibs_cbs']['aliquota_efetiva_municipal'] ?></span></td>
+                <td><span class="label">Valor Apurado Municipal - IBS</span><span class="value"><?= $data['ibs_cbs']['valor_ibs_municipal'] ?></span></td>
+                <td><span class="label">Alíq. Efetiva Estadual - IBS</span><span class="value"><?= $data['ibs_cbs']['aliquota_efetiva_estadual'] ?></span></td>
+                <td><span class="label">Valor Apurado Estadual - IBS</span><span class="value"><?= $data['ibs_cbs']['valor_ibs_estadual'] ?></span></td>
             </tr>
             <tr>
-                <td colspan="3"></td>
-                <td>
-                    <span class="label">Valor Total da NFS-e c/ IBS/CBS</span>
-                    <span class="value"><?= $data['ibs_cbs']['valor_total_nfse'] ?></span>
-                </td>
+                <td><span class="label">Valor Total Apurado - IBS</span><span class="value"><?= $data['ibs_cbs']['total_ibs'] ?></span></td>
+                <td><span class="label">Alíquota - CBS</span><span class="value"><?= $data['ibs_cbs']['aliquota_cbs'] ?></span></td>
+                <td><span class="label">Alíquota Efetiva - CBS</span><span class="value"><?= $data['ibs_cbs']['aliquota_efetiva_cbs'] ?></span></td>
+                <td><span class="label">Valor Total Apurado - CBS</span><span class="value"><?= $data['ibs_cbs']['total_cbs'] ?></span></td>
             </tr>
         </table>
     </div>
@@ -462,9 +460,9 @@
                 <td><span class="label">Desconto Condicionado</span><span class="value"><?= $data['totais']['desconto_condicionado'] ?></span></td>
             </tr>
             <tr>
-                <td><span class="label">Retenções Federais</span><span class="value"><?= $data['totais']['retencoes_federais'] ?></span></td>
+                <td><span class="label">Total das Retenções (ISSQN / Federais)</span><span class="value"><?= $data['totais']['total_retencoes'] ?></span></td>
                 <td><span class="label">VALOR LÍQUIDO DA NFS-e</span><span class="value"><?= $data['totais']['valor_liquido'] ?></span></td>
-                <td><span class="label">ISSQN Retido / Total IBS/CBS</span><span class="value"><?= $data['totais']['issqn_retido'] ?> / <?= $data['ibs_cbs']['total_ibs_cbs'] ?></span></td>
+                <td><span class="label">Total do IBS/CBS</span><span class="value"><?= $data['ibs_cbs']['total_ibs_cbs'] ?></span></td>
                 <td class="total-emphasis"><span class="label">VALOR LÍQUIDO DA NFS-e + IBS/CBS</span><span class="value value-highlight"><?= $data['ibs_cbs']['valor_total_nfse'] ?></span></td>
             </tr>
         </table>
