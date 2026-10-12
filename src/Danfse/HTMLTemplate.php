@@ -366,11 +366,13 @@
                 <td><span class="label">Contribuição Previdenciária - Retida</span><span class="value"><?= $data['tributacao_federal']['cp'] ?></span></td>
                 <td><span class="label">Contribuições Sociais - Retidas</span><span class="value"><?= $data['tributacao_federal']['csll'] ?></span></td>
             </tr>
-            <tr>
+            <?php if ($data['tributacao_federal']['mostrar_linha_2026']): ?>
+            <tr class="federal-competence-2026">
                 <td><span class="label">PIS - Débito Apuração Própria</span><span class="value"><?= $data['tributacao_federal']['pis'] ?></span></td>
                 <td><span class="label">COFINS - Débito Apuração Própria</span><span class="value"><?= $data['tributacao_federal']['cofins'] ?></span></td>
                 <td colspan="2"><span class="label">Tipo de retenção PIS/COFINS/CSLL</span><span class="value"><?= $data['tributacao_federal']['descricao_retencao'] ?></span></td>
             </tr>
+            <?php endif; ?>
         </table>
     </div>
 

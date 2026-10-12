@@ -150,7 +150,13 @@ final class DanfseTemplate
 
             'servico' => [
                 'codigo_trib_nacional'  => $this->formatter->codTribNacional($this->val($cServ, 'cTribNac')),
-                'desc_trib_nacional'    => $this->formatter->limit(trim($this->val($infNfse, 'xTribNac')), 60),
+                // NT008 2.4.5 prefers an authorized municipal description
+                // over the national one. The length is suggested, not a new
+                // tax-code validation or data mutation.
+                'desc_trib_nacional'    => $this->formatter->limit(
+                    $this->val($infNfse, 'xTribMun') ?: $this->val($infNfse, 'xTribNac'),
+                    167,
+                ),
                 'codigo_trib_municipal' => $this->val($cServ, 'cTribMun') ?: '-',
                 'codigo_nbs'           => $this->formattedNbs($this->val($cServ, 'cNBS')),
                 'desc_trib_municipal'   => $this->formatter->limit(trim($this->val($infNfse, 'xTribMun')), 60),
@@ -179,6 +185,11 @@ final class DanfseTemplate
             ],
 
             'tributacao_federal' => [
+                // NT008 note 6: optional PIS/COFINS line is present only
+                // for actual issue competence through calendar year 2026.
+                'mostrar_linha_2026' => $this->showFederalDetailsForCompetence(
+                    $this->val($infDps, 'dCompet'),
+                ),
                 'irrf'   => $this->currencyOrDash($this->val($tribFed, 'vRetIRRF')),
                 'cp'     => $this->currencyOrDash($this->val($tribFed, 'vRetCP')),
                 'csll'   => $this->currencyOrDash($this->val($tribFed, 'vRetCSLL')),
@@ -415,6 +426,17 @@ final class DanfseTemplate
             '2' => 'NFS-e de débito',
             default => '-',
         };
+    }
+
+    private function showFederalDetailsForCompetence(string $competence): bool
+    {
+        // Do not use today's date: printing an older authorized invoice
+        // must reproduce the display rules for its original competence.
+        if (preg_match('/^(\\d{4})-\\d{2}-\\d{2}$/D', $competence, $matches) !== 1) {
+            return false;
+        }
+
+        return (int) $matches[1] <= 2026;
     }
 
     private function pisCofinsRetentionLabel(string $value): string
