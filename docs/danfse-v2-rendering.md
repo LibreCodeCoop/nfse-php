@@ -29,6 +29,25 @@ The stable contract covered by tests is:
 - optional contact complement and IBGE/CEP follow the authorized XML without inventing missing data;
 - the reference footer never fabricates an acknowledgement date or human signature.
 
+## Locally licensed typography
+
+NT 008 requires **Arial** for labels and **Microsoft Sans Serif** for values.
+CSS family names alone do not satisfy this: Dompdf otherwise falls back to
+Helvetica. The library cannot redistribute those proprietary font binaries.
+
+A caller holding suitable licenses can provide local TrueType files using
+`DanfseConfig(fonts: new DanfseFonts($arialRegular, $arialBold, $microsoftSansSerif))`.
+Files are validated when the options are built, used only from local paths
+within Dompdf's explicitly restricted chroot, and never loaded remotely or
+serialized as font bytes in the HTML. Files must permit PDF embedding under
+their own license; consumers must provide a writable Dompdf font cache.
+
+An A4 PDF should be inspected with `pdffonts receipt.pdf`; exact typography
+is demonstrated only when the correct typefaces are present and embedded.
+The default compatibility path may still fall back to Helvetica and must not
+be claimed to prove complete NT 008 font compliance. CI exercises local-font
+embedding with Dompdf's freely licensed DejaVuSans **only as a test surrogate**.
+
 The project does not guarantee byte-identical PDF output. PDF metadata, font
 metrics and QR SVG serialization can change when rendering dependencies are
 updated. Reviews should therefore treat the named structural reference tests

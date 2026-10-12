@@ -57,6 +57,9 @@ jobs:
             pdfinfo "$pdf" | grep -Fq 'Page size:       595.28 x 841.89 pts (A4)'
           done
           pdftotext -layout "${{ runner.temp }}/danfse/danfse-long-description.pdf" - | grep -Fq '...'
+          # A locally supplied TTF must be genuinely embedded (not silently
+          # replaced by Helvetica). The probe font is freely licensed.
+          pdffonts "${{ runner.temp }}/danfse/danfse-font-probe.pdf" | grep -Fq 'DejaVuSans'
 
       - name: Preserve render evidence
         if: always()

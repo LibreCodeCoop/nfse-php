@@ -9,6 +9,7 @@ namespace LibreCodeCoop\NfsePHP\Tests\Unit\Danfse;
 
 use LibreCodeCoop\NfsePHP\Danfse\Config\DanfseConfig;
 use LibreCodeCoop\NfsePHP\Danfse\Config\DanfseFiscalState;
+use LibreCodeCoop\NfsePHP\Danfse\Config\DanfseFonts;
 use LibreCodeCoop\NfsePHP\Danfse\Config\MunicipalityBranding;
 use LibreCodeCoop\NfsePHP\Danfse\DanfseGenerator;
 use LibreCodeCoop\NfsePHP\Exception\ArtifactException;
@@ -34,6 +35,36 @@ class DanfseGeneratorTest extends TestCase
     {
         $pdf = (new DanfseGenerator())->generateFromXml($this->xml);
 
+        self::assertStringStartsWith('%PDF-', $pdf);
+    }
+
+    public function testFontConfigurationRejectsMissingLocalFiles(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        new DanfseFonts('/not-a-real-folder/arial.ttf', '/not-a-real-folder/arialbd.ttf', '/not-a-real-folder/micross.ttf');
+    }
+
+    public function testLocalFontFilesCanBeRegisteredWithoutRemoteLoading(): void
+    {
+        // Dompdf's redistributable bundled fonts are safe stand-ins for
+        // proving the loading mechanism, NOT Arial/MSG or NT008 compliance.
+        $fontsPath = dirname(__DIR__, 3) . '/vendor/dompdf/dompdf/lib/fonts';
+        $regular = $fontsPath . '/DejaVuSans.ttf';
+        $bold = $fontsPath . '/DejaVuSans-Bold.ttf';
+        self::assertFileExists($regular);
+        self::assertFileExists($bold);
+
+        $fonts = new DanfseFonts($regular, $bold, $regular);
+        self::assertCount(1, $fonts->directories());
+
+        $generator = new DanfseGenerator(new DanfseConfig(fonts: $fonts));
+        $html = $generator->generateHtml($this->xml);
+        self::assertStringContainsString('font-family: "Arial"', $html);
+        self::assertStringContainsString('font-family: "Microsoft Sans Serif"', $html);
+        self::assertStringContainsString('src: url("file://', $html);
+        self::assertStringNotContainsString('data:font/', $html);
+
+        $pdf = $generator->generateFromXml($this->xml);
         self::assertStringStartsWith('%PDF-', $pdf);
     }
 

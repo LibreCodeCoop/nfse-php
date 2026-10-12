@@ -6,6 +6,8 @@
 declare(strict_types=1);
 
 use LibreCodeCoop\NfsePHP\Danfse\DanfseGenerator;
+use LibreCodeCoop\NfsePHP\Danfse\Config\DanfseConfig;
+use LibreCodeCoop\NfsePHP\Danfse\Config\DanfseFonts;
 
 require dirname(__DIR__, 2) . '/vendor/autoload.php';
 
@@ -21,6 +23,18 @@ if ($xml === false) {
 $generator = new DanfseGenerator();
 $pdf = $generator->generateFromXml($xml);
 file_put_contents($outputDir . '/danfse-reference.pdf', $pdf);
+
+// Prove that external local TrueType fonts really embed, using only Dompdf's
+// permissively licensed test font. This does not claim the actual NT008
+// proprietary font names are installed or licensed on the CI runner.
+$fontRoot = dirname(__DIR__, 2) . '/vendor/dompdf/dompdf/lib/fonts';
+$probeFonts = new DanfseFonts(
+    $fontRoot . '/DejaVuSans.ttf',
+    $fontRoot . '/DejaVuSans-Bold.ttf',
+    $fontRoot . '/DejaVuSans.ttf',
+);
+$probePdf = (new DanfseGenerator(new DanfseConfig(fonts: $probeFonts)))->generateFromXml($xml);
+file_put_contents($outputDir . '/danfse-font-probe.pdf', $probePdf);
 
 // Stress-test description overflow/page breaking without using real taxpayer
 // data or changing the fiscal totals in the synthetic authorized fixture.
