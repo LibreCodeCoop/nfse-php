@@ -22,6 +22,7 @@ The stable contract covered by tests is:
 - homologation documents have a visible environment marker;
 - local generation returns a valid PDF artifact;
 - line breaks in the authorized service description are preserved as escaped HTML line breaks;
+- the supplementary text follows NT 008's field order and pipe separators (including substitution, service references, construction, events and municipality information) when they exist in the authorized XML; estimated tax disclosure accepts explicitly supplied monetary **or** percentage values, preserving missing versus numeric zero;
 - optional contact complement and IBGE/CEP follow the authorized XML without inventing missing data;
 - the reference footer never fabricates an acknowledgement date or human signature.
 

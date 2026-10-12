@@ -55,14 +55,12 @@ final class XmlToArray
         $nsChildren = $node->children(self::NFSE_NS);
         if ($nsChildren !== null && $nsChildren->count() > 0) {
             foreach ($nsChildren as $name => $child) {
-                $result[$name] = $this->nodeToArray($child);
+                $this->appendNamedChild($result, (string) $name, $this->nodeToArray($child));
             }
         } else {
             // Fallback for XMLs that omit the namespace on children.
             foreach ($node->children() ?? [] as $name => $child) {
-                if (!isset($result[$name])) {
-                    $result[$name] = $this->nodeToArray($child);
-                }
+                $this->appendNamedChild($result, (string) $name, $this->nodeToArray($child));
             }
         }
 
@@ -72,5 +70,27 @@ final class XmlToArray
         }
 
         return $result;
+    }
+
+    /**
+     * Repeating an XML element is not a replacement: preserve each distinct
+     * child, but leave single-occurrence fields backward compatible.
+     *
+     * @param array<string,mixed> $out
+     * @param array<string,mixed>|string $value
+     */
+    private function appendNamedChild(array &$out, string $name, array|string $value): void
+    {
+        if (!array_key_exists($name, $out)) {
+            $out[$name] = $value;
+
+            return;
+        }
+
+        if (!is_array($out[$name]) || !array_is_list($out[$name])) {
+            $out[$name] = [$out[$name]];
+        }
+
+        $out[$name][] = $value;
     }
 }

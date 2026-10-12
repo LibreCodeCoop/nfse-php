@@ -135,6 +135,64 @@ class DanfseTemplateTest extends TestCase
         self::assertSame('R$ 630,00', $data['tributacao_municipal']['issqn_apurado']);
     }
 
+    public function testComplementaryInformationFollowsOfficialOrderWithoutInventingTaxZeros(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        $dps = & $nfse['infNFSe']['DPS']['infDPS'];
+        $dps['subst'] = ['chSubstda' => str_repeat('3', 50)];
+        $dps['serv']['obra'] = [
+            'cObra' => 'OBRA-FICTICIA-001',
+            'inscImobFisc' => 'IMOB-TESTE-0002',
+        ];
+        $dps['serv']['atvEvento'] = ['idAtvEvt' => 'EVENTO-TESTE-123'];
+        $dps['serv']['infoCompl'] = [
+            'xInfComp' => 'Observacao sintetica',
+            'docRef' => 'DOC-REF-123',
+            'idDocTec' => 'DOC-TEC-456',
+            'xPed' => 'PED-456',
+            'gItemPed' => ['xItemPed' => ['01', '02']],
+        ];
+        $nfse['infNFSe']['xOutInf'] = 'Mensagem municipal sintetica';
+        $dps['valores']['trib']['totTrib'] = [
+            'vTotTrib' => [
+                'vTotTribFed' => '0.00',
+                'vTotTribEst' => '15.50',
+                'vTotTribMun' => '3.25',
+            ],
+        ];
+
+        $data = (new DanfseTemplate())->buildData($nfse);
+        $actual = $data['informacoes_complementares'];
+        foreach (['Inf. Cont.:', 'NFS-e Subst.:', 'Doc. Ref.:', 'Cod. Obra:',
+            'Insc. Imob.:', 'Cod. Evt.:', 'Doc. Tec.:', 'Núm. Ped.:',
+            'Item Ped.:', 'Inf. A. T. Mun.:', 'Totais aproximados dos Tributos'] as $part) {
+            self::assertStringContainsString($part, $actual);
+        }
+        self::assertSame('R$ 0,00', $data['totais_tributos']['federais']);
+        self::assertSame('R$ 15,50', $data['totais_tributos']['estaduais']);
+        self::assertSame('R$ 3,25', $data['totais_tributos']['municipais']);
+        self::assertStringContainsString('Item Ped.: 01, 02', $actual);
+        self::assertStringContainsString('Federais: R$ 0,00; Estaduais: R$ 15,50; Municipais: R$ 3,25', $actual);
+        self::assertLessThan(strpos($actual, 'Doc. Ref.:'), strpos($actual, 'NFS-e Subst.:'));
+        self::assertLessThan(strpos($actual, 'Totais aproximados'), strpos($actual, 'Inf. A. T. Mun.:'));
+    }
+
+    public function testAllAbsentApproximateTaxesStayAbsentAndRealZeroIsDistinct(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        unset($nfse['infNFSe']['DPS']['infDPS']['valores']['trib']['totTrib']);
+
+        $template = new DanfseTemplate();
+        $data = $template->buildData($nfse);
+        self::assertSame('-', $data['totais_tributos']['municipais']);
+        self::assertStringContainsString('Municipais: -;', $data['informacoes_complementares']);
+
+        $nfse['infNFSe']['DPS']['infDPS']['valores']['trib']['totTrib']['pTotTrib']['pTotTribMun'] = '0.00';
+        $data = $template->buildData($nfse);
+        self::assertSame('0.00%', $data['totais_tributos']['municipais']);
+        self::assertStringContainsString('Municipais: 0.00%', $data['informacoes_complementares']);
+    }
+
     public function testDescriptionPreservesNewlinesWithoutRenderingMarkup(): void
     {
         $nfse = $this->fixtureNfseData();
