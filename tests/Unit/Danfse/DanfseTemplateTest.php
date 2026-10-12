@@ -135,6 +135,85 @@ class DanfseTemplateTest extends TestCase
         self::assertSame('R$ 630,00', $data['tributacao_municipal']['issqn_apurado']);
     }
 
+    public function testMunicipalTaxDescriptionWinsButNationalIsFallback(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        $nfse['infNFSe']['xTribNac'] = 'Descricao nacional sintetica';
+        $nfse['infNFSe']['xTribMun'] = 'Descricao municipal sintetica';
+
+        $template = new DanfseTemplate();
+        self::assertSame('Descricao municipal sintetica', $template->buildData($nfse)['servico']['desc_trib_nacional']);
+        self::assertStringContainsString('Descricao municipal sintetica', $template->render($nfse, new DanfseConfig()));
+        self::assertStringNotContainsString('Descricao nacional sintetica', $template->render($nfse, new DanfseConfig()));
+
+        unset($nfse['infNFSe']['xTribMun']);
+        self::assertSame('Descricao nacional sintetica', $template->buildData($nfse)['servico']['desc_trib_nacional']);
+    }
+
+    public function testFederalDetailRowFollowsOriginalFiscalCompetence(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        $template = new DanfseTemplate();
+
+        $nfse['infNFSe']['DPS']['infDPS']['dCompet'] = '2026-12-31';
+        self::assertTrue($template->buildData($nfse)['tributacao_federal']['mostrar_linha_2026']);
+        self::assertStringContainsString('class="federal-competence-2026"', $template->render($nfse, new DanfseConfig()));
+
+        $nfse['infNFSe']['DPS']['infDPS']['dCompet'] = '2027-01-01';
+        self::assertFalse($template->buildData($nfse)['tributacao_federal']['mostrar_linha_2026']);
+        $html = $template->render($nfse, new DanfseConfig());
+        self::assertStringNotContainsString('class="federal-competence-2026"', $html);
+        self::assertStringContainsString('Contribuições Sociais - Retidas', $html);
+
+        unset($nfse['infNFSe']['DPS']['infDPS']['dCompet']);
+        self::assertFalse($template->buildData($nfse)['tributacao_federal']['mostrar_linha_2026']);
+    }
+
+    public function testAuthorizedApproximateTaxValuesAreCopiedWithoutZeroFillingOrIssFallback(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        $nfse['infNFSe']['valores']['pAliqAplic'] = '2.00';
+        $nfse['infNFSe']['valores']['vISSQN'] = '630.00';
+        $totals = & $nfse['infNFSe']['DPS']['infDPS']['valores']['trib']['totTrib'];
+
+        $totals = ['indTotTrib' => '0'];
+        $unknown = (new DanfseTemplate())->buildData($nfse);
+
+        self::assertSame('2.00%', $unknown['tributacao_municipal']['aliquota']);
+        self::assertSame('R$ 630,00', $unknown['tributacao_municipal']['issqn_apurado']);
+        self::assertSame(
+            ['federais' => '-', 'estaduais' => '-', 'municipais' => '-'],
+            $unknown['totais_tributos'],
+        );
+        self::assertStringContainsString(
+            'Federais: -; Estaduais: -; Municipais: -;',
+            $unknown['informacoes_complementares'],
+        );
+
+        // These are explicit source declarations, not the assessed ISS rate.
+        $totals = [
+            'pTotTrib' => [
+                'pTotTribFed' => '0.00',
+                'pTotTribEst' => '0.00',
+                'pTotTribMun' => '0.00',
+            ],
+        ];
+        $documentedZero = (new DanfseTemplate())->buildData($nfse);
+        self::assertSame('0.00%', $documentedZero['totais_tributos']['municipais']);
+        self::assertStringContainsString(
+            'Federais: 0.00%; Estaduais: 0.00%; Municipais: 0.00%;',
+            $documentedZero['informacoes_complementares'],
+        );
+
+        $totals['pTotTrib']['pTotTribFed'] = '7.45';
+        $totals['pTotTrib']['pTotTribMun'] = '4.10';
+        $sourced = (new DanfseTemplate())->buildData($nfse);
+        self::assertSame('7.45%', $sourced['totais_tributos']['federais']);
+        self::assertSame('4.10%', $sourced['totais_tributos']['municipais']);
+        self::assertSame('2.00%', $sourced['tributacao_municipal']['aliquota']);
+        self::assertSame('R$ 630,00', $sourced['tributacao_municipal']['issqn_apurado']);
+    }
+
     public function testDescriptionPreservesNewlinesWithoutRenderingMarkup(): void
     {
         $nfse = $this->fixtureNfseData();
@@ -160,6 +239,136 @@ class DanfseTemplateTest extends TestCase
 
         self::assertStringContainsString('Conjunto 10', $data['tomador']['endereco']);
         self::assertSame('3550308 / 04578-000', $data['tomador']['ibge_cep']);
+    }
+
+    public function testRecipientIsIndependentOfIntermediaryAndUsesAuthorizedDps(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        $dps = & $nfse['infNFSe']['DPS']['infDPS'];
+        unset($dps['interm']);
+        $dps['IBSCBS']['dest'] = [
+            'NIF' => 'PT-TEST-998877',
+            'xNome' => 'DESTINATARIO SINTETICO',
+            'end' => [
+                'endExt' => [
+                    'cPais' => 'PT',
+                    'cEndPost' => '0000-001',
+                    'xCidade' => 'Cidade Ficticia',
+                    'xEstProvReg' => 'Distrito Ficticio',
+                ],
+                'xLgr' => 'Rua Exemplo',
+                'nro' => '1',
+                'xBairro' => 'Bairro Modelo',
+            ],
+            'email' => 'recipient@example.org',
+        ];
+
+        $template = new DanfseTemplate();
+        $data = $template->buildData($nfse);
+        self::assertNull($data['intermediario']);
+        self::assertSame('PT-TEST-998877', $data['destinatario']['cnpj_cpf']);
+        self::assertSame('Cidade Ficticia - Distrito Ficticio', $data['destinatario']['municipio']);
+        self::assertSame('- / 0000-001', $data['destinatario']['ibge_cep']);
+        self::assertFalse($data['destinatario']['mesmo_tomador']);
+
+        $html = $template->render($nfse, new DanfseConfig());
+        self::assertStringContainsString('DESTINATÁRIO DA OPERAÇÃO', $html);
+        self::assertStringContainsString('recipient@example.org', $html);
+        self::assertStringContainsString('INTERMEDIÁRIO DA OPERAÇÃO NÃO IDENTIFICADO', $html);
+        self::assertStringNotContainsString('DESTINATÁRIO DA OPERAÇÃO NÃO IDENTIFICADO', $html);
+    }
+
+    public function testSameRecipientAndTakerUseOfficialConciseMessage(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        $dps = & $nfse['infNFSe']['DPS']['infDPS'];
+        $dps['IBSCBS']['dest'] = [
+            'CNPJ' => $dps['toma']['CNPJ'],
+            'xNome' => 'DESTINATARIO SINTETICO',
+        ];
+
+        $template = new DanfseTemplate();
+        self::assertTrue($template->buildData($nfse)['destinatario']['mesmo_tomador']);
+        $html = $template->render($nfse, new DanfseConfig());
+        self::assertStringContainsString('O DESTINATÁRIO É O PRÓPRIO TOMADOR/ADQUIRENTE DA OPERAÇÃO', $html);
+        self::assertStringNotContainsString('class="bordered-section party-destinatario"', $html);
+    }
+
+    public function testOfficialIndDestZeroMeansSameTakerEvenWithoutDestGroup(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        $dps = & $nfse['infNFSe']['DPS']['infDPS'];
+        $dps['IBSCBS']['indDest'] = '0';
+        unset($dps['IBSCBS']['dest']);
+
+        $template = new DanfseTemplate();
+        $data = $template->buildData($nfse);
+        self::assertNull($data['destinatario']);
+        self::assertTrue($data['destinatario_mesmo_tomador']);
+
+        $html = $template->render($nfse, new DanfseConfig());
+        self::assertStringContainsString('O DESTINATÁRIO É O PRÓPRIO TOMADOR/ADQUIRENTE DA OPERAÇÃO', $html);
+        self::assertStringNotContainsString('DESTINATÁRIO DA OPERAÇÃO NÃO IDENTIFICADO', $html);
+    }
+
+    public function testOfficialIndDestOnePreventsIncorrectSameTakerSuppression(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        $dps = & $nfse['infNFSe']['DPS']['infDPS'];
+        $dps['IBSCBS']['indDest'] = '1';
+        $dps['IBSCBS']['dest'] = [
+            'CNPJ' => $dps['toma']['CNPJ'],
+            'xNome' => 'DESTINATARIO AUTORIZADO DISTINTO',
+        ];
+
+        $template = new DanfseTemplate();
+        self::assertFalse($template->buildData($nfse)['destinatario_mesmo_tomador']);
+        $html = $template->render($nfse, new DanfseConfig());
+        self::assertStringContainsString('class="bordered-section party-destinatario"', $html);
+        self::assertStringNotContainsString('O DESTINATÁRIO É O PRÓPRIO TOMADOR', $html);
+    }
+
+    public function testMissingTakerAndRecipientHaveSeparateCondensedBlocks(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        unset($nfse['infNFSe']['DPS']['infDPS']['toma']);
+        $template = new DanfseTemplate();
+        self::assertNull($template->buildData($nfse)['tomador']);
+        self::assertNull($template->buildData($nfse)['destinatario']);
+        $html = $template->render($nfse, new DanfseConfig());
+        self::assertStringContainsString('TOMADOR/ADQUIRENTE DA OPERAÇÃO NÃO IDENTIFICADO NA NFS-e', $html);
+        self::assertStringContainsString('DESTINATÁRIO DA OPERAÇÃO NÃO IDENTIFICADO NA NFS-e', $html);
+        self::assertStringContainsString('class="bordered-section party-intermediario"', $html);
+    }
+
+    public function testProviderPrefersAuthorizedDpsAddressAndPreservesLeadingZeroCep(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        $provider = & $nfse['infNFSe']['DPS']['infDPS']['prest'];
+        $provider['xNome'] = 'FORNECEDOR SINTETICO DA DPS';
+        $provider['end'] = [
+            'endNac' => ['cMun' => '3550308', 'CEP' => '01001000'],
+            'xLgr' => 'Rua da Amostra',
+            'nro' => '10',
+            'xBairro' => 'Centro',
+        ];
+
+        $data = (new DanfseTemplate())->buildData($nfse);
+        self::assertSame('FORNECEDOR SINTETICO DA DPS', $data['emitente']['nome']);
+        self::assertSame('São Paulo - SP', $data['emitente']['municipio']);
+        self::assertSame('3550308 / 01001-000', $data['emitente']['ibge_cep']);
+        self::assertStringContainsString('Rua da Amostra', $data['emitente']['endereco']);
+    }
+
+    public function testIntermediaryKeepsIbgeAndCepInSameCell(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        $template = new DanfseTemplate();
+        $data = $template->buildData($nfse);
+        self::assertSame('3518800 / 07095-130', $data['intermediario']['ibge_cep']);
+        $html = $template->render($nfse, new DanfseConfig());
+        self::assertStringContainsString('class="bordered-section party-intermediario"', $html);
+        self::assertStringContainsString('3518800 / 07095-130', $html);
     }
 
 
@@ -297,6 +506,58 @@ class DanfseTemplateTest extends TestCase
         $data = (new DanfseTemplate())->buildData($nfseData);
 
         self::assertSame('AB-123', $data['tomador']['cnpj_cpf']);
+    }
+
+
+    public function testHeaderMunicipalityFollowsAuthorizedXmlAndItem99Rule(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        $nfse['infNFSe']['xLocEmi'] = 'Município de Teste';
+        $nfse['infNFSe']['emit']['enderNac']['UF'] = 'MG';
+
+        $template = new DanfseTemplate();
+        $data = $template->buildData($nfse);
+        self::assertSame('Município de Teste / MG', $data['municipio_emissao']);
+
+        $html = $template->render($nfse, new DanfseConfig());
+        self::assertStringContainsString('Município: Município de Teste / MG', $html);
+        self::assertStringContainsString('.municipality-name { font-size: 8pt;', $html);
+        self::assertStringContainsString('.municipality-environment { font-size: 6pt;', $html);
+
+        $nfse['infNFSe']['DPS']['infDPS']['serv']['cServ']['cTribNac'] = '990000';
+        self::assertSame('', $template->buildData($nfse)['municipio_emissao']);
+        $html = $template->render($nfse, new DanfseConfig());
+        self::assertStringNotContainsString('Município: Município de Teste', $html);
+        self::assertStringContainsString('Ambiente Gerador:', $html);
+        self::assertStringContainsString('Tipo de Ambiente:', $html);
+    }
+
+    public function testHeaderDoesNotInventAbsentMunicipalityOrUf(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        unset($nfse['infNFSe']['xLocEmi'], $nfse['infNFSe']['emit']['enderNac']['UF']);
+        $template = new DanfseTemplate();
+        self::assertSame('', $template->buildData($nfse)['municipio_emissao']);
+        self::assertStringNotContainsString('Município:', $template->render($nfse, new DanfseConfig()));
+
+        $nfse['infNFSe']['xLocEmi'] = 'Cidade Sintética';
+        self::assertSame('Cidade Sintética / -', $template->buildData($nfse)['municipio_emissao']);
+
+        unset($nfse['infNFSe']['xLocEmi']);
+        $nfse['infNFSe']['emit']['enderNac']['UF'] = 'SP';
+        self::assertSame('- / SP', $template->buildData($nfse)['municipio_emissao']);
+    }
+
+    public function testHomologationHeaderRetainsWarningAndEnvironmentWhenMunicipalitySuppressed(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        $nfse['infNFSe']['DPS']['infDPS']['tpAmb'] = '2';
+        $nfse['infNFSe']['DPS']['infDPS']['serv']['cServ']['cTribNac'] = '990000';
+
+        $html = (new DanfseTemplate())->render($nfse, new DanfseConfig());
+        self::assertStringContainsString('NFS-e SEM VALIDADE JURÍDICA', $html);
+        self::assertStringContainsString('Tipo de Ambiente:', $html);
+        self::assertStringNotContainsString('Município: Niterói / RJ', $html);
     }
 
     public function testRenderProducesHtmlWithQrCodeAndAccessKey(): void
