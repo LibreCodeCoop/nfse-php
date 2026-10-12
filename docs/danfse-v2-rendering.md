@@ -29,6 +29,14 @@ The stable contract covered by tests is:
 - optional contact complement and IBGE/CEP follow the authorized XML without inventing missing data;
 - the reference footer never fabricates an acknowledgement date or human signature.
 
+## Supported PDF engine
+
+The library requires **Dompdf 3.1.6 or later within the 3.x series**
+(`dompdf/dompdf: ^3.1.6`), rather than the older 2.x major.
+The minimum includes security fixes released in Dompdf 3.1.6;
+Composer dependency resolution must retain security-advisory blocking.
+The library does not attempt to provide compatibility with Dompdf 2.
+
 ## Bundled Liberation Sans typography
 
 By default the renderer embeds unmodified Liberation Sans 2.1.5 Regular and

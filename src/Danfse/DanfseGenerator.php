@@ -95,7 +95,7 @@ final class DanfseGenerator
                     $options->getChroot(),
                     $fonts->directories(),
                 ))));
-                // Dompdf 2/3 can cache font lookups between documents in one
+                // Dompdf 3 can cache font lookups between documents in one
                 // PHP process; isolate metrics and family names per font set.
                 $options->setFontDir($fonts->fontCacheDirectory);
                 $options->setFontCache($fonts->fontCacheDirectory);

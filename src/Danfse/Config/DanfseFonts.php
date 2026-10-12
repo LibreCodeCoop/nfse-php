@@ -55,7 +55,7 @@ final readonly class DanfseFonts
      */
     public function fontFaceCss(): string
     {
-        // Dompdf 2.x/3.x caches FontMetrics::getFont() lookups statically
+        // Dompdf 3.x caches FontMetrics::getFont() lookups statically
         // by CSS family name, across renderer instances in one PHP process.
         // A namespaced family avoids poisoning the next default document.
         $label = $this->labelFamily();
