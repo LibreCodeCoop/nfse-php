@@ -15,35 +15,46 @@
     <meta charset="UTF-8">
     <title>DANFSe - <?= $data['numero_nfse'] ?></title>
     <style>
-        @page { margin: 7pt 7pt 65pt; }
+        /* NT008 2.2: 0.15–0.20 cm margins, 1pt perimeter, 0.5pt sections. */
+        @page { margin: 5pt; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: Arial, Helvetica, sans-serif;
-            font-size: 6.5pt;
+            font-family: Arial, "Liberation Sans", Helvetica, sans-serif;
+            font-size: 7pt;
             line-height: 1.14;
-            color: #111;
-            margin: 4pt;
-            padding: 3pt 4pt;
-            border: 0.7pt solid #111;
+            color: #000;
+            margin: 0;
+            padding: 1pt 1pt 65pt;
+        }
+        /* Fixed page border includes footer and uses the full A4 frame.
+           This is not a text container border that ends after its content. */
+        .page-border {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border: 1pt solid #000;
+            z-index: -2;
         }
         table { width: 100%; border-collapse: collapse; table-layout: fixed; margin: 0; }
         tr { page-break-inside: avoid; }
         td { padding: 1.4pt 3pt 1.6pt; vertical-align: top; word-wrap: break-word; }
-        .bordered-section { border-bottom: 0.7pt solid #222; margin: 0; }
+        .bordered-section { border-bottom: 0.5pt solid #000; margin: 0; }
         .first-section td { padding-bottom: 1pt; }
-        .label { display: block; font-size: 6.4pt; font-weight: bold; margin-bottom: 1pt; }
-        .value { font-size: 6.85pt; line-height: 1.18; font-weight: normal; }
+        .label { display: block; font-family: Arial, "Liberation Sans", Helvetica, sans-serif; font-size: 6pt; font-weight: bold; margin-bottom: 1pt; }
+        .value { font-family: "Microsoft Sans Serif", "Liberation Sans", Arial, sans-serif; font-size: 7pt; line-height: 1.18; font-weight: normal; }
         .section-header {
             width: 25%;
             font-size: 7.1pt;
             font-weight: bold;
             text-align: left;
             vertical-align: middle;
-            background: #ededed;
+            background: #f2f2f2;
             padding: 2pt 3pt;
         }
         .section-title { font-size: 7.1pt; font-weight: bold; }
-        .header-table { background: #f3f3f3; border-bottom: 0.7pt solid #111; margin-bottom: 2pt; }
+        .header-table { background: #f2f2f2; border-bottom: 0.5pt solid #000; margin-bottom: 2pt; }
         .header-table td { padding: 2pt 3pt 3pt; vertical-align: middle; }
         .logo-cell { width: 32%; text-align: left; }
         .title-cell { width: 42%; text-align: center; }
@@ -51,18 +62,18 @@
         .municipality-name { font-size: 8pt; font-weight: normal; }
         .municipality-environment { font-size: 6pt; font-weight: normal; }
         .qr-container { text-align: center; }
-        .qr-notice { font-size: 5.6pt; line-height: 1.15; margin-top: 2pt; text-align: left; }
-        .access-key { white-space: nowrap; font-size: 6.6pt; }
-        .no-party { text-align: center; font-size: 6.4pt; padding: 2pt; border-bottom: 0.7pt solid #222; }
+        .qr-notice { font-size: 6pt; line-height: 1.15; margin-top: 2pt; text-align: left; }
+        .access-key { white-space: nowrap; font-size: 7pt; }
+        .no-party { text-align: center; font-size: 6pt; padding: 2pt; border-bottom: 0.5pt solid #000; }
         .no-party div { border-top: 0.5pt solid #222; margin-top: 2pt; padding-top: 2pt; }
         .value-highlight { font-weight: bold; }
-        .total-emphasis { background: #f3f3f3; }
-        .emitter-cell { background: #f3f3f3; }
-        .footer-container { position: fixed; bottom: 0; left: 4pt; right: 4pt; }
+        .total-emphasis { background: #f2f2f2; }
+        .emitter-cell { background: #f2f2f2; }
+        .footer-container { position: fixed; bottom: 2pt; left: 1pt; right: 1pt; }
         .footer-table { width: 100%; background: #fff; }
-        .footer-table td { border: 0.8pt solid #000; padding: 2pt 3pt; }
-        .footer-table .label { font-size: 5.8pt; }
-        .footer-table .value { font-size: 6pt; }
+        .footer-table td { border: 0.5pt solid #000; padding: 2pt 3pt; }
+        .footer-table .label { font-size: 6pt; }
+        .footer-table .value { font-size: 7pt; }
         .fiscal-state-watermark {
             position: fixed;
             top: 46%;
@@ -82,7 +93,7 @@
             transform: translate(-50%, -50%) rotate(-45deg);
             font-size: 45pt;
             font-weight: bold;
-            color: rgba(180, 180, 180, 0.2);
+            color: #a6a6a6;
             z-index: -1;
             white-space: nowrap;
         }
@@ -92,6 +103,7 @@
     <?php if ($fiscalState !== null): ?>
         <div class="fiscal-state-watermark"><?= htmlspecialchars($fiscalState->value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></div>
     <?php endif; ?>
+    <div class="page-border"></div>
     <?php if ($isHomologacao): ?>
     <div class="watermark">HOMOLOGAÇÃO</div>
     <?php endif; ?>
@@ -105,10 +117,10 @@
                 <?php endif; ?>
             </td>
             <td class="title-cell">
-                <div style="font-size: 8.7pt; font-weight: bold;">DANFSe v2.0</div>
-                <div style="font-size: 8pt; font-weight: bold;">Documento Auxiliar da NFS-e</div>
+                <div style="font-size: 9pt; font-weight: bold;">DANFSe v2.0</div>
+                <div style="font-size: 9pt; font-weight: bold;">Documento Auxiliar da NFS-e</div>
                 <?php if ($isHomologacao): ?>
-                    <div style="color: red; font-weight: bold;">NFS-e SEM VALIDADE JURÍDICA</div>
+                    <div style="color: red; font-size: 9pt; font-weight: bold;">NFS-e SEM VALIDADE JURÍDICA</div>
                 <?php endif; ?>
             </td>
             <td class="municipality-cell">
