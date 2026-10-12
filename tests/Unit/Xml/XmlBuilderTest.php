@@ -50,6 +50,83 @@ class XmlBuilderTest extends TestCase
         $this->builder->buildDps($this->makeDps(prestadorInscricaoMunicipal: str_repeat('1', 16)));
     }
 
+    public function testExtendedDtoKeepsLegacyPositionalConstructorOrder(): void
+    {
+        $parameters = (new \ReflectionMethod(DpsData::class, '__construct'))->getParameters();
+        $names = array_map(static fn (\ReflectionParameter $parameter): string => $parameter->getName(), $parameters);
+
+        self::assertSame('regimeApuracaoSimplesNacional', $names[count($names) - 1]);
+        self::assertLessThan(
+            array_search('regimeApuracaoSimplesNacional', $names, true),
+            array_search('regimeEspecialTributacao', $names, true),
+        );
+    }
+
+    public function testMeEppWithoutApurationIsRejectedBeforeXmlGeneration(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('E0166');
+
+        $this->builder->buildDps($this->makeDps(opcaoSimplesNacional: 3));
+    }
+
+    public function testMeEppApurationSerializesAllOfficialCodesInTheCorrectXsdOrder(): void
+    {
+        foreach ([1, 2, 3] as $apuration) {
+            $xml = $this->builder->buildDps($this->makeDps(
+                opcaoSimplesNacional: 3,
+                regimeApuracaoSimplesNacional: $apuration,
+                regimeEspecialTributacao: 0,
+            ));
+
+            self::assertStringContainsString('<opSimpNac>3</opSimpNac>', $xml);
+            self::assertStringContainsString('<regApTribSN>' . $apuration . '</regApTribSN>', $xml);
+            self::assertStringContainsString('<regEspTrib>0</regEspTrib>', $xml);
+            self::assertLessThan(
+                strpos($xml, '<regApTribSN>'),
+                strpos($xml, '<opSimpNac>'),
+            );
+            self::assertLessThan(
+                strpos($xml, '<regEspTrib>'),
+                strpos($xml, '<regApTribSN>'),
+            );
+        }
+    }
+
+    public function testE0175RejectsSpecialRegimeWhenMeEppApurationIsFullySimple(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('E0175');
+
+        $this->builder->buildDps($this->makeDps(
+            opcaoSimplesNacional: 3,
+            regimeApuracaoSimplesNacional: 1,
+            regimeEspecialTributacao: 6,
+        ));
+    }
+
+    public function testE0162RejectsApurationForMeiAndNonOptant(): void
+    {
+        foreach ([1, 2] as $status) {
+            try {
+                $this->builder->buildDps($this->makeDps(
+                    opcaoSimplesNacional: $status,
+                    regimeApuracaoSimplesNacional: 1,
+                ));
+                self::fail('Non-ME/EPP must not serialize regApTribSN.');
+            } catch (\InvalidArgumentException $e) {
+                self::assertStringContainsString('E0162', $e->getMessage());
+            }
+        }
+    }
+
+    public function testDefaultNonMeEppDpsStillOmitsOptionalApurationTag(): void
+    {
+        $xml = $this->builder->buildDps($this->makeDps());
+        self::assertStringContainsString('<regEspTrib>0</regEspTrib>', $xml);
+        self::assertStringNotContainsString('<regApTribSN>', $xml);
+    }
+
     public function testBuildDpsReturnsWellFormedXml(): void
     {
         $dps = $this->makeDps();
@@ -1045,6 +1122,7 @@ class XmlBuilderTest extends TestCase
         string $issqnNumeroProcessoSuspensao = '',
         int $tipoRetencaoIss = 1,
         int $opcaoSimplesNacional = 1,
+        ?int $regimeApuracaoSimplesNacional = null,
         int $tipoAmbiente = 2,
         int $indicadorTributacao = 0,
         string $totalTributosPercentualFederal = '',
@@ -1105,6 +1183,7 @@ class XmlBuilderTest extends TestCase
             tipoRetencaoIss:          $tipoRetencaoIss,
             issRetido:                $issRetido,
             opcaoSimplesNacional:     $opcaoSimplesNacional,
+            regimeApuracaoSimplesNacional: $regimeApuracaoSimplesNacional,
             tipoAmbiente:              $tipoAmbiente,
             indicadorTributacao:      $indicadorTributacao,
             totalTributosPercentualFederal: $totalTributosPercentualFederal,

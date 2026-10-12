@@ -617,6 +617,25 @@ class XmlBuilder
     {
         $regTrib = $doc->createElement('regTrib');
         $regTrib->appendChild($doc->createElement('opSimpNac', (string) $dps->opcaoSimplesNacional));
+
+        if ($dps->opcaoSimplesNacional === 3) {
+            // XSD allows omission; the national business rule E0166 does not.
+            if (!in_array($dps->regimeApuracaoSimplesNacional, [1, 2, 3], true)) {
+                throw new \InvalidArgumentException('E0166: ME/EPP requires regApTribSN (1, 2 or 3).');
+            }
+
+            // E0175: when both ISS and federal taxes are assessed under SN,
+            // special municipal taxation must be explicitly 0 (Nenhum).
+            if ($dps->regimeApuracaoSimplesNacional === 1 && $dps->regimeEspecialTributacao !== 0) {
+                throw new \InvalidArgumentException('E0175: regApTribSN=1 requires regEspTrib=0.');
+            }
+
+            $regTrib->appendChild($doc->createElement('regApTribSN', (string) $dps->regimeApuracaoSimplesNacional));
+        } elseif ($dps->regimeApuracaoSimplesNacional !== null) {
+            // E0162: this field belongs exclusively to Simples ME/EPP.
+            throw new \InvalidArgumentException('E0162: regApTribSN is not allowed for non-ME/EPP.');
+        }
+
         $regTrib->appendChild($doc->createElement('regEspTrib', (string) $dps->regimeEspecialTributacao));
 
         return $regTrib;

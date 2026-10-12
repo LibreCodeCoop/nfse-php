@@ -225,6 +225,14 @@ final readonly class DpsData
 
         /** Optional municipal benefit identified by the official municipal parameter id. */
         public ?MunicipalBenefitData $beneficioMunicipal = null,
+
+        /**
+         * Regime de apuração do Simples Nacional (regApTribSN).
+         * Required by E0166 for ME/EPP (opSimpNac=3), otherwise absent.
+         * 1: federal and ISS via SN; 2: federal SN, ISS outside SN;
+         * 3: federal and ISS outside SN.
+         */
+        public ?int $regimeApuracaoSimplesNacional = null,
     ) {
     }
 }
