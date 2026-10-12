@@ -15,6 +15,7 @@ The stable contract covered by tests is:
 - header municipality and UF only from `infNFSe/xLocEmi` and `emit/enderNac/UF`, suppressed for national taxation item 99; environment identification remains visible;
 - provider, taker and intermediary identity fields;
 - retained ISS labels from the DPS and municipal base/rate/assessed tax from the authorized `infNFSe/valores` (not the DPS `tribMun`);
+- municipal special regime codes `0` (Nenhum), `9` (Outros) and missing values retain distinct presentation; the two optional municipal rows are omitted only if every field of that row is absent, and a present numeric zero is displayed;
 - foreign taker NIF without inventing a Brazilian CPF/CNPJ;
 - 60-character taxation-description content with an ellipsis suffix when truncated;
 - IBS/CBS block rendered only when the authorized XML contains it;
@@ -22,10 +23,32 @@ The stable contract covered by tests is:
 - legacy authorized XML without IBS/CBS remains renderable;
 - homologation documents have a visible environment marker;
 - cancelled and substituted documents may show the required 50pt diagonal status watermark when the consuming application supplies an **explicit, externally verified event state** through `DanfseConfig::fiscalState`; the original authorized XML alone does not establish that a subsequent cancel/substitution occurred and is not mutated;
-- local generation returns a valid PDF artifact;
+- local generation returns a valid single-page A4 portrait PDF artifact; overflowing optional free text uses visible ellipses as permitted by NT 008 (item 2.1), without modifying the XML, the fiscal fields or mandatory tax disclosure. Layouts that still cannot fit fail explicitly instead of returning a nonconforming multi-page PDF;
 - line breaks in the authorized service description are preserved as escaped HTML line breaks;
+- the supplementary text follows NT 008's field order and pipe separators (including substitution, service references, construction, events and municipality information) when they exist in the authorized XML; estimated tax disclosure accepts explicitly supplied monetary **or** percentage values, preserving missing versus numeric zero;
 - optional contact complement and IBGE/CEP follow the authorized XML without inventing missing data;
 - the reference footer never fabricates an acknowledgement date or human signature.
+
+## Locally licensed typography
+
+NT 008 requires **Arial** for labels and **Microsoft Sans Serif** for values.
+CSS family names alone do not satisfy this: Dompdf otherwise falls back to
+Helvetica. The library cannot redistribute those proprietary font binaries.
+
+A caller holding suitable licenses can provide local TrueType files using
+`DanfseConfig(fonts: new DanfseFonts($arialRegular, $arialBold, $microsoftSansSerif, $writableFontCacheDir))`.
+Files are validated when the options are built, used only from local paths
+within Dompdf's explicitly restricted chroot, and never loaded remotely or
+serialized as font bytes in the HTML. Files must permit PDF embedding under
+their own license. The last argument must be an existing writable font cache
+directory reserved for this use; the renderer isolates its metrics from
+Dompdf's bundled fonts to prevent affecting unrelated documents.
+
+An A4 PDF should be inspected with `pdffonts receipt.pdf`; exact typography
+is demonstrated only when the correct typefaces are present and embedded.
+The default compatibility path may still fall back to Helvetica and must not
+be claimed to prove complete NT 008 font compliance. CI exercises local-font
+embedding with Dompdf's freely licensed DejaVuSans **only as a test surrogate**.
 
 The project does not guarantee byte-identical PDF output. PDF metadata, font
 metrics and QR SVG serialization can change when rendering dependencies are
@@ -48,5 +71,4 @@ The image remains directly viewable on disk and is encoded in the temporary HTML
 All monetary values and document identity continue to come only from authorized
 NFS-e XML; the layout neither recalculates taxes nor invents absent fiscal
 data. Homologation warnings remain visible. No receipt date or signature
-is invented. The footer reserves bottom page space, including when a lengthy
-description flows onto additional pages.
+is invented. The footer reserves bottom page space. Long free-text fields are progressively abbreviated with visible ellipses when needed to keep the DANFSe on one page; if mandatory content cannot fit, generation fails rather than producing additional pages.
