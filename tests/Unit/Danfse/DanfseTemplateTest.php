@@ -135,6 +135,40 @@ class DanfseTemplateTest extends TestCase
         self::assertSame('R$ 630,00', $data['tributacao_municipal']['issqn_apurado']);
     }
 
+    public function testMunicipalTaxDescriptionWinsButNationalIsFallback(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        $nfse['infNFSe']['xTribNac'] = 'Descricao nacional sintetica';
+        $nfse['infNFSe']['xTribMun'] = 'Descricao municipal sintetica';
+
+        $template = new DanfseTemplate();
+        self::assertSame('Descricao municipal sintetica', $template->buildData($nfse)['servico']['desc_trib_nacional']);
+        self::assertStringContainsString('Descricao municipal sintetica', $template->render($nfse, new DanfseConfig()));
+        self::assertStringNotContainsString('Descricao nacional sintetica', $template->render($nfse, new DanfseConfig()));
+
+        unset($nfse['infNFSe']['xTribMun']);
+        self::assertSame('Descricao nacional sintetica', $template->buildData($nfse)['servico']['desc_trib_nacional']);
+    }
+
+    public function testFederalDetailRowFollowsOriginalFiscalCompetence(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        $template = new DanfseTemplate();
+
+        $nfse['infNFSe']['DPS']['infDPS']['dCompet'] = '2026-12-31';
+        self::assertTrue($template->buildData($nfse)['tributacao_federal']['mostrar_linha_2026']);
+        self::assertStringContainsString('class="federal-competence-2026"', $template->render($nfse, new DanfseConfig()));
+
+        $nfse['infNFSe']['DPS']['infDPS']['dCompet'] = '2027-01-01';
+        self::assertFalse($template->buildData($nfse)['tributacao_federal']['mostrar_linha_2026']);
+        $html = $template->render($nfse, new DanfseConfig());
+        self::assertStringNotContainsString('class="federal-competence-2026"', $html);
+        self::assertStringContainsString('Contribuições Sociais - Retidas', $html);
+
+        unset($nfse['infNFSe']['DPS']['infDPS']['dCompet']);
+        self::assertFalse($template->buildData($nfse)['tributacao_federal']['mostrar_linha_2026']);
+    }
+
     public function testDescriptionPreservesNewlinesWithoutRenderingMarkup(): void
     {
         $nfse = $this->fixtureNfseData();

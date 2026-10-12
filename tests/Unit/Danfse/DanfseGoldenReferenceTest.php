@@ -104,7 +104,7 @@ final class DanfseGoldenReferenceTest extends TestCase
 
         $data = (new DanfseTemplate())->buildData($nfse);
 
-        self::assertSame(63, mb_strlen($data['servico']['desc_trib_nacional']));
+        self::assertSame(170, mb_strlen($data['servico']['desc_trib_nacional']));
         self::assertSame(63, mb_strlen($data['servico']['desc_trib_municipal']));
         self::assertStringEndsWith('...', $data['servico']['desc_trib_nacional']);
         self::assertStringEndsWith('...', $data['servico']['desc_trib_municipal']);
