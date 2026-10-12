@@ -92,6 +92,10 @@ final class DanfseTemplate
         $ibsCbs = $this->node($infNfse, 'IBSCBS');
         $ibsCbsValores = $this->node($ibsCbs, 'valores');
         $ibsCbsTotais = $this->node($ibsCbs, 'totCIBS');
+        $ibsTotal = $this->val($ibsCbsTotais, 'gIBS', 'vIBSTot');
+        $cbsTotal = $this->val($ibsCbsTotais, 'gCBS', 'vCBS');
+        $incidenceCode = $this->val($ibsCbs, 'cLocalidadeIncid');
+        $dpsDiscounts = $this->node($valores, 'vDescCondIncond');
 
         $id          = $this->val($infNfse, 'Id');
         $chaveAcesso = str_starts_with($id, 'NFS') ? substr($id, 3) : $id;
@@ -190,22 +194,13 @@ final class DanfseTemplate
             ],
 
             'totais' => [
-                'valor_servico'           => $this->formatter->currency($this->val($valores, 'vServPrest', 'vServ')),
-                'desconto_condicionado'   => $this->currencyOrDash($this->val($tribMun, 'vDescCond')),
-                'desconto_incondicionado' => $this->currencyOrDash($this->val($tribMun, 'vDescIncond')),
-                'issqn_retido'            => ($this->val($authorizedValues, 'vISSQN') !== '' && ($this->val($tribMun, 'tpRetISSQN') ?: '1') !== '1')
-                    ? $this->formatter->currency($this->val($authorizedValues, 'vISSQN'))
-                    : '-',
-                'retencoes_federais' => $this->sumCurrency(
-                    $this->val($tribFed, 'vRetIRRF'),
-                    $this->val($tribFed, 'vRetCP'),
-                    $this->val($tribFed, 'vRetCSLL'),
-                ),
-                'pis_cofins' => $this->sumCurrency(
-                    $this->val($tribFed, 'piscofins', 'vPis'),
-                    $this->val($tribFed, 'piscofins', 'vCofins'),
-                ),
-                'valor_liquido' => $this->formatter->currency($this->val($infNfse, 'valores', 'vLiq')),
+                'valor_servico' => $this->formatter->currency($this->val($valores, 'vServPrest', 'vServ')),
+                'desconto_condicionado' => $this->currencyOrDash($this->val($dpsDiscounts, 'vDescCond')),
+                'desconto_incondicionado' => $this->currencyOrDash($this->val($dpsDiscounts, 'vDescIncond')),
+                // This field is calculated by SEFIN and exists in the authorized
+                // NFS-e. Do not recalculate it from partially provided retentions.
+                'total_retencoes' => $this->currencyOrDash($this->val($authorizedValues, 'vTotalRet')),
+                'valor_liquido' => $this->currencyOrDash($this->val($authorizedValues, 'vLiq')),
             ],
 
             'totais_tributos' => [
@@ -219,25 +214,51 @@ final class DanfseTemplate
                     $this->val($infDps, 'IBSCBS', 'valores', 'trib', 'gIBSCBS', 'CST'),
                     $this->val($infDps, 'IBSCBS', 'valores', 'trib', 'gIBSCBS', 'cClassTrib'),
                 ),
-                'indicador_operacao' => $this->val($infDps, 'IBSCBS', 'cIndOp') ?: '-',
+                'indicador_operacao' => $this->joinedOrDash(
+                    $this->val($infDps, 'IBSCBS', 'cIndOp'),
+                    $incidenceCode,
+                    $this->val($ibsCbs, 'xLocalidadeIncid'),
+                    $this->ufForIbge($incidenceCode),
+                ),
+                // Public buildData() key retained for consumers of the data
+                // model; HTML uses the complete official indicator field.
                 'localidade_incidencia' => $this->val($ibsCbs, 'xLocalidadeIncid')
-                    ?: $this->val($ibsCbs, 'cLocalidadeIncid')
+                    ?: $incidenceCode
                     ?: '-',
+                // NT008 explicitly displays this sum of XML components. It
+                // does not authorize fresh IBS/CBS or ISS tax calculation.
                 'exclusoes_reducoes' => $this->sumCurrency(
-                    $this->val($infNfse, 'valores', 'vISSQN'),
+                    $this->val($dpsDiscounts, 'vDescIncond'),
+                    $this->val($ibsCbsValores, 'vCalcReeRepRes'),
+                    $this->val($authorizedValues, 'vISSQN'),
                     $this->val($tribFed, 'piscofins', 'vPis'),
                     $this->val($tribFed, 'piscofins', 'vCofins'),
                 ),
                 'base_calculo' => $this->currencyOrDash($this->val($ibsCbsValores, 'vBC')),
+                'reducao_aliquotas' => $this->joinedOrDash(
+                    $this->percentOrDash($this->val($ibsCbsValores, 'uf', 'pRedAliqUF')),
+                    $this->percentOrDash($this->val($ibsCbsValores, 'mun', 'pRedAliqMun')),
+                    $this->percentOrDash($this->val($ibsCbsValores, 'fed', 'pRedAliqCBS')),
+                ),
+                'aliquota_ibs' => $this->joinedOrDash(
+                    $this->percentOrDash($this->val($ibsCbsValores, 'uf', 'pIBSUF')),
+                    $this->percentOrDash($this->val($ibsCbsValores, 'mun', 'pIBSMun')),
+                ),
                 'aliquota_ibs_uf' => $this->percentOrDash($this->val($ibsCbsValores, 'uf', 'pIBSUF')),
                 'aliquota_ibs_municipal' => $this->percentOrDash($this->val($ibsCbsValores, 'mun', 'pIBSMun')),
+                'aliquota_efetiva_municipal' => $this->percentOrDash($this->val($ibsCbsValores, 'mun', 'pAliqEfetMun')),
+                'valor_ibs_municipal' => $this->currencyOrDash($this->val($ibsCbsTotais, 'gIBS', 'gIBSMunTot', 'vIBSMun')),
+                'aliquota_efetiva_estadual' => $this->percentOrDash($this->val($ibsCbsValores, 'uf', 'pAliqEfetUF')),
+                'valor_ibs_estadual' => $this->currencyOrDash($this->val($ibsCbsTotais, 'gIBS', 'gIBSUFTot', 'vIBSUF')),
                 'aliquota_cbs' => $this->percentOrDash($this->val($ibsCbsValores, 'fed', 'pCBS')),
-                'total_ibs' => $this->currencyOrDash($this->val($ibsCbsTotais, 'gIBS', 'vIBSTot')),
-                'total_cbs' => $this->currencyOrDash($this->val($ibsCbsTotais, 'gCBS', 'vCBS')),
-                'total_ibs_cbs' => $ibsCbs === [] ? '-' : $this->sumCurrency(
-                    $this->val($ibsCbsTotais, 'gIBS', 'vIBSTot'),
-                    $this->val($ibsCbsTotais, 'gCBS', 'vCBS'),
-                ),
+                'aliquota_efetiva_cbs' => $this->percentOrDash($this->val($ibsCbsValores, 'fed', 'pAliqEfetCBS')),
+                'total_ibs' => $this->currencyOrDash($ibsTotal),
+                'total_cbs' => $this->currencyOrDash($cbsTotal),
+                // An absent amount is not proof of zero. Two explicit amounts
+                // (including literal zero) are required for a displayed sum.
+                'total_ibs_cbs' => $ibsTotal !== '' && $cbsTotal !== ''
+                    ? $this->sumCurrency($ibsTotal, $cbsTotal)
+                    : '-',
                 'valor_total_nfse' => $this->currencyOrDash($this->val($ibsCbsTotais, 'vTotNF')),
             ],
 
@@ -341,6 +362,23 @@ final class DanfseTemplate
 
         return ($city !== '' ? $city : '-') . ' / ' . ($uf !== '' ? $uf : '-') . ' / '
             . ($country !== '' ? $country : '-');
+    }
+
+    /**
+     * Derive the UF only from an explicitly authorized, recognized IBGE code.
+     */
+    private function ufForIbge(string $code): string
+    {
+        if (preg_match('/^\\d{7}$/D', $code) !== 1) {
+            return '-';
+        }
+
+        $name = Municipios::lookup($code);
+        if ($name === $code || !str_contains($name, ' - ')) {
+            return '-';
+        }
+
+        return substr($name, (int) strrpos($name, ' - ') + 3);
     }
 
     private function formattedNbs(string $code): string

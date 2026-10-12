@@ -374,68 +374,31 @@
         </table>
     </div>
 
-    <!-- Tributação IBS / CBS (NT 008 v1.02) -->
+    <!-- Tributação IBS/CBS: Anexo I grid and official authorized XML fields -->
     <div class="bordered-section">
         <table>
             <tr>
-                <td class="section-header">
-                    <span class="section-title">TRIBUTAÇÃO IBS / CBS</span>
-                </td>
-                <td>
-                    <span class="label">CST / cClassTrib</span>
-                    <span class="value"><?= $data['ibs_cbs']['cst_classificacao'] ?></span>
-                </td>
-                <td>
-                    <span class="label">Indicador de Operação</span>
-                    <span class="value"><?= $data['ibs_cbs']['indicador_operacao'] ?></span>
-                </td>
-                <td>
-                    <span class="label">Localidade de Incidência</span>
-                    <span class="value"><?= $data['ibs_cbs']['localidade_incidencia'] ?></span>
-                </td>
+                <td class="section-header"><span class="section-title">TRIBUTAÇÃO IBS / CBS</span></td>
+                <td><span class="label">CST / cClassTrib</span><span class="value"><?= $data['ibs_cbs']['cst_classificacao'] ?></span></td>
+                <td colspan="2"><span class="label">Indicador de Operação / Código IBGE / Município Incidência / Sigla UF</span><span class="value"><?= $data['ibs_cbs']['indicador_operacao'] ?></span></td>
             </tr>
             <tr>
-                <td>
-                    <span class="label">Exclusões e Reduções da Base de Cálculo</span>
-                    <span class="value"><?= $data['ibs_cbs']['exclusoes_reducoes'] ?></span>
-                </td>
-                <td>
-                    <span class="label">Base de Cálculo</span>
-                    <span class="value"><?= $data['ibs_cbs']['base_calculo'] ?></span>
-                </td>
-                <td>
-                    <span class="label">Alíquota IBS UF</span>
-                    <span class="value"><?= $data['ibs_cbs']['aliquota_ibs_uf'] ?></span>
-                </td>
-                <td>
-                    <span class="label">Alíquota IBS Município</span>
-                    <span class="value"><?= $data['ibs_cbs']['aliquota_ibs_municipal'] ?></span>
-                </td>
+                <td><span class="label">Exclusões e Reduções da Base de Cálculo</span><span class="value"><?= $data['ibs_cbs']['exclusoes_reducoes'] ?></span></td>
+                <td><span class="label">Base de Cálculo Após Exclusões e Reduções</span><span class="value"><?= $data['ibs_cbs']['base_calculo'] ?></span></td>
+                <td><span class="label">Red. Alíquota IBS / Red. Alíquota CBS</span><span class="value"><?= $data['ibs_cbs']['reducao_aliquotas'] ?></span></td>
+                <td><span class="label">Alíquota - IBS UF / IBS Mun</span><span class="value"><?= $data['ibs_cbs']['aliquota_ibs'] ?></span></td>
             </tr>
             <tr>
-                <td>
-                    <span class="label">Reduções de Alíquota IBS/CBS</span>
-                    <span class="value">-</span>
-                </td>
-                <td>
-                    <span class="label">Alíquota CBS</span>
-                    <span class="value"><?= $data['ibs_cbs']['aliquota_cbs'] ?></span>
-                </td>
-                <td>
-                    <span class="label">Total IBS</span>
-                    <span class="value"><?= $data['ibs_cbs']['total_ibs'] ?></span>
-                </td>
-                <td>
-                    <span class="label">Total CBS</span>
-                    <span class="value"><?= $data['ibs_cbs']['total_cbs'] ?></span>
-                </td>
+                <td><span class="label">Alíq. Efetiva Municipal - IBS</span><span class="value"><?= $data['ibs_cbs']['aliquota_efetiva_municipal'] ?></span></td>
+                <td><span class="label">Valor Apurado Municipal - IBS</span><span class="value"><?= $data['ibs_cbs']['valor_ibs_municipal'] ?></span></td>
+                <td><span class="label">Alíq. Efetiva Estadual - IBS</span><span class="value"><?= $data['ibs_cbs']['aliquota_efetiva_estadual'] ?></span></td>
+                <td><span class="label">Valor Apurado Estadual - IBS</span><span class="value"><?= $data['ibs_cbs']['valor_ibs_estadual'] ?></span></td>
             </tr>
             <tr>
-                <td colspan="3"></td>
-                <td>
-                    <span class="label">Valor Total da NFS-e c/ IBS/CBS</span>
-                    <span class="value"><?= $data['ibs_cbs']['valor_total_nfse'] ?></span>
-                </td>
+                <td><span class="label">Valor Total Apurado - IBS</span><span class="value"><?= $data['ibs_cbs']['total_ibs'] ?></span></td>
+                <td><span class="label">Alíquota - CBS</span><span class="value"><?= $data['ibs_cbs']['aliquota_cbs'] ?></span></td>
+                <td><span class="label">Alíquota Efetiva - CBS</span><span class="value"><?= $data['ibs_cbs']['aliquota_efetiva_cbs'] ?></span></td>
+                <td><span class="label">Valor Total Apurado - CBS</span><span class="value"><?= $data['ibs_cbs']['total_cbs'] ?></span></td>
             </tr>
         </table>
     </div>
@@ -450,9 +413,9 @@
                 <td><span class="label">Desconto Condicionado</span><span class="value"><?= $data['totais']['desconto_condicionado'] ?></span></td>
             </tr>
             <tr>
-                <td><span class="label">Retenções Federais</span><span class="value"><?= $data['totais']['retencoes_federais'] ?></span></td>
+                <td><span class="label">Total das Retenções (ISSQN / Federais)</span><span class="value"><?= $data['totais']['total_retencoes'] ?></span></td>
                 <td><span class="label">VALOR LÍQUIDO DA NFS-e</span><span class="value"><?= $data['totais']['valor_liquido'] ?></span></td>
-                <td><span class="label">ISSQN Retido / Total IBS/CBS</span><span class="value"><?= $data['totais']['issqn_retido'] ?> / <?= $data['ibs_cbs']['total_ibs_cbs'] ?></span></td>
+                <td><span class="label">Total do IBS/CBS</span><span class="value"><?= $data['ibs_cbs']['total_ibs_cbs'] ?></span></td>
                 <td class="total-emphasis"><span class="label">VALOR LÍQUIDO DA NFS-e + IBS/CBS</span><span class="value value-highlight"><?= $data['ibs_cbs']['valor_total_nfse'] ?></span></td>
             </tr>
         </table>
