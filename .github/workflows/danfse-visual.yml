@@ -50,7 +50,8 @@ jobs:
           for pdf in "${{ runner.temp }}/danfse/"*.pdf; do
             pdftotext -layout "$pdf" - | grep -Fq "DATA CIENTIFICAÇÃO"
             pdftotext -layout "$pdf" - | grep -Fq "IDENTIFICAÇÃO E ASSINATURA"
-            pdftotext -layout "$pdf" - | grep -Fq "Totais aproximados dos Tributos"
+            # Normalize PDF line wraps while still requiring the complete official disclosure.
+            pdftotext -layout "$pdf" - | tr -s '[:space:]' ' ' | grep -Fq "Totais aproximados dos Tributos"
             pages=$(pdfinfo "$pdf" | awk '/^Pages:/ {print $2}')
             test "$pages" -eq 1
             pdfinfo "$pdf" | grep -Fq 'Page size:       595.28 x 841.89 pts (A4)'
