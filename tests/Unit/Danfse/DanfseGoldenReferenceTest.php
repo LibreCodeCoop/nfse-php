@@ -29,8 +29,11 @@ final class DanfseGoldenReferenceTest extends TestCase
     {
         $html = (new DanfseTemplate())->render($this->fixtureData(), new DanfseConfig());
 
-        self::assertStringContainsString('background: #f3f3f3', $html);
-        self::assertStringContainsString('background: #ededed', $html);
+        self::assertStringContainsString('background: #f2f2f2', $html);
+        self::assertStringContainsString('border: 1pt solid #000', $html);
+        self::assertStringContainsString('border-bottom: 0.5pt solid #000', $html);
+        self::assertStringContainsString('@page { margin: 5pt; }', $html);
+        self::assertStringContainsString('class="page-border"', $html);
         self::assertStringContainsString('position: fixed;', $html);
         self::assertStringContainsString('bottom: 0;', $html);
         self::assertStringContainsString('PRESTADOR / FORNECEDOR', $html);
