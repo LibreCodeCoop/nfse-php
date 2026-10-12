@@ -43,9 +43,19 @@ final class DanfseTemplate
      *
      * @param array<string, mixed> $nfse
      */
-    public function render(array $nfse, DanfseConfig $config): string
-    {
-        $data          = $this->buildData($nfse);
+    public function render(
+        array $nfse,
+        DanfseConfig $config,
+        ?int $serviceDescriptionLimit = null,
+        ?int $complementaryTextLimit = null,
+    ): string {
+        $data          = $this->buildData($nfse, $complementaryTextLimit);
+        if ($serviceDescriptionLimit !== null) {
+            $data['servico']['descricao'] = $this->formatter->limit(
+                (string) $data['servico']['descricao'],
+                $serviceDescriptionLimit,
+            );
+        }
         $logo          = $config->logoDataUri;
         $municipality  = $config->municipality;
         // This is an explicitly supplied, externally verified state; it
@@ -73,7 +83,7 @@ final class DanfseTemplate
      * @param array<string, mixed> $nfse
      * @return array<string, mixed>
      */
-    public function buildData(array $nfse): array
+    public function buildData(array $nfse, ?int $complementaryTextLimit = null): array
     {
         $infNfse = $this->node($nfse, 'infNFSe');
         $infDps  = $this->node($infNfse, 'DPS', 'infDPS');
@@ -304,6 +314,7 @@ final class DanfseTemplate
                 $this->percentOrDash($this->val($totTrib, 'pTotTribFed')),
                 $this->percentOrDash($this->val($totTrib, 'pTotTribEst')),
                 $this->percentOrDash($this->val($totTrib, 'pTotTribMun')),
+                $complementaryTextLimit,
             ),
         ];
     }
@@ -651,7 +662,12 @@ final class DanfseTemplate
         string $federal,
         string $state,
         string $municipal,
+        ?int $freeTextLimit = null,
     ): string {
+        if ($freeTextLimit !== null) {
+            $existing = $this->formatter->limit(trim($existing), $freeTextLimit);
+        }
+
         $taxes = sprintf(
             'Totais aproximados dos Tributos cfe. Lei n° 12.741/2012: Federais: %s; Estaduais: %s; Municipais: %s;',
             $federal,
