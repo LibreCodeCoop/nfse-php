@@ -171,6 +171,13 @@ final class DanfseTemplate
             );
         $descontoIncondicionado = $this->val($valores, 'vDescCondIncond', 'vDescIncond');
 
+        // NT008 v1.02, 2.4.5: these are display compositions of XML
+        // amounts, never a recalculation of a tax or retention liability.
+        $pisCofinsRetention = $this->val($tribFed, 'piscofins', 'tpRetPisCofins');
+        $retainedSocial = $this->val($tribFed, 'vRetCSLL');
+        $pisValue = $this->val($tribFed, 'piscofins', 'vPis');
+        $cofinsValue = $this->val($tribFed, 'piscofins', 'vCofins');
+
         $id          = $this->val($infNfse, 'Id');
         $chaveAcesso = str_starts_with($id, 'NFS') ? substr($id, 3) : $id;
 
@@ -251,7 +258,11 @@ final class DanfseTemplate
                 'mostrar_linha_beneficio' => $this->hasAnyPresent($tipoBeneficio, $calculoBeneficio, $totalDeducoes !== '-' ? $totalDeducoes : '', $descontoIncondicionado),
                 // Note 4 permits the concise no-ISS block when the XML
                 // expressly identifies the operation as not incident.
-                'nao_sujeito_issqn' => $this->val($tribMun, 'tribISSQN') === '4',
+                'nao_sujeito_issqn' => in_array(
+                    $this->val($tribMun, 'tribISSQN'),
+                    ['2', '3', '4'],
+                    true,
+                ),
                 'valor_servico'        => $this->formatter->currency($this->val($valores, 'vServPrest', 'vServ')),
                 'bc_issqn'             => $this->currencyOrDash($this->val($authorizedValues, 'vBC')),
                 'aliquota'             => $this->percentOrDash($this->val($authorizedValues, 'pAliqAplic')),
@@ -267,14 +278,20 @@ final class DanfseTemplate
                 ),
                 'irrf'   => $this->currencyOrDash($this->val($tribFed, 'vRetIRRF')),
                 'cp'     => $this->currencyOrDash($this->val($tribFed, 'vRetCP')),
-                'contribuicoes_sociais' => $this->currencyOrDash($this->val($tribFed, 'vRetCSLL')),
-                // Alias de compatibilidade para consumidores de buildData().
-                'csll'   => $this->currencyOrDash($this->val($tribFed, 'vRetCSLL')),
-                'pis'    => $this->currencyOrDash($this->val($tribFed, 'piscofins', 'vPis')),
-                'cofins' => $this->currencyOrDash($this->val($tribFed, 'piscofins', 'vCofins')),
-                'descricao_retencao' => $this->pisCofinsRetentionLabel(
-                    $this->val($tribFed, 'piscofins', 'tpRetPisCofins'),
-                ),
+                'contribuicoes_sociais' => $pisCofinsRetention === '1'
+                    ? $this->sumCurrency($retainedSocial, $pisValue, $cofinsValue)
+                    : $this->currencyOrDash($retainedSocial),
+                // Keep legacy model keys unchanged for existing consumers.
+                'csll' => $this->currencyOrDash($retainedSocial),
+                // When PIS/COFINS are retained, the NT008 prescribes zero
+                // for the own-assessment cells, not the retained amounts.
+                'pis' => $pisCofinsRetention === '1'
+                    ? $this->formatter->currency('0.00')
+                    : $this->currencyOrDash($pisValue),
+                'cofins' => $pisCofinsRetention === '1'
+                    ? $this->formatter->currency('0.00')
+                    : $this->currencyOrDash($cofinsValue),
+                'descricao_retencao' => $this->pisCofinsRetentionLabel($pisCofinsRetention),
             ],
 
             'totais' => [
