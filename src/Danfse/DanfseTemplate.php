@@ -80,6 +80,7 @@ final class DanfseTemplate
         $enderEmit = $this->node($emit, 'enderNac');
         $toma    = $this->node($infDps, 'toma');
         $endToma = $this->node($toma, 'end');
+        $dest    = $this->node($infDps, 'IBSCBS', 'dest');
         $interm  = $this->node($infDps, 'interm');
         $endInterm = $this->node($interm, 'end');
         $serv    = $this->node($infDps, 'serv');
@@ -92,6 +93,26 @@ final class DanfseTemplate
         $ibsCbs = $this->node($infNfse, 'IBSCBS');
         $ibsCbsValores = $this->node($ibsCbs, 'valores');
         $ibsCbsTotais = $this->node($ibsCbs, 'totCIBS');
+
+        // The authorized DPS is the primary source for the provider. The
+        // authorized infNFSe/emit enriches omitted legacy address/name data.
+        $provider = $this->personDetails($prest);
+        $provider['nome'] = $this->val($prest, 'xNome') ?: $this->val($emit, 'xNome') ?: '-';
+        $provider['cnpj_cpf'] = $this->formattedDocument($prest);
+        $provider['im'] = $this->val($prest, 'IM') ?: $this->val($emit, 'IM') ?: '-';
+        $provider['telefone'] = $this->formatter->phone($this->val($prest, 'fone') ?: $this->val($emit, 'fone'));
+        $provider['email'] = strtolower($this->val($prest, 'email') ?: $this->val($emit, 'email'));
+        if ($this->node($prest, 'end') === []) {
+            $provider['endereco'] = $this->address($enderEmit);
+            $provider['municipio'] = $this->cityWithUf(
+                $this->val($infNfse, 'xLocEmi'),
+                $this->val($enderEmit, 'UF'),
+            );
+            $provider['cep'] = $this->formatter->cep($this->val($enderEmit, 'CEP'));
+            $provider['ibge_cep'] = $this->ibgeCep($this->val($enderEmit, 'cMun'), $this->val($enderEmit, 'CEP'));
+        }
+        $provider['simples_nacional'] = OptanteSimplesNacional::labelFor($this->val($regTrib, 'opSimpNac'));
+        $provider['regime_sn'] = RegimeApuracaoTributariaSN::labelFor($this->val($regTrib, 'regApTribSN'));
 
         $id          = $this->val($infNfse, 'Id');
         $chaveAcesso = str_starts_with($id, 'NFS') ? substr($id, 3) : $id;
@@ -115,42 +136,23 @@ final class DanfseTemplate
             'situacao_nfse' => $this->statusLabel($this->val($infNfse, 'cStat')),
             'finalidade_nfse' => $this->purposeLabel($this->val($infDps, 'IBSCBS', 'finNFSe')),
 
-            'emitente' => [
-                'nome'            => $this->val($emit, 'xNome') ?: '-',
-                'cnpj_cpf'        => $this->formattedDocument($emit),
-                'im'              => $this->val($prest, 'IM') ?: $this->val($emit, 'IM') ?: '-',
-                'telefone'        => $this->formatter->phone($this->val($prest, 'fone') ?: $this->val($emit, 'fone')),
-                'email'           => strtolower($this->val($prest, 'email') ?: $this->val($emit, 'email')),
-                'endereco'        => $this->address($enderEmit),
-                'municipio'       => $this->cityWithUf($this->val($infNfse, 'xLocEmi'), $this->val($enderEmit, 'UF')),
-                'cep'             => $this->formatter->cep($this->val($enderEmit, 'CEP')),
-                'ibge_cep'        => $this->ibgeCep($this->val($enderEmit, 'cMun'), $this->val($enderEmit, 'CEP')),
-                'simples_nacional' => OptanteSimplesNacional::labelFor($this->val($regTrib, 'opSimpNac')),
-                'regime_sn'       => RegimeApuracaoTributariaSN::labelFor($this->val($regTrib, 'regApTribSN')),
-            ],
-
-            'tomador' => [
-                'nome'      => $this->val($toma, 'xNome') ?: '-',
-                'cnpj_cpf'  => $this->formattedDocument($toma),
-                'im'        => $this->val($toma, 'IM') ?: '-',
-                'telefone'  => $this->formatter->phone($this->val($toma, 'fone')),
-                'email'     => strtolower($this->val($toma, 'email')),
-                'endereco'  => $this->address($endToma),
-                'municipio' => $this->city($this->val($endToma, 'endNac', 'cMun')),
-                'cep'       => $this->formatter->cep($this->val($endToma, 'endNac', 'CEP')),
-                'ibge_cep'  => $this->ibgeCep($this->val($endToma, 'endNac', 'cMun'), $this->val($endToma, 'endNac', 'CEP')),
-            ],
-
-            'intermediario' => $interm === [] ? null : [
-                'nome'      => $this->val($interm, 'xNome') ?: '-',
-                'cnpj_cpf'  => $this->formattedDocument($interm),
-                'im'        => $this->val($interm, 'IMPrestMun') ?: '-',
-                'telefone'  => $this->formatter->phone($this->val($interm, 'fone')),
-                'email'     => strtolower($this->val($interm, 'email')),
-                'endereco'  => $this->address($endInterm),
-                'municipio' => $this->city($this->val($endInterm, 'endNac', 'cMun')),
-                'cep'       => $this->formatter->cep($this->val($endInterm, 'endNac', 'CEP')),
-            ],
+            'emitente' => $provider,
+            'tomador' => $toma === [] ? null : $this->personDetails($toma),
+            'destinatario' => $dest === [] ? null : array_merge(
+                $this->personDetails($dest),
+                ['mesmo_tomador' => $this->samePerson($dest, $toma)],
+            ),
+            // The official XSD's indDest=0 is an explicit declaration
+            // that dest=toma, even if there is no separate dest group.
+            // When indDest=1, never override that with a name or inferred
+            // equality. Only legacy XML lacking indDest uses identity
+            // comparison as a presentation fallback.
+            'destinatario_mesmo_tomador' => match ($this->val($infDps, 'IBSCBS', 'indDest')) {
+                '0' => true,
+                '1' => false,
+                default => $dest !== [] && $this->samePerson($dest, $toma),
+            },
+            'intermediario' => $interm === [] ? null : $this->personDetails($interm),
 
             'servico' => [
                 'codigo_trib_nacional'  => $this->formatter->codTribNacional($this->val($cServ, 'cTribNac')),
@@ -263,6 +265,69 @@ final class DanfseTemplate
                 $this->percentOrDash($this->val($totTrib, 'pTotTribMun')),
             ),
         ];
+    }
+
+    /**
+     * Presentation fields for people in the authorized DPS, keeping national
+     * IBGE/CEP and foreign city/postal codes distinct. Missing values stay
+     * missing: no municipality, state or identity is guessed.
+     *
+     * @param array<string,mixed> $person
+     * @return array<string,string>
+     */
+    private function personDetails(array $person): array
+    {
+        $address = $this->node($person, 'end');
+        $national = $this->node($address, 'endNac');
+        $foreign = $this->node($address, 'endExt');
+
+        $municipio = '-';
+        $ibgeCep = '-';
+        $cep = '-';
+
+        if ($national !== []) {
+            $municipio = $this->city($this->val($national, 'cMun'));
+            $ibgeCep = $this->ibgeCep($this->val($national, 'cMun'), $this->val($national, 'CEP'));
+            $cep = $this->formatter->cep($this->val($national, 'CEP'));
+        } elseif ($foreign !== []) {
+            $city = $this->val($foreign, 'xCidade');
+            $region = $this->val($foreign, 'xEstProvReg');
+            $postal = $this->val($foreign, 'cEndPost');
+            $municipio = $city !== '' ? $city . ($region !== '' ? ' - ' . $region : '') : '-';
+            $ibgeCep = '- / ' . ($postal !== '' ? $postal : '-');
+            $cep = $postal !== '' ? $postal : '-';
+        }
+
+        return [
+            'nome' => $this->val($person, 'xNome') ?: '-',
+            'cnpj_cpf' => $this->formattedDocument($person),
+            'im' => $this->val($person, 'IM') ?: $this->val($person, 'IMPrestMun') ?: '-',
+            'telefone' => $this->formatter->phone($this->val($person, 'fone')),
+            'email' => strtolower($this->val($person, 'email')),
+            'endereco' => $this->address($address),
+            'municipio' => $municipio,
+            'ibge_cep' => $ibgeCep,
+            'cep' => $cep,
+        ];
+    }
+
+    /**
+     * Equal verified identifiers permit the NT008 optional same-taker label.
+     * Names or addresses alone do not establish fiscal identity.
+     *
+     * @param array<string,mixed> $left
+     * @param array<string,mixed> $right
+     */
+    private function samePerson(array $left, array $right): bool
+    {
+        foreach (['CNPJ', 'CPF', 'NIF'] as $key) {
+            $id = $this->val($left, $key);
+            if ($id !== '' && $id === $this->val($right, $key)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

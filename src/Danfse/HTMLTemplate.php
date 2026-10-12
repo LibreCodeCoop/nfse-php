@@ -171,7 +171,7 @@
     </div>
 
     <!-- Emitente -->
-    <div class="bordered-section">
+    <div class="bordered-section party-prestador">
         <table>
             <tr>
                 <td class="section-header">
@@ -191,28 +191,13 @@
                 </td>
             </tr>
             <tr>
-                <td colspan="2">
-                    <span class="label">Nome / Nome Empresarial</span>
-                    <span class="value"><?= $data['emitente']['nome'] ?></span>
-                </td>
-                <td colspan="2">
-                    <span class="label">E-mail</span>
-                    <span class="value"><?= $data['emitente']['email'] ?></span>
-                </td>
+                <td colspan="2"><span class="label">Nome / Nome Empresarial</span><span class="value"><?= $data['emitente']['nome'] ?></span></td>
+                <td><span class="label">Município / Sigla UF</span><span class="value"><?= $data['emitente']['municipio'] ?></span></td>
+                <td><span class="label">Código IBGE / CEP</span><span class="value"><?= $data['emitente']['ibge_cep'] ?></span></td>
             </tr>
             <tr>
-                <td colspan="2">
-                    <span class="label">Endereço</span>
-                    <span class="value"><?= $data['emitente']['endereco'] ?></span>
-                </td>
-                <td>
-                    <span class="label">Município</span>
-                    <span class="value"><?= $data['emitente']['municipio'] ?></span>
-                </td>
-                <td>
-                    <span class="label">Código IBGE / CEP</span>
-                    <span class="value"><?= $data['emitente']['ibge_cep'] ?></span>
-                </td>
+                <td colspan="2"><span class="label">Endereço</span><span class="value"><?= $data['emitente']['endereco'] ?></span></td>
+                <td colspan="2"><span class="label">E-mail</span><span class="value"><?= $data['emitente']['email'] ?></span></td>
             </tr>
             <tr>
                 <td colspan="2">
@@ -228,7 +213,10 @@
     </div>
 
     <!-- Tomador -->
-    <div class="bordered-section">
+    <?php if ($data['tomador'] === null): ?>
+    <div class="no-party">TOMADOR/ADQUIRENTE DA OPERAÇÃO NÃO IDENTIFICADO NA NFS-e</div>
+    <?php else: ?>
+    <div class="bordered-section party-tomador">
         <table>
             <tr>
                 <td class="section-header">
@@ -252,38 +240,54 @@
                     <span class="label">Nome / Nome Empresarial</span>
                     <span class="value"><?= $data['tomador']['nome'] ?></span>
                 </td>
-                <td colspan="2" style="width: 50%;">
-                    <span class="label">E-mail</span>
-                    <span class="value"><?= $data['tomador']['email'] ?></span>
-                </td>
+                <td><span class="label">Município / Sigla UF</span><span class="value"><?= $data['tomador']['municipio'] ?></span></td>
+                <td><span class="label">Código IBGE / CEP</span><span class="value"><?= $data['tomador']['ibge_cep'] ?></span></td>
             </tr>
             <tr>
-                <td colspan="2" style="width: 50%;">
-                    <span class="label">Endereço</span>
-                    <span class="value"><?= $data['tomador']['endereco'] ?></span>
-                </td>
-                <td style="width: 25%;">
-                    <span class="label">Município</span>
-                    <span class="value"><?= $data['tomador']['municipio'] ?></span>
-                </td>
-                <td style="width: 25%;">
-                    <span class="label">Código IBGE / CEP</span>
-                    <span class="value"><?= $data['tomador']['ibge_cep'] ?></span>
-                </td>
+                <td colspan="2"><span class="label">Endereço</span><span class="value"><?= $data['tomador']['endereco'] ?></span></td>
+                <td colspan="2"><span class="label">E-mail</span><span class="value"><?= $data['tomador']['email'] ?></span></td>
             </tr>
         </table>
     </div>
+    <?php endif; ?>
+
+    <!-- Destinatário: independent of the intermediary, as required by NT008 -->
+    <?php if ($data['destinatario_mesmo_tomador']): ?>
+    <div class="no-party">O DESTINATÁRIO É O PRÓPRIO TOMADOR/ADQUIRENTE DA OPERAÇÃO</div>
+    <?php elseif ($data['destinatario'] === null): ?>
+    <div class="no-party">DESTINATÁRIO DA OPERAÇÃO NÃO IDENTIFICADO NA NFS-e</div>
+    <?php else: ?>
+    <div class="bordered-section party-destinatario">
+        <table>
+            <tr>
+                <td class="section-header"><span class="section-title">DESTINATÁRIO DA OPERAÇÃO</span></td>
+                <td><span class="label">CNPJ / CPF / NIF</span><span class="value"><?= $data['destinatario']['cnpj_cpf'] ?></span></td>
+                <td></td>
+                <td><span class="label">Telefone</span><span class="value"><?= $data['destinatario']['telefone'] ?></span></td>
+            </tr>
+            <tr>
+                <td colspan="2"><span class="label">Nome / Nome Empresarial</span><span class="value"><?= $data['destinatario']['nome'] ?></span></td>
+                <td><span class="label">Município / Sigla UF</span><span class="value"><?= $data['destinatario']['municipio'] ?></span></td>
+                <td><span class="label">Código IBGE / CEP</span><span class="value"><?= $data['destinatario']['ibge_cep'] ?></span></td>
+            </tr>
+            <tr>
+                <td colspan="2"><span class="label">Endereço</span><span class="value"><?= $data['destinatario']['endereco'] ?></span></td>
+                <td colspan="2"><span class="label">E-mail</span><span class="value"><?= $data['destinatario']['email'] ?></span></td>
+            </tr>
+        </table>
+    </div>
+    <?php endif; ?>
 
     <!-- Intermediário -->
     <?php if ($data['intermediario'] !== null): ?>
-    <div class="bordered-section">
+    <div class="bordered-section party-intermediario">
         <table>
             <tr>
                 <td class="section-header">
                   <span class="section-title">INTERMEDIÁRIO DO SERVIÇO</span>
                 </td>
                 <td style="width: 25%;">
-                    <span class="label">CNPJ / CPF</span>
+                    <span class="label">CNPJ / CPF / NIF</span>
                     <span class="value"><?= $data['intermediario']['cnpj_cpf'] ?></span>
                 </td>
                 <td style="width: 25%;">
@@ -300,31 +304,17 @@
                     <span class="label">Nome / Nome Empresarial</span>
                     <span class="value"><?= $data['intermediario']['nome'] ?></span>
                 </td>
-                <td colspan="2" style="width: 50%;">
-                    <span class="label">E-mail</span>
-                    <span class="value"><?= $data['intermediario']['email'] ?></span>
-                </td>
+                <td><span class="label">Município / Sigla UF</span><span class="value"><?= $data['intermediario']['municipio'] ?></span></td>
+                <td><span class="label">Código IBGE / CEP</span><span class="value"><?= $data['intermediario']['ibge_cep'] ?></span></td>
             </tr>
             <tr>
-                <td colspan="2" style="width: 50%;">
-                    <span class="label">Endereço</span>
-                    <span class="value"><?= $data['intermediario']['endereco'] ?></span>
-                </td>
-                <td style="width: 25%;">
-                    <span class="label">Município</span>
-                    <span class="value"><?= $data['intermediario']['municipio'] ?></span>
-                </td>
-                <td style="width: 25%;">
-                    <span class="label">CEP</span>
-                    <span class="value"><?= $data['intermediario']['cep'] ?></span>
-                </td>
+                <td colspan="2"><span class="label">Endereço</span><span class="value"><?= $data['intermediario']['endereco'] ?></span></td>
+                <td colspan="2"><span class="label">E-mail</span><span class="value"><?= $data['intermediario']['email'] ?></span></td>
             </tr>
         </table>
     </div>
     <?php else: ?>
-    <div class="no-party">DESTINATÁRIO DA OPERAÇÃO NÃO IDENTIFICADO NA NFS-e
-        <div>INTERMEDIÁRIO DA OPERAÇÃO NÃO IDENTIFICADO NA NFS-e</div>
-    </div>
+    <div class="no-party">INTERMEDIÁRIO DA OPERAÇÃO NÃO IDENTIFICADO NA NFS-e</div>
     <?php endif; ?>
 
     <!-- Serviço Prestado -->
