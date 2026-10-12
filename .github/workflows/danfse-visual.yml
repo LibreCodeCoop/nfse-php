@@ -9,6 +9,7 @@ on:
       - 'src/Danfse/**'
       - 'tests/fixtures/nfse_exemplo.xml'
       - 'tools/bin/render-danfse-visual-fixtures.php'
+      - 'tools/bin/verify-danfse-composer-package.php'
       - 'tools/bin/verify-danfse-visual-fixtures.php'
       - 'tools/src/DanfsePdfEvidence.php'
       - 'tests/Unit/Danfse/DanfsePdfEvidenceTest.php'
@@ -50,6 +51,9 @@ jobs:
 
       - name: Install PDF inspection tools
         run: sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils
+
+      - name: Verify bundled fonts and licenses in Composer distribution
+        run: php tools/bin/verify-danfse-composer-package.php
 
       - name: Test PDF evidence verifier (positive and negative cases)
         run: vendor/bin/phpunit tests/Unit/Danfse/DanfsePdfEvidenceTest.php
