@@ -29,6 +29,21 @@ The stable contract covered by tests is:
 - optional contact complement and IBGE/CEP follow the authorized XML without inventing missing data;
 - the reference footer never fabricates an acknowledgement date or human signature.
 
+## Bundled Liberation Sans typography
+
+By default the renderer embeds unmodified Liberation Sans 2.1.5 Regular and
+Bold under SIL Open Font License 1.1 (OFL-1.1). Both TrueType files, their
+SHA-256 provenance and the OFL terms are bundled with the Composer package.
+The library uses only local resources, a private process-local font metrics
+cache and distinct namespaced families; no OS font or remote download is needed.
+A missing/unreadable/altered mandatory font raises an artifact error rather
+than silently selecting Helvetica.
+
+**Explicit normative divergence:** NT008 v1.02 (14 July 2026), item 2.4,
+names Arial and Microsoft Sans Serif. Liberation Sans is an engineering
+substitute with compatible metrics, not literal compliance with those named
+families. There is no official approval of this substitution being asserted.
+
 ## Locally licensed typography
 
 NT 008 requires **Arial** for labels and **Microsoft Sans Serif** for values.
@@ -48,9 +63,11 @@ registration from changing the default renderer's typography.
 
 An A4 PDF should be inspected with `pdffonts receipt.pdf`; exact typography
 is demonstrated only when the correct typefaces are present and embedded.
-The default compatibility path may still fall back to Helvetica and must not
-be claimed to prove complete NT 008 font compliance. CI exercises local-font
-embedding with Dompdf's freely licensed DejaVuSans **only as a test surrogate**.
+The packaged default path embeds Liberation Sans, not Helvetica. Even when the
+font is embedded, it does **not** meet the exact typeface names of NT008.
+CI also exercises custom-font embedding with DejaVuSans **only as a test
+surrogate**. A caller holding valid licenses can still supply Arial and
+Microsoft Sans Serif via the unchanged `DanfseFonts` API.
 
 The project does not guarantee byte-identical PDF output. PDF metadata, font
 metrics and QR SVG serialization can change when rendering dependencies are

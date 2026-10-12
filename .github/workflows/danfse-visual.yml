@@ -60,6 +60,19 @@ jobs:
           # A locally supplied TTF must be genuinely embedded (not silently
           # replaced by Helvetica). The probe font is freely licensed.
           pdffonts "${{ runner.temp }}/danfse/danfse-font-probe.pdf" | grep -Fq 'DejaVuSans'
+          for pdf in "${{ runner.temp }}/danfse/"*.pdf; do
+            case "$pdf" in *font-probe.pdf) continue;; esac
+            fonts=$(pdffonts "$pdf")
+            echo "$fonts" | grep -Fq 'LiberationSans'
+            echo "$fonts" | awk 'NR>2 && $4 != "yes" { exit 1 }'
+            if echo "$fonts" | grep -Eq 'Helvetica|Times|DejaVu'; then
+              echo "Unexpected fallback font in $pdf" >&2
+              exit 1
+            fi
+          done
+          # Verify both Regular and Bold were selected and actually embedded.
+          pdffonts "${{ runner.temp }}/danfse/danfse-reference.pdf" | grep -E 'LiberationSans' | grep -Eq 'Bold|Regular'
+
 
       - name: Preserve render evidence
         if: always()
