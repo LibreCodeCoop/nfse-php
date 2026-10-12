@@ -36,11 +36,13 @@ CSS family names alone do not satisfy this: Dompdf otherwise falls back to
 Helvetica. The library cannot redistribute those proprietary font binaries.
 
 A caller holding suitable licenses can provide local TrueType files using
-`DanfseConfig(fonts: new DanfseFonts($arialRegular, $arialBold, $microsoftSansSerif))`.
+`DanfseConfig(fonts: new DanfseFonts($arialRegular, $arialBold, $microsoftSansSerif, $writableFontCacheDir))`.
 Files are validated when the options are built, used only from local paths
 within Dompdf's explicitly restricted chroot, and never loaded remotely or
 serialized as font bytes in the HTML. Files must permit PDF embedding under
-their own license; consumers must provide a writable Dompdf font cache.
+their own license. The last argument must be an existing writable font cache
+directory reserved for this use; the renderer isolates its metrics from
+Dompdf's bundled fonts to prevent affecting unrelated documents.
 
 An A4 PDF should be inspected with `pdffonts receipt.pdf`; exact typography
 is demonstrated only when the correct typefaces are present and embedded.

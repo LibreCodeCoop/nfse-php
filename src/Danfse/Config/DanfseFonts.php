@@ -19,12 +19,20 @@ final readonly class DanfseFonts
     public string $arialRegular;
     public string $arialBold;
     public string $microsoftSansSerif;
+    public string $fontCacheDirectory;
 
     public function __construct(
         string $arialRegular,
         string $arialBold,
         string $microsoftSansSerif,
+        string $fontCacheDirectory,
     ) {
+        $cache = realpath($fontCacheDirectory);
+        if ($cache === false || !is_dir($cache) || !is_writable($cache)) {
+            throw new \InvalidArgumentException('A writable, existing Dompdf font cache directory is required.');
+        }
+
+        $this->fontCacheDirectory = $cache;
         $this->arialRegular = self::existingFont($arialRegular);
         $this->arialBold = self::existingFont($arialBold);
         $this->microsoftSansSerif = self::existingFont($microsoftSansSerif);

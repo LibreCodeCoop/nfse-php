@@ -94,6 +94,11 @@ final class DanfseGenerator
                         $options->getChroot(),
                         $this->config->fonts->directories(),
                     ))));
+                    // Isolate dynamic font metrics from Dompdf's bundled
+                    // cache. Without this, later default-font documents can
+                    // silently inherit a different typeface and overflow A4.
+                    $options->setFontDir($this->config->fonts->fontCacheDirectory);
+                    $options->setFontCache($this->config->fonts->fontCacheDirectory);
                 }
 
                 $dompdf = new Dompdf($options);

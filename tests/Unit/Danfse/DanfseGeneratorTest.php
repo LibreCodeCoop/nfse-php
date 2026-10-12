@@ -41,7 +41,12 @@ class DanfseGeneratorTest extends TestCase
     public function testFontConfigurationRejectsMissingLocalFiles(): void
     {
         $this->expectException(\InvalidArgumentException::class);
-        new DanfseFonts('/not-a-real-folder/arial.ttf', '/not-a-real-folder/arialbd.ttf', '/not-a-real-folder/micross.ttf');
+        new DanfseFonts(
+            '/not-a-real-folder/arial.ttf',
+            '/not-a-real-folder/arialbd.ttf',
+            '/not-a-real-folder/micross.ttf',
+            sys_get_temp_dir(),
+        );
     }
 
     public function testLocalFontFilesCanBeRegisteredWithoutRemoteLoading(): void
@@ -54,7 +59,9 @@ class DanfseGeneratorTest extends TestCase
         self::assertFileExists($regular);
         self::assertFileExists($bold);
 
-        $fonts = new DanfseFonts($regular, $bold, $regular);
+        $cache = sys_get_temp_dir() . '/nfse-danfse-fonts-' . bin2hex(random_bytes(8));
+        self::assertTrue(mkdir($cache, 0700));
+        $fonts = new DanfseFonts($regular, $bold, $regular, $cache);
         self::assertCount(1, $fonts->directories());
 
         $generator = new DanfseGenerator(new DanfseConfig(fonts: $fonts));
