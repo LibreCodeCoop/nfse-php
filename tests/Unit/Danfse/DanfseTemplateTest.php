@@ -199,6 +199,19 @@ class DanfseTemplateTest extends TestCase
         self::assertSame('R$ 0,00', $template->buildData($nfse)['ibs_cbs']['total_ibs_cbs']);
     }
 
+    public function testLegacyXmlWithoutIbsCbsDoesNotInventIbsExclusions(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        unset($nfse['infNFSe']['IBSCBS']);
+        // The old DPS can still contain PIS/COFINS amounts. Without any
+        // authorized IBS/CBS block they are not a new IBS base reduction.
+        $nfse['infNFSe']['DPS']['infDPS']['valores']['trib']['tribFed']['piscofins']['vPis'] = '12.25';
+
+        $model = (new DanfseTemplate())->buildData($nfse);
+        self::assertSame('-', $model['ibs_cbs']['exclusoes_reducoes']);
+        self::assertSame('-', $model['ibs_cbs']['base_calculo']);
+    }
+
     public function testAuthorizedTotalRetentionNeverComesFromPartialDpsSum(): void
     {
         $nfse = $this->fixtureNfseData();

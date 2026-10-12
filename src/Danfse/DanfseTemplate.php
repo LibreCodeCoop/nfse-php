@@ -243,7 +243,7 @@ final class DanfseTemplate
                     ?: '-',
                 // NT008 explicitly displays this sum of XML components. It
                 // does not authorize fresh IBS/CBS or ISS tax calculation.
-                'exclusoes_reducoes' => $this->sumCurrency(
+                'exclusoes_reducoes' => $ibsCbs === [] ? '-' : $this->sumCurrency(
                     $this->val($dpsDiscounts, 'vDescIncond'),
                     $this->val($ibsCbsValores, 'vCalcReeRepRes'),
                     $this->val($authorizedValues, 'vISSQN'),
