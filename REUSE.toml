@@ -38,3 +38,9 @@ path = [
 precedence = "override"
 SPDX-FileCopyrightText = "Sistema Nacional NFS-e / Governo Federal"
 SPDX-License-Identifier = "CC-BY-ND-3.0"
+
+[[annotations]]
+path = ["src/Danfse/Assets/fonts/*.ttf"]
+precedence = "override"
+SPDX-FileCopyrightText = "2010 Google Corporation; 2012 Red Hat, Inc."
+SPDX-License-Identifier = "OFL-1.1"

@@ -33,7 +33,7 @@
         "ext-soap": "*",
         "bacon/bacon-qr-code": "^3.0",
         "csharpru/vault-php": "^4.4",
-        "dompdf/dompdf": "^2.0 || ^3.0",
+        "dompdf/dompdf": "^3.1.6",
         "psr/http-client": "^1.0",
         "psr/http-factory": "^1.0"
     },
@@ -71,7 +71,14 @@
         "ci:php": "@php tools/bin/ci-php.php validate",
         "domains:download": "@php tools/bin/domains.php download",
         "domains:verify-indicators": "@php tools/bin/domains.php verify-indicators",
-        "domains:contract-matrix": "@php tools/bin/domains.php contract-matrix"
+        "domains:contract-matrix": "@php tools/bin/domains.php contract-matrix",
+        "danfse:visual": [
+            "@danfse:package",
+            "@php tools/bin/render-danfse-visual-fixtures.php build/danfse-visual",
+            "@php tools/bin/verify-danfse-visual-fixtures.php build/danfse-visual"
+        ],
+        "danfse:verify": "@php tools/bin/verify-danfse-visual-fixtures.php build/danfse-visual",
+        "danfse:package": "@php tools/bin/verify-danfse-composer-package.php"
     },
     "minimum-stability": "stable",
     "prefer-stable": true,

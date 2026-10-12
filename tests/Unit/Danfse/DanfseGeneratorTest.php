@@ -7,6 +7,7 @@ declare(strict_types=1);
 
 namespace LibreCodeCoop\NfsePHP\Tests\Unit\Danfse;
 
+use LibreCodeCoop\NfsePHP\Danfse\Config\BundledDanfseFonts;
 use LibreCodeCoop\NfsePHP\Danfse\Config\DanfseConfig;
 use LibreCodeCoop\NfsePHP\Danfse\Config\DanfseFiscalState;
 use LibreCodeCoop\NfsePHP\Danfse\Config\DanfseFonts;
@@ -29,6 +30,61 @@ class DanfseGeneratorTest extends TestCase
         $xml = file_get_contents(__DIR__ . '/../../fixtures/nfse_exemplo.xml');
         self::assertNotFalse($xml);
         $this->xml = $xml;
+    }
+
+    public function testBundledLiberationFontsAreAvailableAndRejectTampering(): void
+    {
+        $fontDir = dirname(__DIR__, 3) . '/src/Danfse/Assets/fonts';
+        $regular = $fontDir . '/LiberationSans-Regular.ttf';
+        $bold = $fontDir . '/LiberationSans-Bold.ttf';
+        self::assertFileExists($regular);
+        self::assertFileExists($bold);
+        self::assertSame('76d04c18ea243f426b7de1f3ad208e927008f961dc5945e5aad352d0dfde8ee8', hash_file('sha256', $regular));
+        self::assertSame('788abee4c806d660e8aee46689dd8540cd4bb98da03dcc9d171ce3efd99a9173', hash_file('sha256', $bold));
+        self::assertFileExists(dirname(__DIR__, 3) . '/LICENSES/OFL-1.1.txt');
+
+        $fonts = BundledDanfseFonts::get();
+        self::assertSame(realpath($regular), $fonts->arialRegular);
+        self::assertSame(realpath($bold), $fonts->arialBold);
+
+        $this->expectException(ArtifactException::class);
+        BundledDanfseFonts::assertValidFile($regular, str_repeat('0', 64));
+    }
+
+    public function testBundledFontsAreEmbeddedByDefaultWithoutRemoteUrls(): void
+    {
+        $html = (new DanfseGenerator())->generateHtml($this->xml);
+        $fonts = BundledDanfseFonts::get();
+        self::assertStringContainsString($fonts->labelFamily(), $html);
+        self::assertStringContainsString($fonts->valueFamily(), $html);
+        self::assertStringContainsString('LiberationSans-Regular.ttf', $html);
+        self::assertStringContainsString('LiberationSans-Bold.ttf', $html);
+        self::assertStringContainsString('font-weight: 700', $html);
+        self::assertStringNotContainsString('data:font/', $html);
+        self::assertStringNotContainsString('url("http', $html);
+        self::assertStringStartsWith('%PDF-', (new DanfseGenerator())->generateFromXml($this->xml));
+    }
+
+    public function testDefaultCustomDefaultAndDistinctCustomCachesRemainIsolated(): void
+    {
+        $path = dirname(__DIR__, 3) . '/vendor/dompdf/dompdf/lib/fonts';
+        $regular = $path . '/DejaVuSans.ttf';
+        $bold = $path . '/DejaVuSans-Bold.ttf';
+        $firstCache = sys_get_temp_dir() . '/nfse-font-A-' . bin2hex(random_bytes(6));
+        $secondCache = sys_get_temp_dir() . '/nfse-font-B-' . bin2hex(random_bytes(6));
+        self::assertTrue(mkdir($firstCache, 0o700));
+        self::assertTrue(mkdir($secondCache, 0o700));
+        $a = new DanfseFonts($regular, $bold, $regular, $firstCache);
+        $b = new DanfseFonts($regular, $bold, $regular, $secondCache);
+        self::assertNotSame($a->labelFamily(), $b->labelFamily());
+
+        foreach ([null, $a, null, $b, $a, null] as $selected) {
+            $config = new DanfseConfig(fonts: $selected);
+            $html = (new DanfseGenerator($config))->generateHtml($this->xml);
+            $family = ($selected ?? BundledDanfseFonts::get())->labelFamily();
+            self::assertStringContainsString($family, $html);
+            self::assertStringStartsWith('%PDF-', (new DanfseGenerator($config))->generateFromXml($this->xml));
+        }
     }
 
     public function testGenerateFromXmlReturnsPdfBinary(): void
@@ -68,6 +124,7 @@ class DanfseGeneratorTest extends TestCase
         $html = $generator->generateHtml($this->xml);
         self::assertStringContainsString('font-family: "' . $fonts->labelFamily() . '"', $html);
         self::assertStringContainsString('font-family: "' . $fonts->valueFamily() . '"', $html);
+        self::assertStringContainsString('font-family: "' . $fonts->valueFamily() . '"; font-style: normal; font-weight: 700;', $html);
         self::assertStringNotContainsString('@font-face { font-family: "Arial"', $html);
         self::assertStringContainsString('src: url("file://', $html);
         self::assertStringNotContainsString('data:font/', $html);

@@ -9,6 +9,11 @@ on:
       - 'src/Danfse/**'
       - 'tests/fixtures/nfse_exemplo.xml'
       - 'tools/bin/render-danfse-visual-fixtures.php'
+      - 'tools/bin/verify-danfse-composer-package.php'
+      - 'tools/bin/verify-danfse-visual-fixtures.php'
+      - 'tools/src/DanfsePdfEvidence.php'
+      - 'tests/Unit/Danfse/DanfsePdfEvidenceTest.php'
+      - 'composer.json'
       - '.github/workflows/danfse-visual.yml'
   workflow_dispatch:
 
@@ -17,7 +22,7 @@ permissions:
 
 jobs:
   pdf-layout:
-    name: Generate reference and long-description PDFs
+    name: Verify DANFSe PDFs (Dompdf 3)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -35,31 +40,23 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Install dependencies
+      - name: Install dependencies (Dompdf 3.1.6 or newer in the 3.x series)
         run: composer install --prefer-dist --no-progress
 
       - name: Install PDF inspection tools
         run: sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils
 
+      - name: Verify bundled fonts and licenses in Composer distribution
+        run: php tools/bin/verify-danfse-composer-package.php
+
+      - name: Run focused DANFSe regression tests
+        run: vendor/bin/phpunit tests/Unit/Danfse
+
       - name: Generate synthetic PDFs for visual review
         run: php tools/bin/render-danfse-visual-fixtures.php "${{ runner.temp }}/danfse"
 
-      - name: Verify required fields and one-page A4 layout
-        shell: bash
-        run: |
-          for pdf in "${{ runner.temp }}/danfse/"*.pdf; do
-            pdftotext -layout "$pdf" - | grep -Fq "DATA CIENTIFICAÇÃO"
-            pdftotext -layout "$pdf" - | grep -Fq "IDENTIFICAÇÃO E ASSINATURA"
-            # Normalize PDF line wraps while still requiring the complete official disclosure.
-            pdftotext -layout "$pdf" - | tr -s '[:space:]' ' ' | grep -Fq "Totais aproximados dos Tributos"
-            pages=$(pdfinfo "$pdf" | awk '/^Pages:/ {print $2}')
-            test "$pages" -eq 1
-            pdfinfo "$pdf" | grep -Fq 'Page size:       595.28 x 841.89 pts (A4)'
-          done
-          pdftotext -layout "${{ runner.temp }}/danfse/danfse-long-description.pdf" - | grep -Fq '...'
-          # A locally supplied TTF must be genuinely embedded (not silently
-          # replaced by Helvetica). The probe font is freely licensed.
-          pdffonts "${{ runner.temp }}/danfse/danfse-font-probe.pdf" | grep -Fq 'DejaVuSans'
+      - name: Verify PDF evidence (same command as local development)
+        run: php tools/bin/verify-danfse-visual-fixtures.php "${{ runner.temp }}/danfse"
 
       - name: Preserve render evidence
         if: always()

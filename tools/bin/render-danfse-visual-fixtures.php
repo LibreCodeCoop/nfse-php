@@ -125,3 +125,8 @@ $probeFonts = new DanfseFonts(
 );
 $probePdf = (new DanfseGenerator(new DanfseConfig(fonts: $probeFonts)))->generateFromXml($xml);
 file_put_contents($outputDir . '/danfse-font-probe.pdf', $probePdf);
+
+
+// The default font must be embedded even without caller configuration.
+// Interleave default/custom/default rendering to expose FontMetrics cache leaks.
+file_put_contents($outputDir . '/danfse-after-custom.pdf', $generator->generateFromXml($xml));

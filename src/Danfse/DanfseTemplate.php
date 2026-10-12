@@ -11,6 +11,7 @@ use BaconQrCode\Renderer\Image\SvgImageBackEnd;
 use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\RendererStyle\RendererStyle;
 use BaconQrCode\Writer;
+use LibreCodeCoop\NfsePHP\Danfse\Config\BundledDanfseFonts;
 use LibreCodeCoop\NfsePHP\Danfse\Config\DanfseConfig;
 use LibreCodeCoop\NfsePHP\Danfse\Data\Municipios;
 use LibreCodeCoop\NfsePHP\Danfse\Enum\Ambiente;
@@ -61,8 +62,9 @@ final class DanfseTemplate
         // This is an explicitly supplied, externally verified state; it
         // cannot be inferred from an unchanged authorized NFS-e XML.
         $fiscalState  = $config->fiscalState;
-        $fontFaces    = $config->fonts?->fontFaceCss() ?? '';
-        $fontOverrides = $config->fonts?->fontOverrideCss() ?? '';
+        $fonts         = $config->fonts ?? BundledDanfseFonts::get();
+        $fontFaces     = $fonts->fontFaceCss();
+        $fontOverrides = $fonts->fontOverrideCss();
         $ambiente      = Ambiente::fromValue((string) $data['ambiente']);
         $isHomologacao = $ambiente->isHomologacao();
         $qrCode        = $this->generateQrCode((string) $data['chave_acesso'], $ambiente);

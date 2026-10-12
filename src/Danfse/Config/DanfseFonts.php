@@ -55,20 +55,27 @@ final readonly class DanfseFonts
      */
     public function fontFaceCss(): string
     {
-        // Dompdf 2.x/3.x caches FontMetrics::getFont() lookups statically
+        // Dompdf 3.x caches FontMetrics::getFont() lookups statically
         // by CSS family name, across renderer instances in one PHP process.
         // A namespaced family avoids poisoning the next default document.
         $label = $this->labelFamily();
         $value = $this->valueFamily();
 
-        return implode("\n", [
+        $faces = [
             '@font-face { font-family: "' . $label . '"; font-style: normal; font-weight: 400; src: url("' .
                 self::fileUri($this->arialRegular) . '") format("truetype"); }',
             '@font-face { font-family: "' . $label . '"; font-style: normal; font-weight: 700; src: url("' .
                 self::fileUri($this->arialBold) . '") format("truetype"); }',
             '@font-face { font-family: "' . $value . '"; font-style: normal; font-weight: 400; src: url("' .
                 self::fileUri($this->microsoftSansSerif) . '") format("truetype"); }',
-        ]);
+        ];
+        // The public custom-font contract supplies a bold label face, but no
+        // separate bold value face. Explicitly register the available bold
+        // file for highlighted values instead of permitting Helvetica fallback.
+        $faces[] = '@font-face { font-family: "' . $value . '"; font-style: normal; font-weight: 700; src: url("' .
+            self::fileUri($this->arialBold) . '") format("truetype"); }';
+
+        return implode("\n", $faces);
     }
 
     public function fontOverrideCss(): string
