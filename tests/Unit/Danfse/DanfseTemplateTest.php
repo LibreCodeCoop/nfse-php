@@ -229,6 +229,99 @@ class DanfseTemplateTest extends TestCase
         self::assertSame('R$ 630,00', $sourced['tributacao_municipal']['issqn_apurado']);
     }
 
+    public function testIbsCbsFullGridUsesOnlyAuthorizedAmountsAndRates(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        $authorized = & $nfse['infNFSe'];
+        $dps = & $authorized['DPS']['infDPS'];
+        $dps['valores']['vDescCondIncond'] = ['vDescIncond' => '10.00', 'vDescCond' => '5.00'];
+        $authorized['valores']['vISSQN'] = '7.00';
+        $authorized['valores']['vTotalRet'] = '123.45';
+        $authorized['IBSCBS'] = [
+            'cLocalidadeIncid' => '3303302',
+            'xLocalidadeIncid' => 'Niterói',
+            'valores' => [
+                'vBC' => '1450.00',
+                'vCalcReeRepRes' => '20.00',
+                'uf' => ['pRedAliqUF' => '0.00', 'pIBSUF' => '0.10', 'pAliqEfetUF' => '0.10'],
+                'mun' => ['pRedAliqMun' => '0.00', 'pIBSMun' => '0.05', 'pAliqEfetMun' => '0.05'],
+                'fed' => ['pRedAliqCBS' => '0.00', 'pCBS' => '0.90', 'pAliqEfetCBS' => '0.90'],
+            ],
+            'totCIBS' => [
+                'vTotNF' => '1515.75',
+                'gIBS' => [
+                    'vIBSTot' => '2.25',
+                    'gIBSMunTot' => ['vIBSMun' => '0.75'],
+                    'gIBSUFTot' => ['vIBSUF' => '1.50'],
+                ],
+                'gCBS' => ['vCBS' => '13.50'],
+            ],
+        ];
+        $dps['IBSCBS']['cIndOp'] = '010101';
+
+        $template = new DanfseTemplate();
+        $data = $template->buildData($nfse);
+        self::assertSame('010101 / 3303302 / Niterói / RJ', $data['ibs_cbs']['indicador_operacao']);
+        self::assertSame('R$ 91,75', $data['ibs_cbs']['exclusoes_reducoes']);
+        self::assertSame('0.00% / 0.00% / 0.00%', $data['ibs_cbs']['reducao_aliquotas']);
+        self::assertSame('0.10% / 0.05%', $data['ibs_cbs']['aliquota_ibs']);
+        self::assertSame('0.05%', $data['ibs_cbs']['aliquota_efetiva_municipal']);
+        self::assertSame('R$ 0,75', $data['ibs_cbs']['valor_ibs_municipal']);
+        self::assertSame('0.10%', $data['ibs_cbs']['aliquota_efetiva_estadual']);
+        self::assertSame('R$ 1,50', $data['ibs_cbs']['valor_ibs_estadual']);
+        self::assertSame('0.90%', $data['ibs_cbs']['aliquota_efetiva_cbs']);
+        self::assertSame('R$ 15,75', $data['ibs_cbs']['total_ibs_cbs']);
+        self::assertSame('R$ 123,45', $data['totais']['total_retencoes']);
+        self::assertSame('R$ 10,00', $data['totais']['desconto_incondicionado']);
+        self::assertSame('R$ 5,00', $data['totais']['desconto_condicionado']);
+
+        $html = $template->render($nfse, new DanfseConfig());
+        self::assertStringContainsString('Valor Apurado Municipal - IBS', $html);
+        self::assertStringContainsString('Valor Apurado Estadual - IBS', $html);
+        self::assertStringContainsString('Alíquota Efetiva - CBS', $html);
+        self::assertStringContainsString('Total das Retenções (ISSQN / Federais)', $html);
+    }
+
+    public function testAbsentIbsOrCbsAmountIsNotTreatedAsRealZero(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        $nfse['infNFSe']['IBSCBS']['totCIBS']['gIBS']['vIBSTot'] = '0.00';
+        $template = new DanfseTemplate();
+        self::assertSame('-', $template->buildData($nfse)['ibs_cbs']['total_ibs_cbs']);
+
+        $nfse['infNFSe']['IBSCBS']['totCIBS']['gCBS']['vCBS'] = '0.00';
+        self::assertSame('R$ 0,00', $template->buildData($nfse)['ibs_cbs']['total_ibs_cbs']);
+    }
+
+    public function testLegacyXmlWithoutIbsCbsDoesNotInventIbsExclusions(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        unset($nfse['infNFSe']['IBSCBS']);
+        // The old DPS can still contain PIS/COFINS amounts. Without any
+        // authorized IBS/CBS block they are not a new IBS base reduction.
+        $nfse['infNFSe']['DPS']['infDPS']['valores']['trib']['tribFed']['piscofins']['vPis'] = '12.25';
+
+        $model = (new DanfseTemplate())->buildData($nfse);
+        self::assertSame('-', $model['ibs_cbs']['exclusoes_reducoes']);
+        self::assertSame('-', $model['ibs_cbs']['base_calculo']);
+    }
+
+    public function testAuthorizedTotalRetentionNeverComesFromPartialDpsSum(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        $dps = & $nfse['infNFSe']['DPS']['infDPS'];
+        $dps['valores']['trib']['tribFed']['vRetIRRF'] = '99.99';
+
+        $template = new DanfseTemplate();
+        self::assertSame('-', $template->buildData($nfse)['totais']['total_retencoes']);
+
+        $nfse['infNFSe']['valores']['vTotalRet'] = '0.00';
+        self::assertSame('R$ 0,00', $template->buildData($nfse)['totais']['total_retencoes']);
+
+        $nfse['infNFSe']['valores']['vTotalRet'] = '78.90';
+        self::assertSame('R$ 78,90', $template->buildData($nfse)['totais']['total_retencoes']);
+    }
+
     public function testDescriptionPreservesNewlinesWithoutRenderingMarkup(): void
     {
         $nfse = $this->fixtureNfseData();
