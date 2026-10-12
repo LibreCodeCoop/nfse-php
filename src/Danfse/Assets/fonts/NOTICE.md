@@ -5,12 +5,14 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Bundled Liberation Sans font assets
 
-These unmodified fonts come from the Liberation Fonts 2.1.5 upstream binary
-distribution, `liberation-fonts-ttf-2.1.5.tar.gz`:
-https://github.com/liberationfonts/liberation-fonts/files/7261482/liberation-fonts-ttf-2.1.5.tar.gz
+The unmodified 2.1.5 binaries were verified with their internal version
+and OFL licensing metadata. Upstream source and release:
+https://github.com/liberationfonts/liberation-fonts/releases/tag/2.1.5
 
-Upstream archive SHA-256:
-`7191c669bf38899f73a2094ed00f7b800553364f90e2637010a69c0e268f25d0`.
+The checked-in files have the SHA-256 values below. These particular
+binaries were also cross-checked against the local Linux Liberation font
+package; no archive checksum is asserted without independently verifying
+that archive.
 
 | File | SHA-256 |
 | --- | --- |
