@@ -548,6 +548,23 @@ class XmlBuilderTest extends TestCase
         self::assertStringContainsString('<vRetCP>5.00</vRetCP>', $xml);
     }
 
+    public function testBuildDpsKeepsConsolidatedPisCofinsRetentionsWhenCsllItselfIsNotRetained(): void
+    {
+        $xml = $this->builder->buildDps($this->makeDps(
+            federalPiscofinsSituacaoTributaria: '1',
+            federalPiscofinsTipoRetencao: '4',
+            federalPiscofinsBaseCalculo: '31500.00',
+            federalValorIrrf: '472.50',
+            federalValorCsll: '1149.75',
+        ));
+
+        self::assertStringContainsString('<tpRetPisCofins>4</tpRetPisCofins>', $xml);
+        self::assertStringContainsString('<vRetCSLL>1149.75</vRetCSLL>', $xml);
+        self::assertStringContainsString('<vRetIRRF>472.50</vRetIRRF>', $xml);
+        self::assertStringNotContainsString('<vPis>', $xml);
+        self::assertStringNotContainsString('<vCofins>', $xml);
+    }
+
     public function testBuildDpsOmitsZeroValuedOptionalFederalRetentions(): void
     {
         $xml = $this->builder->buildDps($this->makeDps(

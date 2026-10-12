@@ -179,7 +179,10 @@ final readonly class DpsData
         /** Valor do IRRF. */
         public string $federalValorIrrf = '',
 
-        /** Valor da CSLL retida. */
+        /**
+         * Soma das retenções efetivas de PIS, COFINS e CSLL (NT 007/2026).
+         * O nome legado acompanha a tag XML vRetCSLL.
+         */
         public string $federalValorCsll = '',
 
         /** Valor da contribuição previdenciária retida. */
