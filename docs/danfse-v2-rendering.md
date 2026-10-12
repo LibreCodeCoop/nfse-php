@@ -25,6 +25,7 @@ The stable contract covered by tests is:
 - cancelled and substituted documents may show the required 50pt diagonal status watermark when the consuming application supplies an **explicit, externally verified event state** through `DanfseConfig::fiscalState`; the original authorized XML alone does not establish that a subsequent cancel/substitution occurred and is not mutated;
 - local generation returns a valid single-page A4 portrait PDF artifact; overflowing optional free text uses visible ellipses as permitted by NT 008 (item 2.1), without modifying the XML, the fiscal fields or mandatory tax disclosure. Layouts that still cannot fit fail explicitly instead of returning a nonconforming multi-page PDF;
 - line breaks in the authorized service description are preserved as escaped HTML line breaks;
+- the supplementary text follows NT 008's field order and pipe separators (including substitution, service references, construction, events and municipality information) when they exist in the authorized XML; estimated tax disclosure accepts explicitly supplied monetary **or** percentage values, preserving missing versus numeric zero;
 - optional contact complement and IBGE/CEP follow the authorized XML without inventing missing data;
 - the reference footer never fabricates an acknowledgement date or human signature.
 

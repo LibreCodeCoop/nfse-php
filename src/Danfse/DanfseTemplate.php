@@ -102,7 +102,21 @@ final class DanfseTemplate
         $authorizedValues = $this->node($infNfse, 'valores');
         $tribMun = $this->node($valores, 'trib', 'tribMun');
         $tribFed = $this->node($valores, 'trib', 'tribFed');
-        $totTrib = $this->node($valores, 'trib', 'totTrib', 'pTotTrib');
+        $totTribGroup = $this->node($valores, 'trib', 'totTrib');
+        $approxPercent = $this->node($totTribGroup, 'pTotTrib');
+        $approxMoney = $this->node($totTribGroup, 'vTotTrib');
+        $approxValues = $approxMoney !== []
+            ? [
+                $this->currencyOrDash($this->val($approxMoney, 'vTotTribFed')),
+                $this->currencyOrDash($this->val($approxMoney, 'vTotTribEst')),
+                $this->currencyOrDash($this->val($approxMoney, 'vTotTribMun')),
+            ]
+            : [
+                $this->percentOrDash($this->val($approxPercent, 'pTotTribFed')),
+                $this->percentOrDash($this->val($approxPercent, 'pTotTribEst')),
+                $this->percentOrDash($this->val($approxPercent, 'pTotTribMun')),
+            ];
+        $infoComplementares = $this->node($serv, 'infoCompl');
         $ibsCbs = $this->node($infNfse, 'IBSCBS');
         $ibsCbsValores = $this->node($ibsCbs, 'valores');
         $ibsCbsTotais = $this->node($ibsCbs, 'totCIBS');
@@ -290,9 +304,9 @@ final class DanfseTemplate
             ],
 
             'totais_tributos' => [
-                'federais'   => $this->percentOrDash($this->val($totTrib, 'pTotTribFed')),
-                'estaduais'  => $this->percentOrDash($this->val($totTrib, 'pTotTribEst')),
-                'municipais' => $this->percentOrDash($this->val($totTrib, 'pTotTribMun')),
+                'federais' => $approxValues[0],
+                'estaduais' => $approxValues[1],
+                'municipais' => $approxValues[2],
             ],
 
             'ibs_cbs' => [
@@ -349,10 +363,10 @@ final class DanfseTemplate
             ],
 
             'informacoes_complementares' => $this->complementaryInformation(
-                $this->val($serv, 'infoCompl', 'xInfComp'),
-                $this->percentOrDash($this->val($totTrib, 'pTotTribFed')),
-                $this->percentOrDash($this->val($totTrib, 'pTotTribEst')),
-                $this->percentOrDash($this->val($totTrib, 'pTotTribMun')),
+                $this->authorizedComplementaryFields($infNfse, $infDps, $serv, $infoComplementares),
+                $approxValues[0],
+                $approxValues[1],
+                $approxValues[2],
                 $complementaryTextLimit,
             ),
         ];
@@ -725,6 +739,72 @@ final class DanfseTemplate
         return implode(' / ', array_map(static fn (string $value): string => $value !== '' ? $value : '-', $values));
     }
 
+    /**
+     * NT008 table 2.4.5 prescribes a stable order and pipe separators.
+     * The values below exist exclusively in the authorized NFS-e XML.
+     *
+     * @param array<string,mixed> $infNfse
+     * @param array<string,mixed> $infDps
+     * @param array<string,mixed> $service
+     * @param array<string,mixed> $info
+     */
+    private function authorizedComplementaryFields(
+        array $infNfse,
+        array $infDps,
+        array $service,
+        array $info,
+    ): string {
+        $parts = [];
+        $fieldSources = [
+            ['Inf. Cont.:', $this->val($info, 'xInfComp')],
+            ['NFS-e Subst.:', $this->val($infDps, 'subst', 'chSubstda')],
+            ['Doc. Ref.:', $this->val($info, 'docRef')],
+            ['Cod. Obra:', $this->val($service, 'obra', 'cObra')],
+            ['Insc. Imob.:', $this->val($service, 'obra', 'inscImobFisc')
+                ?: $this->val($infDps, 'IBSCBS', 'imovel', 'inscImobFisc')],
+            ['Cod. Evt.:', $this->val($service, 'atvEvento', 'idAtvEvt')],
+            ['Doc. Tec.:', $this->val($info, 'idDocTec')],
+            ['Núm. Ped.:', $this->val($info, 'xPed')],
+            ['Item Ped.:', $this->listItemNumbers($this->node($info, 'gItemPed'))],
+            ['Inf. A. T. Mun.:', $this->val($infNfse, 'xOutInf')],
+        ];
+
+        foreach ($fieldSources as [$prefix, $content]) {
+            if ($content !== '') {
+                $parts[] = $prefix . ' ' . $content;
+            }
+        }
+
+        return implode(' | ', $parts);
+    }
+
+    /**
+     * Preserve all repeated xItemPed occurrences from XML without dropping
+     * the first items (up to 99 in the active XSD).
+     *
+     * @param array<string,mixed> $group
+     */
+    private function listItemNumbers(array $group): string
+    {
+        $items = $group['xItemPed'] ?? null;
+        if (is_scalar($items)) {
+            return trim((string) $items);
+        }
+
+        if (!is_array($items)) {
+            return '';
+        }
+
+        $clean = [];
+        foreach ($items as $item) {
+            if (is_scalar($item) && trim((string) $item) !== '') {
+                $clean[] = trim((string) $item);
+            }
+        }
+
+        return implode(', ', $clean);
+    }
+
     private function complementaryInformation(
         string $existing,
         string $federal,
@@ -743,7 +823,7 @@ final class DanfseTemplate
             $municipal,
         );
 
-        return trim($existing) === '' ? $taxes : trim($existing) . "\n" . $taxes;
+        return $existing === '' ? $taxes : $existing . " | " . $taxes;
     }
 
     private function generateQrCode(string $chaveAcesso, Ambiente $ambiente): string
