@@ -9,6 +9,10 @@ on:
       - 'src/Danfse/**'
       - 'tests/fixtures/nfse_exemplo.xml'
       - 'tools/bin/render-danfse-visual-fixtures.php'
+      - 'tools/bin/verify-danfse-visual-fixtures.php'
+      - 'tools/src/DanfsePdfEvidence.php'
+      - 'tests/Unit/Danfse/DanfsePdfEvidenceTest.php'
+      - 'composer.json'
       - '.github/workflows/danfse-visual.yml'
   workflow_dispatch:
 
@@ -41,38 +45,14 @@ jobs:
       - name: Install PDF inspection tools
         run: sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils
 
+      - name: Test PDF evidence verifier (positive and negative cases)
+        run: vendor/bin/phpunit tests/Unit/Danfse/DanfsePdfEvidenceTest.php
+
       - name: Generate synthetic PDFs for visual review
         run: php tools/bin/render-danfse-visual-fixtures.php "${{ runner.temp }}/danfse"
 
-      - name: Verify required fields and one-page A4 layout
-        shell: bash
-        run: |
-          for pdf in "${{ runner.temp }}/danfse/"*.pdf; do
-            pdftotext -layout "$pdf" - | grep -Fq "DATA CIENTIFICAÇÃO"
-            pdftotext -layout "$pdf" - | grep -Fq "IDENTIFICAÇÃO E ASSINATURA"
-            # Normalize PDF line wraps while still requiring the complete official disclosure.
-            pdftotext -layout "$pdf" - | tr -s '[:space:]' ' ' | grep -Fq "Totais aproximados dos Tributos"
-            pages=$(pdfinfo "$pdf" | awk '/^Pages:/ {print $2}')
-            test "$pages" -eq 1
-            pdfinfo "$pdf" | grep -Fq 'Page size:       595.28 x 841.89 pts (A4)'
-          done
-          pdftotext -layout "${{ runner.temp }}/danfse/danfse-long-description.pdf" - | grep -Fq '...'
-          # A locally supplied TTF must be genuinely embedded (not silently
-          # replaced by Helvetica). The probe font is freely licensed.
-          pdffonts "${{ runner.temp }}/danfse/danfse-font-probe.pdf" | grep -Fq 'DejaVuSans'
-          for pdf in "${{ runner.temp }}/danfse/"*.pdf; do
-            case "$pdf" in *font-probe.pdf) continue;; esac
-            fonts=$(pdffonts "$pdf")
-            echo "$fonts" | grep -Fq 'LiberationSans'
-            echo "$fonts" | awk 'NR>2 && $4 != "yes" { exit 1 }'
-            if echo "$fonts" | grep -Eq 'Helvetica|Times|DejaVu'; then
-              echo "Unexpected fallback font in $pdf" >&2
-              exit 1
-            fi
-          done
-          # Verify both Regular and Bold were selected and actually embedded.
-          pdffonts "${{ runner.temp }}/danfse/danfse-reference.pdf" | grep -E 'LiberationSans' | grep -Eq 'Bold|Regular'
-
+      - name: Verify PDF evidence (same command as local development)
+        run: php tools/bin/verify-danfse-visual-fixtures.php "${{ runner.temp }}/danfse"
 
       - name: Preserve render evidence
         if: always()
