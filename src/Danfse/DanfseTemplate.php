@@ -200,6 +200,22 @@ final class DanfseTemplate
                 // This field is calculated by SEFIN and exists in the authorized
                 // NFS-e. Do not recalculate it from partially provided retentions.
                 'total_retencoes' => $this->currencyOrDash($this->val($authorizedValues, 'vTotalRet')),
+                // Historical buildData() keys are retained for consumers and
+                // golden contracts. The DANFSe itself prints vTotalRet as the
+                // authoritative total rather than any partial DPS sum.
+                'issqn_retido' => (
+                    $this->val($authorizedValues, 'vISSQN') !== ''
+                    && ($this->val($tribMun, 'tpRetISSQN') ?: '1') !== '1'
+                ) ? $this->currencyOrDash($this->val($authorizedValues, 'vISSQN')) : '-',
+                'retencoes_federais' => $this->sumCurrency(
+                    $this->val($tribFed, 'vRetIRRF'),
+                    $this->val($tribFed, 'vRetCP'),
+                    $this->val($tribFed, 'vRetCSLL'),
+                ),
+                'pis_cofins' => $this->sumCurrency(
+                    $this->val($tribFed, 'piscofins', 'vPis'),
+                    $this->val($tribFed, 'piscofins', 'vCofins'),
+                ),
                 'valor_liquido' => $this->currencyOrDash($this->val($authorizedValues, 'vLiq')),
             ],
 
