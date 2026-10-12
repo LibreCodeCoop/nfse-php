@@ -117,6 +117,14 @@ final readonly class DpsData
         /** Whether the provider opts into Simples Nacional. */
         public int $opcaoSimplesNacional = 1,
 
+        /**
+         * Regime de apuração do Simples Nacional (regApTribSN).
+         * Required by E0166 for ME/EPP (opSimpNac=3), otherwise absent.
+         * 1: federal and ISS via SN; 2: federal SN, ISS outside SN;
+         * 3: federal and ISS outside SN.
+         */
+        public ?int $regimeApuracaoSimplesNacional = null,
+
         /** Regime especial de tributação. */
         public int $regimeEspecialTributacao = 0,
 
