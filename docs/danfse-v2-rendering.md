@@ -20,7 +20,7 @@ The stable contract covered by tests is:
 - IBS/CBS values displayed from authorized totals without recalculation;
 - legacy authorized XML without IBS/CBS remains renderable;
 - homologation documents have a visible environment marker;
-- local generation returns a valid PDF artifact;
+- local generation returns a valid single-page A4 portrait PDF artifact; overflowing optional free text uses visible ellipses as permitted by NT 008 (item 2.1), without modifying the XML, the fiscal fields or mandatory tax disclosure. Layouts that still cannot fit fail explicitly instead of returning a nonconforming multi-page PDF;
 - line breaks in the authorized service description are preserved as escaped HTML line breaks;
 - optional contact complement and IBGE/CEP follow the authorized XML without inventing missing data;
 - the reference footer never fabricates an acknowledgement date or human signature.
@@ -46,5 +46,4 @@ The image remains directly viewable on disk and is encoded in the temporary HTML
 All monetary values and document identity continue to come only from authorized
 NFS-e XML; the layout neither recalculates taxes nor invents absent fiscal
 data. Homologation warnings remain visible. No receipt date or signature
-is invented. The footer reserves bottom page space, including when a lengthy
-description flows onto additional pages.
+is invented. The footer reserves bottom page space. Long free-text fields are progressively abbreviated with visible ellipses when needed to keep the DANFSe on one page; if mandatory content cannot fit, generation fails rather than producing additional pages.

@@ -60,6 +60,41 @@ class DanfseGeneratorTest extends TestCase
         self::assertStringStartsWith('%PDF-', $pdf);
     }
 
+    public function testLongSyntheticServiceKeepsExplicitEllipsisAndOnePageHtml(): void
+    {
+        $longDescription = str_repeat('DESCRICAO SINTETICA DE SERVICO E ETAPAS. ', 140);
+        $xml = preg_replace(
+            '~<xDescServ>[^<]*</xDescServ>~',
+            '<xDescServ>' . $longDescription . '</xDescServ>',
+            $this->xml,
+        );
+        self::assertIsString($xml);
+
+        $generator = new DanfseGenerator();
+        $html = $generator->generateHtml($xml);
+        self::assertStringContainsString('DESCRICAO SINTETICA DE SERVICO', $html);
+        self::assertStringContainsString('...', $html);
+        self::assertStringContainsString('Totais aproximados dos Tributos', $html);
+        self::assertStringStartsWith('%PDF-', $generator->generateFromXml($xml));
+    }
+
+    public function testLongSyntheticComplementaryInformationPreservesTaxDisclosure(): void
+    {
+        $longNotes = str_repeat('OBSERVACAO SINTETICA DO SERVICO. ', 140);
+        $xml = preg_replace(
+            '~<xInfComp>[^<]*</xInfComp>~',
+            '<xInfComp>' . $longNotes . '</xInfComp>',
+            $this->xml,
+        );
+        self::assertIsString($xml);
+
+        $html = (new DanfseGenerator())->generateHtml($xml);
+        self::assertStringContainsString('OBSERVACAO SINTETICA DO SERVICO', $html);
+        self::assertStringContainsString('...', $html);
+        self::assertStringContainsString('Totais aproximados dos Tributos', $html);
+        self::assertStringContainsString('Federais: 4.50%', $html);
+    }
+
     public function testGenerateHtmlContainsHomologacaoWatermark(): void
     {
         $xml = str_replace('<tpAmb>1</tpAmb>', '<tpAmb>2</tpAmb>', $this->xml);
