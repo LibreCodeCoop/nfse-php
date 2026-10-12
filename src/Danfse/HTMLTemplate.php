@@ -7,6 +7,7 @@
 /** @var string $qrCode */
 /** @var bool $isHomologacao */
 /** @var ?\LibreCodeCoop\NfsePHP\Danfse\Config\DanfseFiscalState $fiscalState */
+/** @var string $fontFaces */
 /** @var ?\LibreCodeCoop\NfsePHP\Danfse\Config\MunicipalityBranding $municipality */
 ?>
 <!DOCTYPE html>
@@ -15,6 +16,7 @@
     <meta charset="UTF-8">
     <title>DANFSe - <?= $data['numero_nfse'] ?></title>
     <style>
+        <?= $fontFaces ?>
         /* NT008 2.2: 0.15–0.20 cm margins, 1pt perimeter, 0.5pt sections. */
         @page { margin: 5pt; }
         * { margin: 0; padding: 0; box-sizing: border-box; }

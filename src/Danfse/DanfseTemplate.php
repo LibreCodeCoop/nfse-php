@@ -61,6 +61,7 @@ final class DanfseTemplate
         // This is an explicitly supplied, externally verified state; it
         // cannot be inferred from an unchanged authorized NFS-e XML.
         $fiscalState  = $config->fiscalState;
+        $fontFaces    = $config->fonts?->fontFaceCss() ?? '';
         $ambiente      = Ambiente::fromValue((string) $data['ambiente']);
         $isHomologacao = $ambiente->isHomologacao();
         $qrCode        = $this->generateQrCode((string) $data['chave_acesso'], $ambiente);

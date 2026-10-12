@@ -87,6 +87,14 @@ final class DanfseGenerator
                 $options->set('isHtml5ParserEnabled', true);
                 $options->set('isRemoteEnabled', false);
                 $options->set('defaultFont', 'Helvetica');
+                if ($this->config->fonts !== null) {
+                    // Permit only the caller-provided, validated font
+                    // directories, not arbitrary filesystem access.
+                    $options->setChroot(array_values(array_unique(array_merge(
+                        $options->getChroot(),
+                        $this->config->fonts->directories(),
+                    ))));
+                }
 
                 $dompdf = new Dompdf($options);
                 $dompdf->loadHtml($html, 'UTF-8');
