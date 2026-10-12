@@ -8,6 +8,7 @@ declare(strict_types=1);
 namespace LibreCodeCoop\NfsePHP\Tests\Unit\Danfse;
 
 use LibreCodeCoop\NfsePHP\Danfse\Config\DanfseConfig;
+use LibreCodeCoop\NfsePHP\Danfse\Config\DanfseFiscalState;
 use LibreCodeCoop\NfsePHP\Danfse\Config\MunicipalityBranding;
 use LibreCodeCoop\NfsePHP\Danfse\DanfseGenerator;
 use LibreCodeCoop\NfsePHP\Exception\ArtifactException;
@@ -58,6 +59,32 @@ class DanfseGeneratorTest extends TestCase
         $pdf = (new DanfseGenerator($config))->generateFromXml($this->xml);
 
         self::assertStringStartsWith('%PDF-', $pdf);
+    }
+
+    public function testFiscalWatermarkRequiresExplicitAuthorizedExternalState(): void
+    {
+        $generator = new DanfseGenerator();
+        $html = $generator->generateHtml($this->xml);
+        self::assertStringNotContainsString('class="fiscal-state-watermark"', $html);
+
+        self::assertStringNotContainsString('CANCELADA', $html);
+        self::assertStringNotContainsString('SUBSTITUÍDA', $html);
+    }
+
+    public function testCancelledFiscalStateRendersAtLeastFiftyPointWatermark(): void
+    {
+        $config = new DanfseConfig(fiscalState: DanfseFiscalState::Cancelled);
+        $html = (new DanfseGenerator($config))->generateHtml($this->xml);
+        self::assertStringContainsString('class="fiscal-state-watermark">CANCELADA</div>', $html);
+        self::assertStringContainsString('font-size: 50pt;', $html);
+        self::assertStringStartsWith('%PDF-', (new DanfseGenerator($config))->generateFromXml($this->xml));
+    }
+
+    public function testSubstitutedFiscalStateRendersExplicitWatermark(): void
+    {
+        $config = new DanfseConfig(fiscalState: DanfseFiscalState::Substituted);
+        $html = (new DanfseGenerator($config))->generateHtml($this->xml);
+        self::assertStringContainsString('class="fiscal-state-watermark">SUBSTITUÍDA</div>', $html);
     }
 
     public function testGenerateHtmlContainsHomologacaoWatermark(): void

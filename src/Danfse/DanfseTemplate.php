@@ -48,6 +48,9 @@ final class DanfseTemplate
         $data          = $this->buildData($nfse);
         $logo          = $config->logoDataUri;
         $municipality  = $config->municipality;
+        // This is an explicitly supplied, externally verified state; it
+        // cannot be inferred from an unchanged authorized NFS-e XML.
+        $fiscalState  = $config->fiscalState;
         $ambiente      = Ambiente::fromValue((string) $data['ambiente']);
         $isHomologacao = $ambiente->isHomologacao();
         $qrCode        = $this->generateQrCode((string) $data['chave_acesso'], $ambiente);

@@ -6,6 +6,8 @@
 declare(strict_types=1);
 
 use LibreCodeCoop\NfsePHP\Danfse\DanfseGenerator;
+use LibreCodeCoop\NfsePHP\Danfse\Config\DanfseConfig;
+use LibreCodeCoop\NfsePHP\Danfse\Config\DanfseFiscalState;
 
 require dirname(__DIR__, 2) . '/vendor/autoload.php';
 
@@ -43,6 +45,16 @@ if (!is_string($longXml)) {
 }
 $longPdf = $generator->generateFromXml($longXml);
 file_put_contents($outputDir . '/danfse-long-description.pdf', $longPdf);
+
+// State must be supplied by a trusted event/query response, not inferred
+// from cStat or a substitution reference inside the original NFS-e XML.
+foreach ([
+    'cancelled' => DanfseFiscalState::Cancelled,
+    'substituted' => DanfseFiscalState::Substituted,
+] as $label => $state) {
+    $statePdf = (new DanfseGenerator(new DanfseConfig(fiscalState: $state)))->generateFromXml($xml);
+    file_put_contents($outputDir . '/danfse-' . $label . '.pdf', $statePdf);
+}
 
 foreach ([$pdf, $longPdf] as $rendered) {
     if (!str_starts_with($rendered, '%PDF-')) {
