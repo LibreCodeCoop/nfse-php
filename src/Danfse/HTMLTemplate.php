@@ -6,6 +6,7 @@
 /** @var ?string $logo */
 /** @var string $qrCode */
 /** @var bool $isHomologacao */
+/** @var ?\LibreCodeCoop\NfsePHP\Danfse\Config\DanfseFiscalState $fiscalState */
 /** @var ?\LibreCodeCoop\NfsePHP\Danfse\Config\MunicipalityBranding $municipality */
 ?>
 <!DOCTYPE html>
@@ -62,6 +63,18 @@
         .footer-table td { border: 0.8pt solid #000; padding: 2pt 3pt; }
         .footer-table .label { font-size: 5.8pt; }
         .footer-table .value { font-size: 6pt; }
+        .fiscal-state-watermark {
+            position: fixed;
+            top: 46%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-45deg);
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 50pt;
+            font-weight: normal;
+            color: #a6a6a6;
+            z-index: -1;
+            white-space: nowrap;
+        }
         .watermark {
             position: fixed;
             top: 50%;
@@ -76,6 +89,9 @@
     </style>
 </head>
 <body>
+    <?php if ($fiscalState !== null): ?>
+        <div class="fiscal-state-watermark"><?= htmlspecialchars($fiscalState->value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></div>
+    <?php endif; ?>
     <?php if ($isHomologacao): ?>
     <div class="watermark">HOMOLOGAÇÃO</div>
     <?php endif; ?>

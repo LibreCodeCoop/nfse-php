@@ -21,6 +21,7 @@ The stable contract covered by tests is:
 - IBS/CBS values displayed from authorized totals without recalculation;
 - legacy authorized XML without IBS/CBS remains renderable;
 - homologation documents have a visible environment marker;
+- cancelled and substituted documents may show the required 50pt diagonal status watermark when the consuming application supplies an **explicit, externally verified event state** through `DanfseConfig::fiscalState`; the original authorized XML alone does not establish that a subsequent cancel/substitution occurred and is not mutated;
 - local generation returns a valid PDF artifact;
 - line breaks in the authorized service description are preserved as escaped HTML line breaks;
 - optional contact complement and IBGE/CEP follow the authorized XML without inventing missing data;
