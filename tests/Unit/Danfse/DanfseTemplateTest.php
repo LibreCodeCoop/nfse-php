@@ -183,6 +183,58 @@ class DanfseTemplateTest extends TestCase
         self::assertSame('AB-123', $data['tomador']['cnpj_cpf']);
     }
 
+
+    public function testHeaderMunicipalityFollowsAuthorizedXmlAndItem99Rule(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        $nfse['infNFSe']['xLocEmi'] = 'Município de Teste';
+        $nfse['infNFSe']['emit']['enderNac']['UF'] = 'MG';
+
+        $template = new DanfseTemplate();
+        $data = $template->buildData($nfse);
+        self::assertSame('Município de Teste / MG', $data['municipio_emissao']);
+
+        $html = $template->render($nfse, new DanfseConfig());
+        self::assertStringContainsString('Município: Município de Teste / MG', $html);
+        self::assertStringContainsString('.municipality-name { font-size: 8pt;', $html);
+        self::assertStringContainsString('.municipality-environment { font-size: 6pt;', $html);
+
+        $nfse['infNFSe']['DPS']['infDPS']['serv']['cServ']['cTribNac'] = '990000';
+        self::assertSame('', $template->buildData($nfse)['municipio_emissao']);
+        $html = $template->render($nfse, new DanfseConfig());
+        self::assertStringNotContainsString('Município: Município de Teste', $html);
+        self::assertStringContainsString('Ambiente Gerador:', $html);
+        self::assertStringContainsString('Tipo de Ambiente:', $html);
+    }
+
+    public function testHeaderDoesNotInventAbsentMunicipalityOrUf(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        unset($nfse['infNFSe']['xLocEmi'], $nfse['infNFSe']['emit']['enderNac']['UF']);
+        $template = new DanfseTemplate();
+        self::assertSame('', $template->buildData($nfse)['municipio_emissao']);
+        self::assertStringNotContainsString('Município:', $template->render($nfse, new DanfseConfig()));
+
+        $nfse['infNFSe']['xLocEmi'] = 'Cidade Sintética';
+        self::assertSame('Cidade Sintética / -', $template->buildData($nfse)['municipio_emissao']);
+
+        unset($nfse['infNFSe']['xLocEmi']);
+        $nfse['infNFSe']['emit']['enderNac']['UF'] = 'SP';
+        self::assertSame('- / SP', $template->buildData($nfse)['municipio_emissao']);
+    }
+
+    public function testHomologationHeaderRetainsWarningAndEnvironmentWhenMunicipalitySuppressed(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        $nfse['infNFSe']['DPS']['infDPS']['tpAmb'] = '2';
+        $nfse['infNFSe']['DPS']['infDPS']['serv']['cServ']['cTribNac'] = '990000';
+
+        $html = (new DanfseTemplate())->render($nfse, new DanfseConfig());
+        self::assertStringContainsString('NFS-e SEM VALIDADE JURÍDICA', $html);
+        self::assertStringContainsString('Tipo de Ambiente:', $html);
+        self::assertStringNotContainsString('Município: Niterói / RJ', $html);
+    }
+
     public function testRenderProducesHtmlWithQrCodeAndAccessKey(): void
     {
         $html = (new DanfseTemplate())->render($this->fixtureNfseData(), new DanfseConfig());

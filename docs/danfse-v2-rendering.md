@@ -12,6 +12,7 @@ uses synthetic/public-schema data rather than copyrighted screenshots.
 The stable contract covered by tests is:
 
 - authorized NFS-e identity, access key and QR-code presence;
+- header municipality and UF only from `infNFSe/xLocEmi` and `emit/enderNac/UF`, suppressed for national taxation item 99; environment identification remains visible;
 - provider, taker and intermediary identity fields;
 - retained ISS labels from the DPS and municipal base/rate/assessed tax from the authorized `infNFSe/valores` (not the DPS `tribMun`);
 - foreign taker NIF without inventing a Brazilian CPF/CNPJ;

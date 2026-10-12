@@ -106,7 +106,11 @@ final class DanfseTemplate
             'emissao_dps'  => $this->formatter->dateTime($this->val($infDps, 'dhEmi')),
             'ambiente'      => Ambiente::fromValue($this->val($infDps, 'tpAmb'))->value,
             'ambiente_gerador' => $this->val($infNfse, 'ambGer') ?: '-',
-            'municipio_emissao' => $this->val($infNfse, 'xLocEmi') ?: '-',
+            'municipio_emissao' => $this->headerMunicipality(
+                $this->val($infNfse, 'xLocEmi'),
+                $this->val($enderEmit, 'UF'),
+                $this->val($cServ, 'cTribNac'),
+            ),
             'emitente_nfse' => $this->emitterLabel($this->val($infDps, 'tpEmit')),
             'situacao_nfse' => $this->statusLabel($this->val($infNfse, 'cStat')),
             'finalidade_nfse' => $this->purposeLabel($this->val($infDps, 'IBSCBS', 'finNFSe')),
@@ -351,6 +355,19 @@ final class DanfseTemplate
 
         return substr($code, 0, 1) . '.' . substr($code, 1, 4) . '.'
             . substr($code, 5, 2) . '.' . substr($code, 7, 2);
+    }
+
+    /**
+     * The NT 008 municipal heading is not the service location. Its city and UF
+     * come only from the authorized NFS-e, and item 99 suppresses the line.
+     */
+    private function headerMunicipality(string $city, string $uf, string $nationalTaxCode): string
+    {
+        if (str_starts_with($nationalTaxCode, '99') || ($city === '' && $uf === '')) {
+            return '';
+        }
+
+        return ($city !== '' ? $city : '-') . ' / ' . ($uf !== '' ? $uf : '-');
     }
 
     private function cityWithUf(string $city, string $uf): string
