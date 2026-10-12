@@ -536,6 +536,44 @@ class XmlBuilderTest extends TestCase
         self::assertStringNotContainsString('<pTotTrib>', $xml);
     }
 
+    public function testUnknownPercentagesUseIndicatorInsteadOfInventingZeros(): void
+    {
+        $xml = $this->builder->buildDps($this->makeDps(
+            indicadorTributacao: 0,
+            aliquota: '2.00',
+        ));
+
+        self::assertStringContainsString('<indTotTrib>0</indTotTrib>', $xml);
+        self::assertStringNotContainsString('<pTotTribMun>0.00</pTotTribMun>', $xml);
+    }
+
+    public function testExplicitZeroPercentagesAreRetainedAsDeclared(): void
+    {
+        $xml = $this->builder->buildDps($this->makeDps(
+            indicadorTributacao: 2,
+            totalTributosPercentualFederal: '0.00',
+            totalTributosPercentualEstadual: '0.00',
+            totalTributosPercentualMunicipal: '0.00',
+        ));
+
+        self::assertStringContainsString('<pTotTribFed>0.00</pTotTribFed>', $xml);
+        self::assertStringContainsString('<pTotTribMun>0.00</pTotTribMun>', $xml);
+        self::assertStringNotContainsString('<indTotTrib>0</indTotTrib>', $xml);
+    }
+
+    public function testPartialPercentagesFailBeforeAnyXmlCouldBeSent(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Missing is not a confirmed zero.');
+
+        $this->builder->buildDps($this->makeDps(
+            indicadorTributacao: 2,
+            totalTributosPercentualFederal: '6.50',
+            totalTributosPercentualEstadual: '',
+            totalTributosPercentualMunicipal: '2.00',
+        ));
+    }
+
     public function testBuildDpsIncludesTotalTributosPercentuaisWhenConfigured(): void
     {
         $xml = $this->builder->buildDps($this->makeDps(
