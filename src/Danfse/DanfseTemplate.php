@@ -138,6 +138,16 @@ final class DanfseTemplate
                 $this->personDetails($dest),
                 ['mesmo_tomador' => $this->samePerson($dest, $toma)],
             ),
+            // The official XSD's indDest=0 is an explicit declaration
+            // that dest=toma, even if there is no separate dest group.
+            // When indDest=1, never override that with a name or inferred
+            // equality. Only legacy XML lacking indDest uses identity
+            // comparison as a presentation fallback.
+            'destinatario_mesmo_tomador' => match ($this->val($infDps, 'IBSCBS', 'indDest')) {
+                '0' => true,
+                '1' => false,
+                default => $dest !== [] && $this->samePerson($dest, $toma),
+            },
             'intermediario' => $interm === [] ? null : $this->personDetails($interm),
 
             'servico' => [

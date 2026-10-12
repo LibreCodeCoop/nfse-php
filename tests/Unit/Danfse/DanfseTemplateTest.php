@@ -215,6 +215,40 @@ class DanfseTemplateTest extends TestCase
         self::assertStringNotContainsString('class="bordered-section party-destinatario"', $html);
     }
 
+    public function testOfficialIndDestZeroMeansSameTakerEvenWithoutDestGroup(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        $dps = & $nfse['infNFSe']['DPS']['infDPS'];
+        $dps['IBSCBS']['indDest'] = '0';
+        unset($dps['IBSCBS']['dest']);
+
+        $template = new DanfseTemplate();
+        $data = $template->buildData($nfse);
+        self::assertNull($data['destinatario']);
+        self::assertTrue($data['destinatario_mesmo_tomador']);
+
+        $html = $template->render($nfse, new DanfseConfig());
+        self::assertStringContainsString('O DESTINATÁRIO É O PRÓPRIO TOMADOR/ADQUIRENTE DA OPERAÇÃO', $html);
+        self::assertStringNotContainsString('DESTINATÁRIO DA OPERAÇÃO NÃO IDENTIFICADO', $html);
+    }
+
+    public function testOfficialIndDestOnePreventsIncorrectSameTakerSuppression(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        $dps = & $nfse['infNFSe']['DPS']['infDPS'];
+        $dps['IBSCBS']['indDest'] = '1';
+        $dps['IBSCBS']['dest'] = [
+            'CNPJ' => $dps['toma']['CNPJ'],
+            'xNome' => 'DESTINATARIO AUTORIZADO DISTINTO',
+        ];
+
+        $template = new DanfseTemplate();
+        self::assertFalse($template->buildData($nfse)['destinatario_mesmo_tomador']);
+        $html = $template->render($nfse, new DanfseConfig());
+        self::assertStringContainsString('class="bordered-section party-destinatario"', $html);
+        self::assertStringNotContainsString('O DESTINATÁRIO É O PRÓPRIO TOMADOR', $html);
+    }
+
     public function testMissingTakerAndRecipientHaveSeparateCondensedBlocks(): void
     {
         $nfse = $this->fixtureNfseData();

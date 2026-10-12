@@ -248,10 +248,10 @@
     <?php endif; ?>
 
     <!-- Destinatário: independent of the intermediary, as required by NT008 -->
-    <?php if ($data['destinatario'] === null): ?>
-    <div class="no-party">DESTINATÁRIO DA OPERAÇÃO NÃO IDENTIFICADO NA NFS-e</div>
-    <?php elseif ($data['destinatario']['mesmo_tomador']): ?>
+    <?php if ($data['destinatario_mesmo_tomador']): ?>
     <div class="no-party">O DESTINATÁRIO É O PRÓPRIO TOMADOR/ADQUIRENTE DA OPERAÇÃO</div>
+    <?php elseif ($data['destinatario'] === null): ?>
+    <div class="no-party">DESTINATÁRIO DA OPERAÇÃO NÃO IDENTIFICADO NA NFS-e</div>
     <?php else: ?>
     <div class="bordered-section party-destinatario">
         <table>
