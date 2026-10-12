@@ -47,6 +47,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Resolve dependencies for selected Dompdf major
+        # Dompdf 2 has public advisories; allow this version only in a
+        # synthetic, isolated compatibility job. Regular Composer installs
+        # retain advisory blocking and no production dependency pin changes.
+        env:
+          COMPOSER_POLICY_ADVISORIES_BLOCK: ${{ matrix.dompdf == '2' && '0' || '1' }}
         run: composer update --with "dompdf/dompdf:^${{ matrix.dompdf }}.0" --with-all-dependencies --prefer-dist --no-progress
 
       - name: Install PDF inspection tools

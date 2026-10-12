@@ -63,9 +63,17 @@ try {
             continue;
         }
 
-        $name = $entry->getPathname();
+        // PharData keys contain "phar://<absolute-tar-path>/".
+        // Match full archive-relative paths: suffix-only matches also
+        // incorrectly accept vendor-bin/domains/composer.json as the root.
+        $archivePrefix = 'phar://' . $archives[0] . '/';
+        $fullPath = $entry->getPathname();
+        if (!str_starts_with($fullPath, $archivePrefix)) {
+            throw new RuntimeException('Invalid Composer archive entry path: ' . $fullPath);
+        }
+        $entryPath = substr($fullPath, strlen($archivePrefix));
         foreach ($required as $relative => $checksum) {
-            if ($name !== $relative && !str_ends_with($name, '/' . $relative)) {
+            if ($entryPath !== $relative) {
                 continue;
             }
             if (isset($found[$relative])) {
