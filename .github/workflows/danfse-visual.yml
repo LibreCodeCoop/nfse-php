@@ -21,8 +21,14 @@ permissions:
 
 jobs:
   pdf-layout:
-    name: Generate reference and long-description PDFs
+    name: Generate reference and long-description PDFs (Dompdf ${{ matrix.dompdf }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The general prefer-lowest job currently resolves Dompdf 3.x.
+        # Exercise both declared major versions with real PDFs.
+        dompdf: ['2', '3']
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -39,8 +45,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Install dependencies
-        run: composer install --prefer-dist --no-progress
+      - name: Resolve dependencies for selected Dompdf major
+        run: composer update --with "dompdf/dompdf:^${{ matrix.dompdf }}.0" --with-all-dependencies --prefer-dist --no-progress
 
       - name: Install PDF inspection tools
         run: sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils
@@ -58,6 +64,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: danfse-visual-evidence
+          name: danfse-visual-evidence-dompdf${{ matrix.dompdf }}
           path: ${{ runner.temp }}/danfse/*.pdf
           if-no-files-found: error
