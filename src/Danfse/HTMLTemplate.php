@@ -8,6 +8,7 @@
 /** @var bool $isHomologacao */
 /** @var ?\LibreCodeCoop\NfsePHP\Danfse\Config\DanfseFiscalState $fiscalState */
 /** @var string $fontFaces */
+/** @var string $fontOverrides */
 /** @var ?\LibreCodeCoop\NfsePHP\Danfse\Config\MunicipalityBranding $municipality */
 ?>
 <!DOCTYPE html>
@@ -101,6 +102,7 @@
             z-index: -1;
             white-space: nowrap;
         }
+        <?= $fontOverrides ?>
     </style>
 </head>
 <body>

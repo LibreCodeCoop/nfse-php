@@ -24,23 +24,6 @@ $generator = new DanfseGenerator();
 $pdf = $generator->generateFromXml($xml);
 file_put_contents($outputDir . '/danfse-reference.pdf', $pdf);
 
-// Prove that external local TrueType fonts really embed, using only Dompdf's
-// permissively licensed test font. This does not claim the actual NT008
-// proprietary font names are installed or licensed on the CI runner.
-$fontRoot = dirname(__DIR__, 2) . '/vendor/dompdf/dompdf/lib/fonts';
-$fontCache = $outputDir . '/font-cache';
-if (!is_dir($fontCache) && !mkdir($fontCache, 0775, true) && !is_dir($fontCache)) {
-    throw new RuntimeException('Unable to create isolated font cache');
-}
-$probeFonts = new DanfseFonts(
-    $fontRoot . '/DejaVuSans.ttf',
-    $fontRoot . '/DejaVuSans-Bold.ttf',
-    $fontRoot . '/DejaVuSans.ttf',
-    $fontCache,
-);
-$probePdf = (new DanfseGenerator(new DanfseConfig(fonts: $probeFonts)))->generateFromXml($xml);
-file_put_contents($outputDir . '/danfse-font-probe.pdf', $probePdf);
-
 // Stress-test description overflow/page breaking without using real taxpayer
 // data or changing the fiscal totals in the synthetic authorized fixture.
 $doc = new DOMDocument();
@@ -125,3 +108,20 @@ foreach (['regime-zero', 'regime-nine', 'regime-absent', 'immunity-zero', 'benef
     }
     file_put_contents($outputDir . '/danfse-' . $scenario . '.pdf', $casePdf);
 }
+
+// Prove that external local TrueType fonts really embed, using only Dompdf's
+// permissively licensed test font. This does not claim the actual NT008
+// proprietary font names are installed or licensed on the CI runner.
+$fontRoot = dirname(__DIR__, 2) . '/vendor/dompdf/dompdf/lib/fonts';
+$fontCache = $outputDir . '/font-cache';
+if (!is_dir($fontCache) && !mkdir($fontCache, 0775, true) && !is_dir($fontCache)) {
+    throw new RuntimeException('Unable to create isolated font cache');
+}
+$probeFonts = new DanfseFonts(
+    $fontRoot . '/DejaVuSans.ttf',
+    $fontRoot . '/DejaVuSans-Bold.ttf',
+    $fontRoot . '/DejaVuSans.ttf',
+    $fontCache,
+);
+$probePdf = (new DanfseGenerator(new DanfseConfig(fonts: $probeFonts)))->generateFromXml($xml);
+file_put_contents($outputDir . '/danfse-font-probe.pdf', $probePdf);

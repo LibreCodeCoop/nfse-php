@@ -41,8 +41,10 @@ Files are validated when the options are built, used only from local paths
 within Dompdf's explicitly restricted chroot, and never loaded remotely or
 serialized as font bytes in the HTML. Files must permit PDF embedding under
 their own license. The last argument must be an existing writable font cache
-directory reserved for this use; the renderer isolates its metrics from
-Dompdf's bundled fonts to prevent affecting unrelated documents.
+directory reserved for this use. CSS font families are namespaced by their
+local files and cache directory because Dompdf caches font lookups across
+renderer instances in the same PHP process; this prevents optional font
+registration from changing the default renderer's typography.
 
 An A4 PDF should be inspected with `pdffonts receipt.pdf`; exact typography
 is demonstrated only when the correct typefaces are present and embedded.

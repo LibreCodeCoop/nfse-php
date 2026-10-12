@@ -55,14 +55,47 @@ final readonly class DanfseFonts
      */
     public function fontFaceCss(): string
     {
+        // Dompdf 2.x/3.x caches FontMetrics::getFont() lookups statically
+        // by CSS family name, across renderer instances in one PHP process.
+        // A namespaced family avoids poisoning the next default document.
+        $label = $this->labelFamily();
+        $value = $this->valueFamily();
+
         return implode("\n", [
-            '@font-face { font-family: "Arial"; font-style: normal; font-weight: 400; src: url("' .
+            '@font-face { font-family: "' . $label . '"; font-style: normal; font-weight: 400; src: url("' .
                 self::fileUri($this->arialRegular) . '") format("truetype"); }',
-            '@font-face { font-family: "Arial"; font-style: normal; font-weight: 700; src: url("' .
+            '@font-face { font-family: "' . $label . '"; font-style: normal; font-weight: 700; src: url("' .
                 self::fileUri($this->arialBold) . '") format("truetype"); }',
-            '@font-face { font-family: "Microsoft Sans Serif"; font-style: normal; font-weight: 400; src: url("' .
+            '@font-face { font-family: "' . $value . '"; font-style: normal; font-weight: 400; src: url("' .
                 self::fileUri($this->microsoftSansSerif) . '") format("truetype"); }',
         ]);
+    }
+
+    public function fontOverrideCss(): string
+    {
+        return 'body, .label, .fiscal-state-watermark, .watermark { font-family: "' .
+            $this->labelFamily() . '", sans-serif; }' . "\n" .
+            '.value, .municipality-cell { font-family: "' . $this->valueFamily() . '", sans-serif; }';
+    }
+
+    public function labelFamily(): string
+    {
+        return 'NfseLabels' . $this->cacheNamespace();
+    }
+
+    public function valueFamily(): string
+    {
+        return 'NfseValues' . $this->cacheNamespace();
+    }
+
+    private function cacheNamespace(): string
+    {
+        return substr(hash('sha256', implode('|', [
+            $this->arialRegular,
+            $this->arialBold,
+            $this->microsoftSansSerif,
+            $this->fontCacheDirectory,
+        ])), 0, 16);
     }
 
     private static function existingFont(string $path): string

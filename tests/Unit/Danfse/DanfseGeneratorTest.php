@@ -60,19 +60,27 @@ class DanfseGeneratorTest extends TestCase
         self::assertFileExists($bold);
 
         $cache = sys_get_temp_dir() . '/nfse-danfse-fonts-' . bin2hex(random_bytes(8));
-        self::assertTrue(mkdir($cache, 0700));
+        self::assertTrue(mkdir($cache, 0o700));
         $fonts = new DanfseFonts($regular, $bold, $regular, $cache);
         self::assertCount(1, $fonts->directories());
 
         $generator = new DanfseGenerator(new DanfseConfig(fonts: $fonts));
         $html = $generator->generateHtml($this->xml);
-        self::assertStringContainsString('font-family: "Arial"', $html);
-        self::assertStringContainsString('font-family: "Microsoft Sans Serif"', $html);
+        self::assertStringContainsString('font-family: "' . $fonts->labelFamily() . '"', $html);
+        self::assertStringContainsString('font-family: "' . $fonts->valueFamily() . '"', $html);
+        self::assertStringNotContainsString('@font-face { font-family: "Arial"', $html);
         self::assertStringContainsString('src: url("file://', $html);
         self::assertStringNotContainsString('data:font/', $html);
 
         $pdf = $generator->generateFromXml($this->xml);
         self::assertStringStartsWith('%PDF-', $pdf);
+
+        // Distinct font registrations must not change the default font
+        // lookup later in the SAME PHP process.
+        $default = new DanfseGenerator();
+        self::assertStringStartsWith('%PDF-', $default->generateFromXml($this->xml));
+        $homolog = str_replace('<tpAmb>1</tpAmb>', '<tpAmb>2</tpAmb>', $this->xml);
+        self::assertStringContainsString('HOMOLOGAÇÃO', $default->generateHtml($homolog));
     }
 
     public function testGeneratedPdfSizeIsReasonable(): void
