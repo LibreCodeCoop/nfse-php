@@ -53,7 +53,7 @@ final readonly class DanfseFonts
     /**
      * Output references files on disk, never inline font bytes or network URIs.
      */
-    public function fontFaceCss(): string
+    public function fontFaceCss(bool $boldValues = false): string
     {
         // Dompdf 2.x/3.x caches FontMetrics::getFont() lookups statically
         // by CSS family name, across renderer instances in one PHP process.
@@ -61,14 +61,22 @@ final readonly class DanfseFonts
         $label = $this->labelFamily();
         $value = $this->valueFamily();
 
-        return implode("\n", [
+        $faces = [
             '@font-face { font-family: "' . $label . '"; font-style: normal; font-weight: 400; src: url("' .
                 self::fileUri($this->arialRegular) . '") format("truetype"); }',
             '@font-face { font-family: "' . $label . '"; font-style: normal; font-weight: 700; src: url("' .
                 self::fileUri($this->arialBold) . '") format("truetype"); }',
             '@font-face { font-family: "' . $value . '"; font-style: normal; font-weight: 400; src: url("' .
                 self::fileUri($this->microsoftSansSerif) . '") format("truetype"); }',
-        ]);
+        ];
+        if ($boldValues) {
+            // Default Liberation Sans also supplies bold highlighted values.
+            // Keep the legacy custom-font registration unchanged.
+            $faces[] = '@font-face { font-family: "' . $value . '"; font-style: normal; font-weight: 700; src: url("' .
+                self::fileUri($this->arialBold) . '") format("truetype"); }';
+        }
+
+        return implode("\n", $faces);
     }
 
     public function fontOverrideCss(): string

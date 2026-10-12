@@ -9,6 +9,7 @@ namespace LibreCodeCoop\NfsePHP\Danfse;
 
 use Dompdf\Dompdf;
 use Dompdf\Options;
+use LibreCodeCoop\NfsePHP\Danfse\Config\BundledDanfseFonts;
 use LibreCodeCoop\NfsePHP\Danfse\Config\DanfseConfig;
 use LibreCodeCoop\NfsePHP\Exception\ArtifactException;
 use LibreCodeCoop\NfsePHP\Exception\NfseErrorCode;
@@ -66,6 +67,7 @@ final class DanfseGenerator
         }
 
         $this->assertAuthorizedNfse($data);
+        $fonts = $this->config->fonts ?? BundledDanfseFonts::get();
         $template = new DanfseTemplate();
 
         // [service-description limit, additional free-text limit].
@@ -86,20 +88,17 @@ final class DanfseGenerator
                 $options = new Options();
                 $options->set('isHtml5ParserEnabled', true);
                 $options->set('isRemoteEnabled', false);
-                $options->set('defaultFont', 'Helvetica');
-                if ($this->config->fonts !== null) {
-                    // Permit only the caller-provided, validated font
-                    // directories, not arbitrary filesystem access.
-                    $options->setChroot(array_values(array_unique(array_merge(
-                        $options->getChroot(),
-                        $this->config->fonts->directories(),
-                    ))));
-                    // Isolate dynamic font metrics from Dompdf's bundled
-                    // cache. Without this, later default-font documents can
-                    // silently inherit a different typeface and overflow A4.
-                    $options->setFontDir($this->config->fonts->fontCacheDirectory);
-                    $options->setFontCache($this->config->fonts->fontCacheDirectory);
-                }
+                $options->set('defaultFont', $fonts->labelFamily());
+                // Resolve both default and caller-supplied fonts from local
+                // files. Font directories are restricted by Dompdf chroot.
+                $options->setChroot(array_values(array_unique(array_merge(
+                    $options->getChroot(),
+                    $fonts->directories(),
+                ))));
+                // Dompdf 2/3 can cache font lookups between documents in one
+                // PHP process; isolate metrics and family names per font set.
+                $options->setFontDir($fonts->fontCacheDirectory);
+                $options->setFontCache($fonts->fontCacheDirectory);
 
                 $dompdf = new Dompdf($options);
                 $dompdf->loadHtml($html, 'UTF-8');
