@@ -95,9 +95,10 @@ final class DanfsePdfEvidence
                 if (!$font['embedded']) {
                     $errors[] = 'Required font is not embedded: ' . $name;
                 }
-            } elseif (!$custom) {
-                // Default DANFSe must never quietly fall back to core fonts.
-                $errors[] = 'Unexpected default font: ' . $name;
+            } else {
+                // Neither bundled nor caller-provided fonts may silently fall
+                // back to an unlicensed/non-embedded PDF core font.
+                $errors[] = ($custom ? 'Unexpected custom font: ' : 'Unexpected default font: ') . $name;
             }
         }
         foreach ([$family, $family . '-Bold'] as $required) {
@@ -105,8 +106,6 @@ final class DanfsePdfEvidence
                 $errors[] = 'Missing embedded font: ' . $required;
             }
         }
-        // The externally configured font probe retains its pre-existing
-        // behavior: assert both custom fonts embed, not that ALL text uses them.
         return $errors;
     }
 }

@@ -63,7 +63,7 @@ final class DanfseTemplate
         // cannot be inferred from an unchanged authorized NFS-e XML.
         $fiscalState  = $config->fiscalState;
         $fonts         = $config->fonts ?? BundledDanfseFonts::get();
-        $fontFaces     = $fonts->fontFaceCss($config->fonts === null);
+        $fontFaces     = $fonts->fontFaceCss();
         $fontOverrides = $fonts->fontOverrideCss();
         $ambiente      = Ambiente::fromValue((string) $data['ambiente']);
         $isHomologacao = $ambiente->isHomologacao();

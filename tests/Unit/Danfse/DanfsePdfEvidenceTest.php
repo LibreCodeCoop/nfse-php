@@ -69,8 +69,15 @@ final class DanfsePdfEvidenceTest extends TestCase
     public function testCustomFontsPreserveExternalRegistrationCompatibility(): void
     {
         $fonts = str_replace('LiberationSans', 'DejaVuSans', self::FONTS);
-        $fonts .= "\nHelvetica-Bold Type 1 WinAnsi no no no 27 0\n";
         self::assertSame([], DanfsePdfEvidence::check('danfse-font-probe.pdf', self::A4, $fonts, self::TEXT));
+    }
+
+    public function testCustomProbeRejectsCoreFontFallback(): void
+    {
+        $fonts = str_replace('LiberationSans', 'DejaVuSans', self::FONTS);
+        $fonts .= "\nHelvetica-Bold Type 1 WinAnsi no no no 27 0\n";
+        $errors = DanfsePdfEvidence::check('danfse-font-probe.pdf', self::A4, $fonts, self::TEXT);
+        self::assertContains('Unexpected custom font: Helvetica-Bold', $errors);
     }
 
     public function testMalformedFontMetadataCannotProduceFalseSuccess(): void

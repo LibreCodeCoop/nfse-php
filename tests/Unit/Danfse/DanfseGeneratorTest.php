@@ -124,6 +124,7 @@ class DanfseGeneratorTest extends TestCase
         $html = $generator->generateHtml($this->xml);
         self::assertStringContainsString('font-family: "' . $fonts->labelFamily() . '"', $html);
         self::assertStringContainsString('font-family: "' . $fonts->valueFamily() . '"', $html);
+        self::assertStringContainsString('font-family: "' . $fonts->valueFamily() . '"; font-style: normal; font-weight: 700;', $html);
         self::assertStringNotContainsString('@font-face { font-family: "Arial"', $html);
         self::assertStringContainsString('src: url("file://', $html);
         self::assertStringNotContainsString('data:font/', $html);
