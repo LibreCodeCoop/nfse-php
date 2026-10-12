@@ -219,7 +219,7 @@ final class DanfseTemplate
                 'municipio_incidencia' => $this->locationWithUfAndCountry(
                     $this->val($infNfse, 'xLocIncid'),
                     $this->val($infNfse, 'cLocIncid'),
-                    '',
+                    $this->val($tribMun, 'cPaisResult'),
                 ),
                 'regime_especial'      => RegimeEspecialTributacao::labelFor($regimeEspecial),
                 'tipo_imunidade'       => $this->immunityLabel($tipoImunidade),
@@ -249,6 +249,8 @@ final class DanfseTemplate
                 ),
                 'irrf'   => $this->currencyOrDash($this->val($tribFed, 'vRetIRRF')),
                 'cp'     => $this->currencyOrDash($this->val($tribFed, 'vRetCP')),
+                'contribuicoes_sociais' => $this->currencyOrDash($this->val($tribFed, 'vRetCSLL')),
+                // Alias de compatibilidade para consumidores de buildData().
                 'csll'   => $this->currencyOrDash($this->val($tribFed, 'vRetCSLL')),
                 'pis'    => $this->currencyOrDash($this->val($tribFed, 'piscofins', 'vPis')),
                 'cofins' => $this->currencyOrDash($this->val($tribFed, 'piscofins', 'vCofins')),
@@ -457,8 +459,11 @@ final class DanfseTemplate
     }
 
     /**
-     * Show the municipality, UF and an optional country only when present in
-     * the authorized XML. The UF is resolved from the official IBGE code.
+     * Display ISO country BR for a recognized Brazilian IBGE municipality.
+     * The NT 008/2026 v1.02 DANFSe table explicitly uses BR as an example;
+     * this is a presentation inference from the authorized IBGE municipality,
+     * NOT a cPaisPrestacao XML value (which E0304 forbids for BR).
+     * For foreign operations, preserve the explicit XML country instead.
      */
     private function locationWithUfAndCountry(string $city, string $ibge, string $country): string
     {
@@ -469,6 +474,11 @@ final class DanfseTemplate
             if ($resolved !== $ibge && str_contains($resolved, ' - ')) {
                 $uf = substr($resolved, (int) strrpos($resolved, ' - ') + 3);
             }
+        }
+
+        $country = strtoupper(trim($country));
+        if ($country === '' && $uf !== '') {
+            $country = 'BR';
         }
 
         return ($city !== '' ? $city : '-') . ' / ' . ($uf !== '' ? $uf : '-') . ' / '
@@ -644,6 +654,10 @@ final class DanfseTemplate
             '3' => '3 - PIS/COFINS/CSLL Retidos',
             '4' => '4 - PIS/COFINS Retidos, CSLL Não Retido',
             '5' => '5 - PIS Retido, COFINS/CSLL Não Retido',
+            '6' => '6 - COFINS Retido, PIS/CSLL Não Retido',
+            '7' => '7 - PIS Não Retido, COFINS/CSLL Retidos',
+            '8' => '8 - PIS/COFINS Não Retidos, CSLL Retido',
+            '9' => '9 - COFINS Não Retido, PIS/CSLL Retidos',
             default => '-',
         };
     }

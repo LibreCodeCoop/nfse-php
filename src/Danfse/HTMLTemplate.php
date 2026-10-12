@@ -393,7 +393,7 @@
                 <td class="section-header"><span class="section-title">TRIBUTAÇÃO FEDERAL (EXCETO CBS)</span></td>
                 <td><span class="label">IRRF</span><span class="value"><?= $data['tributacao_federal']['irrf'] ?></span></td>
                 <td><span class="label">Contribuição Previdenciária - Retida</span><span class="value"><?= $data['tributacao_federal']['cp'] ?></span></td>
-                <td><span class="label">Contribuições Sociais - Retidas</span><span class="value"><?= $data['tributacao_federal']['csll'] ?></span></td>
+                <td><span class="label">Contribuições Sociais - Retidas</span><span class="value"><?= $data['tributacao_federal']['contribuicoes_sociais'] ?></span></td>
             </tr>
             <?php if ($data['tributacao_federal']['mostrar_linha_2026']): ?>
             <tr class="federal-competence-2026">
