@@ -211,6 +211,45 @@ class DanfseTemplateTest extends TestCase
         self::assertSame(1, substr_count($html, 'class="municipal-conditional-regime"'));
     }
 
+    public function testMunicipalImmunityCodeZeroIsNotDisplayedAsAbsent(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        unset($nfse['infNFSe']['DPS']['infDPS']['prest']['regTrib']['regEspTrib']);
+        $nfse['infNFSe']['DPS']['infDPS']['valores']['trib']['tribMun']['tpImunidade'] = '0';
+
+        $template = new DanfseTemplate();
+        $data = $template->buildData($nfse);
+        self::assertSame('Imunidade (tipo não informado)', $data['tributacao_municipal']['tipo_imunidade']);
+        self::assertTrue($data['tributacao_municipal']['mostrar_linha_regime']);
+
+        $html = $template->render($nfse, new DanfseConfig());
+        self::assertStringContainsString('Imunidade (tipo não informado)', $html);
+        self::assertStringContainsString('class="municipal-conditional-regime"', $html);
+    }
+
+    public function testMunicipalDeductionsUseOfficialAuthorizedSourcesAndPreserveExplicitZero(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        $values = & $nfse['infNFSe']['valores'];
+        $dpsValues = & $nfse['infNFSe']['DPS']['infDPS']['valores'];
+
+        unset($dpsValues['vDedRed'], $values['vCalcDR'], $nfse['infNFSe']['IBSCBS']);
+        $template = new DanfseTemplate();
+        self::assertSame('-', $template->buildData($nfse)['tributacao_municipal']['total_deducoes']);
+
+        $values['vCalcDR'] = '10.50';
+        $nfse['infNFSe']['IBSCBS']['valores']['vCalcReeRepRes'] = '3.25';
+        $data = $template->buildData($nfse);
+        self::assertSame('R$ 13,75', $data['tributacao_municipal']['total_deducoes']);
+        self::assertTrue($data['tributacao_municipal']['mostrar_linha_beneficio']);
+
+        $dpsValues['vDedRed']['vDR'] = '7.00';
+        self::assertSame('R$ 7,00', $template->buildData($nfse)['tributacao_municipal']['total_deducoes']);
+
+        $dpsValues['vDedRed']['vDR'] = '0.00';
+        self::assertSame('R$ 0,00', $template->buildData($nfse)['tributacao_municipal']['total_deducoes']);
+    }
+
     public function testMunicipalBenefitZeroIsNotSuppressedAndAbsenceIsDifferent(): void
     {
         $nfse = $this->fixtureNfseData();

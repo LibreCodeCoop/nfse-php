@@ -106,10 +106,16 @@ final class DanfseTemplate
             $this->val($authorizedValues, 'vCalcBM'),
             $this->val($tribMun, 'BM', 'vRedBCBM'),
         );
-        $totalDeducoes = $this->firstPresent(
-            $this->val($valores, 'vDedRed', 'vDR'),
-            $this->val($authorizedValues, 'vCalcDR'),
-        );
+        // The official display table chooses the explicit DPS vDR, or the
+        // calculated deduction and reimbursement amounts supplied in the
+        // authorized NFS-e. It does not re-derive these from service prices.
+        $explicitDeductions = $this->val($valores, 'vDedRed', 'vDR');
+        $totalDeducoes = $explicitDeductions !== ''
+            ? $this->currencyOrDash($explicitDeductions)
+            : $this->sumCurrency(
+                $this->val($authorizedValues, 'vCalcDR'),
+                $this->val($ibsCbsValores, 'vCalcReeRepRes'),
+            );
         $descontoIncondicionado = $this->val($valores, 'vDescCondIncond', 'vDescIncond');
 
         $id          = $this->val($infNfse, 'Id');
@@ -196,9 +202,9 @@ final class DanfseTemplate
                 'mostrar_linha_regime' => $this->hasAnyPresent($regimeEspecial, $tipoImunidade, $tipoSuspensao, $numeroProcesso),
                 'beneficio_municipal'  => $this->municipalBenefitLabel($tipoBeneficio),
                 'calculo_bm'           => $this->currencyOrDash($calculoBeneficio),
-                'total_deducoes'       => $this->currencyOrDash($totalDeducoes),
+                'total_deducoes'       => $totalDeducoes,
                 'desconto_incondicionado' => $this->currencyOrDash($descontoIncondicionado),
-                'mostrar_linha_beneficio' => $this->hasAnyPresent($tipoBeneficio, $calculoBeneficio, $totalDeducoes, $descontoIncondicionado),
+                'mostrar_linha_beneficio' => $this->hasAnyPresent($tipoBeneficio, $calculoBeneficio, $totalDeducoes !== '-' ? $totalDeducoes : '', $descontoIncondicionado),
                 // Note 4 permits the concise no-ISS block when the XML
                 // expressly identifies the operation as not incident.
                 'nao_sujeito_issqn' => $this->val($tribMun, 'tribISSQN') === '4',
@@ -424,6 +430,10 @@ final class DanfseTemplate
     private function immunityLabel(string $value): string
     {
         $label = match ($value) {
+            // XSD 1.01 explicitly assigns 0 to a legacy, unspecified type.
+            // Display the actual fiscal meaning instead of confusing it with
+            // a missing XML tag, even though NT008's table lists 1–5.
+            '0' => 'Imunidade (tipo não informado)',
             '1' => 'Patrimônio, renda ou serviços de entes públicos',
             '2' => 'Entidades religiosas e templos de qualquer culto',
             '3' => 'Partidos, sindicatos, educação e assistência social',
