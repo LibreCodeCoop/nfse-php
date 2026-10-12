@@ -50,6 +50,18 @@ class XmlBuilderTest extends TestCase
         $this->builder->buildDps($this->makeDps(prestadorInscricaoMunicipal: str_repeat('1', 16)));
     }
 
+    public function testExtendedDtoKeepsLegacyPositionalConstructorOrder(): void
+    {
+        $parameters = (new \ReflectionMethod(DpsData::class, '__construct'))->getParameters();
+        $names = array_map(static fn (\ReflectionParameter $parameter): string => $parameter->getName(), $parameters);
+
+        self::assertSame('regimeApuracaoSimplesNacional', $names[count($names) - 1]);
+        self::assertLessThan(
+            array_search('regimeApuracaoSimplesNacional', $names, true),
+            array_search('regimeEspecialTributacao', $names, true),
+        );
+    }
+
     public function testMeEppWithoutApurationIsRejectedBeforeXmlGeneration(): void
     {
         $this->expectException(\InvalidArgumentException::class);
