@@ -73,10 +73,12 @@
         "domains:verify-indicators": "@php tools/bin/domains.php verify-indicators",
         "domains:contract-matrix": "@php tools/bin/domains.php contract-matrix",
         "danfse:visual": [
+            "@danfse:package",
             "@php tools/bin/render-danfse-visual-fixtures.php build/danfse-visual",
             "@php tools/bin/verify-danfse-visual-fixtures.php build/danfse-visual"
         ],
-        "danfse:verify": "@php tools/bin/verify-danfse-visual-fixtures.php build/danfse-visual"
+        "danfse:verify": "@php tools/bin/verify-danfse-visual-fixtures.php build/danfse-visual",
+        "danfse:package": "@php tools/bin/verify-danfse-composer-package.php"
     },
     "minimum-stability": "stable",
     "prefer-stable": true,

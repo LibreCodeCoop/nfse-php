@@ -5,14 +5,20 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Bundled Liberation Sans font assets
 
-The unmodified 2.1.5 binaries were verified with their internal version
-and OFL licensing metadata. Upstream source and release:
+The bundled TTF name tables identify Liberation Sans version 2.1.5
+and SIL OFL 1.1. Their exact SHA-256 fingerprints are recorded below.
+The official upstream binary release is available at:
 https://github.com/liberationfonts/liberation-fonts/releases/tag/2.1.5
 
-The checked-in files have the SHA-256 values below. These particular
-binaries were also cross-checked against the local Linux Liberation font
-package; no archive checksum is asserted without independently verifying
-that archive.
+MacPorts independently records SHA-256
+`7191c669bf38899f73a2094ed00f7b800553364f90e2637010a69c0e268f25d0`
+for the complete upstream `liberation-fonts-ttf-2.1.5.tar.gz` archive:
+https://github.com/macports/macports-ports/blob/master/x11/liberation-fonts/Portfile
+
+The above *archive* checksum has not been directly compared with the
+bundled font binaries in this repository; do not mistake the recorded
+individual-file hashes and internal metadata for proof of byte-for-byte
+correspondence with the upstream archive.
 
 | File | SHA-256 |
 | --- | --- |

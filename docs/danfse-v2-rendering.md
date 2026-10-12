@@ -67,7 +67,9 @@ The packaged default path embeds Liberation Sans, not Helvetica. Even when the
 font is embedded, it does **not** meet the exact typeface names of NT008.
 CI also exercises custom-font embedding with DejaVuSans **only as a test
 surrogate**. A caller holding valid licenses can still supply Arial and
-Microsoft Sans Serif via the unchanged `DanfseFonts` API.
+Microsoft Sans Serif via the unchanged `DanfseFonts` API. That API has no
+separate bold face for value text; highlighted bold values explicitly use the
+caller-provided Arial Bold file, avoiding an undocumented Helvetica fallback.
 
 The project does not guarantee byte-identical PDF output. PDF metadata, font
 metrics and QR SVG serialization can change when rendering dependencies are

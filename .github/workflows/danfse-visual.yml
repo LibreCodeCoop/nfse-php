@@ -60,8 +60,8 @@ jobs:
       - name: Verify bundled fonts and licenses in Composer distribution
         run: php tools/bin/verify-danfse-composer-package.php
 
-      - name: Test PDF evidence verifier (positive and negative cases)
-        run: vendor/bin/phpunit tests/Unit/Danfse/DanfsePdfEvidenceTest.php
+      - name: Run focused DANFSe regression tests for this Dompdf version
+        run: vendor/bin/phpunit tests/Unit/Danfse
 
       - name: Generate synthetic PDFs for visual review
         run: php tools/bin/render-danfse-visual-fixtures.php "${{ runner.temp }}/danfse"
