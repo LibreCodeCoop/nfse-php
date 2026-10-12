@@ -44,15 +44,22 @@ jobs:
       - name: Generate synthetic PDFs for visual review
         run: php tools/bin/render-danfse-visual-fixtures.php "${{ runner.temp }}/danfse"
 
-      - name: Verify printable receipt footer and long-description pagination
+      - name: Verify required fields and one-page A4 layout
         shell: bash
         run: |
           for pdf in "${{ runner.temp }}/danfse/"*.pdf; do
             pdftotext -layout "$pdf" - | grep -Fq "DATA CIENTIFICAÇÃO"
             pdftotext -layout "$pdf" - | grep -Fq "IDENTIFICAÇÃO E ASSINATURA"
+            # Normalize PDF line wraps while still requiring the complete official disclosure.
+            pdftotext -layout "$pdf" - | tr -s '[:space:]' ' ' | grep -Fq "Totais aproximados dos Tributos"
+            pages=$(pdfinfo "$pdf" | awk '/^Pages:/ {print $2}')
+            test "$pages" -eq 1
+            pdfinfo "$pdf" | grep -Fq 'Page size:       595.28 x 841.89 pts (A4)'
           done
-          pages=$(pdfinfo "${{ runner.temp }}/danfse/danfse-long-description.pdf" | awk '/^Pages:/ {print $2}')
-          test "$pages" -gt 1
+          pdftotext -layout "${{ runner.temp }}/danfse/danfse-long-description.pdf" - | grep -Fq '...'
+          # A locally supplied TTF must be genuinely embedded (not silently
+          # replaced by Helvetica). The probe font is freely licensed.
+          pdffonts "${{ runner.temp }}/danfse/danfse-font-probe.pdf" | grep -Fq 'DejaVuSans'
 
       - name: Preserve render evidence
         if: always()

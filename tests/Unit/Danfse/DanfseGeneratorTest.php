@@ -9,6 +9,7 @@ namespace LibreCodeCoop\NfsePHP\Tests\Unit\Danfse;
 
 use LibreCodeCoop\NfsePHP\Danfse\Config\DanfseConfig;
 use LibreCodeCoop\NfsePHP\Danfse\Config\DanfseFiscalState;
+use LibreCodeCoop\NfsePHP\Danfse\Config\DanfseFonts;
 use LibreCodeCoop\NfsePHP\Danfse\Config\MunicipalityBranding;
 use LibreCodeCoop\NfsePHP\Danfse\DanfseGenerator;
 use LibreCodeCoop\NfsePHP\Exception\ArtifactException;
@@ -35,6 +36,51 @@ class DanfseGeneratorTest extends TestCase
         $pdf = (new DanfseGenerator())->generateFromXml($this->xml);
 
         self::assertStringStartsWith('%PDF-', $pdf);
+    }
+
+    public function testFontConfigurationRejectsMissingLocalFiles(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        new DanfseFonts(
+            '/not-a-real-folder/arial.ttf',
+            '/not-a-real-folder/arialbd.ttf',
+            '/not-a-real-folder/micross.ttf',
+            sys_get_temp_dir(),
+        );
+    }
+
+    public function testLocalFontFilesCanBeRegisteredWithoutRemoteLoading(): void
+    {
+        // Dompdf's redistributable bundled fonts are safe stand-ins for
+        // proving the loading mechanism, NOT Arial/MSG or NT008 compliance.
+        $fontsPath = dirname(__DIR__, 3) . '/vendor/dompdf/dompdf/lib/fonts';
+        $regular = $fontsPath . '/DejaVuSans.ttf';
+        $bold = $fontsPath . '/DejaVuSans-Bold.ttf';
+        self::assertFileExists($regular);
+        self::assertFileExists($bold);
+
+        $cache = sys_get_temp_dir() . '/nfse-danfse-fonts-' . bin2hex(random_bytes(8));
+        self::assertTrue(mkdir($cache, 0o700));
+        $fonts = new DanfseFonts($regular, $bold, $regular, $cache);
+        self::assertCount(1, $fonts->directories());
+
+        $generator = new DanfseGenerator(new DanfseConfig(fonts: $fonts));
+        $html = $generator->generateHtml($this->xml);
+        self::assertStringContainsString('font-family: "' . $fonts->labelFamily() . '"', $html);
+        self::assertStringContainsString('font-family: "' . $fonts->valueFamily() . '"', $html);
+        self::assertStringNotContainsString('@font-face { font-family: "Arial"', $html);
+        self::assertStringContainsString('src: url("file://', $html);
+        self::assertStringNotContainsString('data:font/', $html);
+
+        $pdf = $generator->generateFromXml($this->xml);
+        self::assertStringStartsWith('%PDF-', $pdf);
+
+        // Distinct font registrations must not change the default font
+        // lookup later in the SAME PHP process.
+        $default = new DanfseGenerator();
+        self::assertStringStartsWith('%PDF-', $default->generateFromXml($this->xml));
+        $homolog = str_replace('<tpAmb>1</tpAmb>', '<tpAmb>2</tpAmb>', $this->xml);
+        self::assertStringContainsString('HOMOLOGAÇÃO', $default->generateHtml($homolog));
     }
 
     public function testGeneratedPdfSizeIsReasonable(): void
@@ -85,6 +131,41 @@ class DanfseGeneratorTest extends TestCase
         $config = new DanfseConfig(fiscalState: DanfseFiscalState::Substituted);
         $html = (new DanfseGenerator($config))->generateHtml($this->xml);
         self::assertStringContainsString('class="fiscal-state-watermark">SUBSTITUÍDA</div>', $html);
+    }
+
+    public function testLongSyntheticServiceKeepsExplicitEllipsisAndOnePageHtml(): void
+    {
+        $longDescription = str_repeat('DESCRICAO SINTETICA DE SERVICO E ETAPAS. ', 140);
+        $xml = preg_replace(
+            '~<xDescServ>[^<]*</xDescServ>~',
+            '<xDescServ>' . $longDescription . '</xDescServ>',
+            $this->xml,
+        );
+        self::assertIsString($xml);
+
+        $generator = new DanfseGenerator();
+        $html = $generator->generateHtml($xml);
+        self::assertStringContainsString('DESCRICAO SINTETICA DE SERVICO', $html);
+        self::assertStringContainsString('...', $html);
+        self::assertStringContainsString('Totais aproximados dos Tributos', $html);
+        self::assertStringStartsWith('%PDF-', $generator->generateFromXml($xml));
+    }
+
+    public function testLongSyntheticComplementaryInformationPreservesTaxDisclosure(): void
+    {
+        $longNotes = str_repeat('OBSERVACAO SINTETICA DO SERVICO. ', 140);
+        $xml = preg_replace(
+            '~<xInfComp>[^<]*</xInfComp>~',
+            '<xInfComp>' . $longNotes . '</xInfComp>',
+            $this->xml,
+        );
+        self::assertIsString($xml);
+
+        $html = (new DanfseGenerator())->generateHtml($xml);
+        self::assertStringContainsString('OBSERVACAO SINTETICA DO SERVICO', $html);
+        self::assertStringContainsString('...', $html);
+        self::assertStringContainsString('Totais aproximados dos Tributos', $html);
+        self::assertStringContainsString('Federais: 4.50%', $html);
     }
 
     public function testGenerateHtmlContainsHomologacaoWatermark(): void

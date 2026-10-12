@@ -18,6 +18,7 @@ enum RegimeEspecialTributacao: int
     case NOTARIO_REGISTRADOR = 4;
     case PROFISSIONAL_AUTONOMO = 5;
     case SOCIEDADE_PROFISSIONAIS = 6;
+    case OUTROS = 9;
 
     public function label(): string
     {
@@ -29,6 +30,7 @@ enum RegimeEspecialTributacao: int
             self::NOTARIO_REGISTRADOR => 'Notário ou Registrador',
             self::PROFISSIONAL_AUTONOMO => 'Profissional Autônomo',
             self::SOCIEDADE_PROFISSIONAIS => 'Sociedade de Profissionais',
+            self::OUTROS => 'Outros',
         };
     }
 }

@@ -43,14 +43,26 @@ final class DanfseTemplate
      *
      * @param array<string, mixed> $nfse
      */
-    public function render(array $nfse, DanfseConfig $config): string
-    {
-        $data          = $this->buildData($nfse);
+    public function render(
+        array $nfse,
+        DanfseConfig $config,
+        ?int $serviceDescriptionLimit = null,
+        ?int $complementaryTextLimit = null,
+    ): string {
+        $data          = $this->buildData($nfse, $complementaryTextLimit);
+        if ($serviceDescriptionLimit !== null) {
+            $data['servico']['descricao'] = $this->formatter->limit(
+                (string) $data['servico']['descricao'],
+                $serviceDescriptionLimit,
+            );
+        }
         $logo          = $config->logoDataUri;
         $municipality  = $config->municipality;
         // This is an explicitly supplied, externally verified state; it
         // cannot be inferred from an unchanged authorized NFS-e XML.
         $fiscalState  = $config->fiscalState;
+        $fontFaces    = $config->fonts?->fontFaceCss() ?? '';
+        $fontOverrides = $config->fonts?->fontOverrideCss() ?? '';
         $ambiente      = Ambiente::fromValue((string) $data['ambiente']);
         $isHomologacao = $ambiente->isHomologacao();
         $qrCode        = $this->generateQrCode((string) $data['chave_acesso'], $ambiente);
@@ -73,7 +85,7 @@ final class DanfseTemplate
      * @param array<string, mixed> $nfse
      * @return array<string, mixed>
      */
-    public function buildData(array $nfse): array
+    public function buildData(array $nfse, ?int $complementaryTextLimit = null): array
     {
         $infNfse = $this->node($nfse, 'infNFSe');
         $infDps  = $this->node($infNfse, 'DPS', 'infDPS');
@@ -92,10 +104,28 @@ final class DanfseTemplate
         $authorizedValues = $this->node($infNfse, 'valores');
         $tribMun = $this->node($valores, 'trib', 'tribMun');
         $tribFed = $this->node($valores, 'trib', 'tribFed');
-        $totTrib = $this->node($valores, 'trib', 'totTrib', 'pTotTrib');
+        $totTribGroup = $this->node($valores, 'trib', 'totTrib');
+        $approxPercent = $this->node($totTribGroup, 'pTotTrib');
+        $approxMoney = $this->node($totTribGroup, 'vTotTrib');
+        $approxValues = $approxMoney !== []
+            ? [
+                $this->currencyOrDash($this->val($approxMoney, 'vTotTribFed')),
+                $this->currencyOrDash($this->val($approxMoney, 'vTotTribEst')),
+                $this->currencyOrDash($this->val($approxMoney, 'vTotTribMun')),
+            ]
+            : [
+                $this->percentOrDash($this->val($approxPercent, 'pTotTribFed')),
+                $this->percentOrDash($this->val($approxPercent, 'pTotTribEst')),
+                $this->percentOrDash($this->val($approxPercent, 'pTotTribMun')),
+            ];
+        $infoComplementares = $this->node($serv, 'infoCompl');
         $ibsCbs = $this->node($infNfse, 'IBSCBS');
         $ibsCbsValores = $this->node($ibsCbs, 'valores');
         $ibsCbsTotais = $this->node($ibsCbs, 'totCIBS');
+        $ibsTotal = $this->val($ibsCbsTotais, 'gIBS', 'vIBSTot');
+        $cbsTotal = $this->val($ibsCbsTotais, 'gCBS', 'vCBS');
+        $incidenceCode = $this->val($ibsCbs, 'cLocalidadeIncid');
+        $dpsDiscounts = $this->node($valores, 'vDescCondIncond');
 
         // The authorized DPS is the primary source for the provider. The
         // authorized infNFSe/emit enriches omitted legacy address/name data.
@@ -116,6 +146,39 @@ final class DanfseTemplate
         }
         $provider['simples_nacional'] = OptanteSimplesNacional::labelFor($this->val($regTrib, 'opSimpNac'));
         $provider['regime_sn'] = RegimeApuracaoTributariaSN::labelFor($this->val($regTrib, 'regApTribSN'));
+
+        // NT 008 note 5: each optional municipal row is suppressed only
+        // when all four of its source fields are absent. A literal '0' is
+        // supplied data and must not be treated as absent.
+        $regimeEspecial = $this->val($regTrib, 'regEspTrib');
+        $tipoImunidade = $this->val($tribMun, 'tpImunidade');
+        $tipoSuspensao = $this->val($tribMun, 'exigSusp', 'tpSusp');
+        $numeroProcesso = $this->val($tribMun, 'exigSusp', 'nProcesso');
+
+        $tipoBeneficio = $this->val($authorizedValues, 'tpBM');
+        $calculoBeneficio = $this->firstPresent(
+            $this->val($authorizedValues, 'vCalcBM'),
+            $this->val($tribMun, 'BM', 'vCalcBM'),
+            $this->val($tribMun, 'BM', 'vRedBCBM'),
+        );
+        // The official display table chooses the explicit DPS vDR, or the
+        // calculated deduction and reimbursement amounts supplied in the
+        // authorized NFS-e. It does not re-derive these from service prices.
+        $explicitDeductions = $this->val($valores, 'vDedRed', 'vDR');
+        $totalDeducoes = $explicitDeductions !== ''
+            ? $this->currencyOrDash($explicitDeductions)
+            : $this->sumCurrency(
+                $this->val($authorizedValues, 'vCalcDR'),
+                $this->val($ibsCbsValores, 'vCalcReeRepRes'),
+            );
+        $descontoIncondicionado = $this->val($valores, 'vDescCondIncond', 'vDescIncond');
+
+        // NT008 v1.02, 2.4.5: these are display compositions of XML
+        // amounts, never a recalculation of a tax or retention liability.
+        $pisCofinsRetention = $this->val($tribFed, 'piscofins', 'tpRetPisCofins');
+        $retainedSocial = $this->val($tribFed, 'vRetCSLL');
+        $pisValue = $this->val($tribFed, 'piscofins', 'vPis');
+        $cofinsValue = $this->val($tribFed, 'piscofins', 'vCofins');
 
         $id          = $this->val($infNfse, 'Id');
         $chaveAcesso = str_starts_with($id, 'NFS') ? substr($id, 3) : $id;
@@ -185,7 +248,23 @@ final class DanfseTemplate
                     $this->val($infNfse, 'cLocIncid'),
                     $this->val($tribMun, 'cPaisResult'),
                 ),
-                'regime_especial'      => RegimeEspecialTributacao::labelFor($this->val($regTrib, 'regEspTrib')),
+                'regime_especial'      => RegimeEspecialTributacao::labelFor($regimeEspecial),
+                'tipo_imunidade'       => $this->immunityLabel($tipoImunidade),
+                'suspensao_issqn'      => $this->suspensionLabel($tipoSuspensao),
+                'numero_processo'      => $numeroProcesso !== '' ? $numeroProcesso : '-',
+                'mostrar_linha_regime' => $this->hasAnyPresent($regimeEspecial, $tipoImunidade, $tipoSuspensao, $numeroProcesso),
+                'beneficio_municipal'  => $this->municipalBenefitLabel($tipoBeneficio),
+                'calculo_bm'           => $this->currencyOrDash($calculoBeneficio),
+                'total_deducoes'       => $totalDeducoes,
+                'desconto_incondicionado' => $this->currencyOrDash($descontoIncondicionado),
+                'mostrar_linha_beneficio' => $this->hasAnyPresent($tipoBeneficio, $calculoBeneficio, $totalDeducoes !== '-' ? $totalDeducoes : '', $descontoIncondicionado),
+                // Note 4 permits the concise no-ISS block when the XML
+                // expressly identifies the operation as not incident.
+                'nao_sujeito_issqn' => in_array(
+                    $this->val($tribMun, 'tribISSQN'),
+                    ['2', '3', '4'],
+                    true,
+                ),
                 'valor_servico'        => $this->formatter->currency($this->val($valores, 'vServPrest', 'vServ')),
                 'bc_issqn'             => $this->currencyOrDash($this->val($authorizedValues, 'vBC')),
                 'aliquota'             => $this->percentOrDash($this->val($authorizedValues, 'pAliqAplic')),
@@ -201,23 +280,36 @@ final class DanfseTemplate
                 ),
                 'irrf'   => $this->currencyOrDash($this->val($tribFed, 'vRetIRRF')),
                 'cp'     => $this->currencyOrDash($this->val($tribFed, 'vRetCP')),
-                'contribuicoes_sociais' => $this->currencyOrDash($this->val($tribFed, 'vRetCSLL')),
-                // Alias de compatibilidade para consumidores de buildData().
-                'csll'   => $this->currencyOrDash($this->val($tribFed, 'vRetCSLL')),
-                'pis'    => $this->currencyOrDash($this->val($tribFed, 'piscofins', 'vPis')),
-                'cofins' => $this->currencyOrDash($this->val($tribFed, 'piscofins', 'vCofins')),
-                'descricao_retencao' => $this->pisCofinsRetentionLabel(
-                    $this->val($tribFed, 'piscofins', 'tpRetPisCofins'),
-                ),
+                'contribuicoes_sociais' => $pisCofinsRetention === '1'
+                    ? $this->sumCurrency($retainedSocial, $pisValue, $cofinsValue)
+                    : $this->currencyOrDash($retainedSocial),
+                // Keep legacy model keys unchanged for existing consumers.
+                'csll' => $this->currencyOrDash($retainedSocial),
+                // When PIS/COFINS are retained, the NT008 prescribes zero
+                // for the own-assessment cells, not the retained amounts.
+                'pis' => $pisCofinsRetention === '1'
+                    ? $this->formatter->currency('0.00')
+                    : $this->currencyOrDash($pisValue),
+                'cofins' => $pisCofinsRetention === '1'
+                    ? $this->formatter->currency('0.00')
+                    : $this->currencyOrDash($cofinsValue),
+                'descricao_retencao' => $this->pisCofinsRetentionLabel($pisCofinsRetention),
             ],
 
             'totais' => [
-                'valor_servico'           => $this->formatter->currency($this->val($valores, 'vServPrest', 'vServ')),
-                'desconto_condicionado'   => $this->currencyOrDash($this->val($tribMun, 'vDescCond')),
-                'desconto_incondicionado' => $this->currencyOrDash($this->val($tribMun, 'vDescIncond')),
-                'issqn_retido'            => ($this->val($authorizedValues, 'vISSQN') !== '' && ($this->val($tribMun, 'tpRetISSQN') ?: '1') !== '1')
-                    ? $this->formatter->currency($this->val($authorizedValues, 'vISSQN'))
-                    : '-',
+                'valor_servico' => $this->formatter->currency($this->val($valores, 'vServPrest', 'vServ')),
+                'desconto_condicionado' => $this->currencyOrDash($this->val($dpsDiscounts, 'vDescCond')),
+                'desconto_incondicionado' => $this->currencyOrDash($this->val($dpsDiscounts, 'vDescIncond')),
+                // This field is calculated by SEFIN and exists in the authorized
+                // NFS-e. Do not recalculate it from partially provided retentions.
+                'total_retencoes' => $this->currencyOrDash($this->val($authorizedValues, 'vTotalRet')),
+                // Historical buildData() keys are retained for consumers and
+                // golden contracts. The DANFSe itself prints vTotalRet as the
+                // authoritative total rather than any partial DPS sum.
+                'issqn_retido' => (
+                    $this->val($authorizedValues, 'vISSQN') !== ''
+                    && ($this->val($tribMun, 'tpRetISSQN') ?: '1') !== '1'
+                ) ? $this->currencyOrDash($this->val($authorizedValues, 'vISSQN')) : '-',
                 'retencoes_federais' => $this->sumCurrency(
                     $this->val($tribFed, 'vRetIRRF'),
                     $this->val($tribFed, 'vRetCP'),
@@ -227,13 +319,13 @@ final class DanfseTemplate
                     $this->val($tribFed, 'piscofins', 'vPis'),
                     $this->val($tribFed, 'piscofins', 'vCofins'),
                 ),
-                'valor_liquido' => $this->formatter->currency($this->val($infNfse, 'valores', 'vLiq')),
+                'valor_liquido' => $this->currencyOrDash($this->val($authorizedValues, 'vLiq')),
             ],
 
             'totais_tributos' => [
-                'federais'   => $this->percentOrDash($this->val($totTrib, 'pTotTribFed')),
-                'estaduais'  => $this->percentOrDash($this->val($totTrib, 'pTotTribEst')),
-                'municipais' => $this->percentOrDash($this->val($totTrib, 'pTotTribMun')),
+                'federais' => $approxValues[0],
+                'estaduais' => $approxValues[1],
+                'municipais' => $approxValues[2],
             ],
 
             'ibs_cbs' => [
@@ -241,33 +333,60 @@ final class DanfseTemplate
                     $this->val($infDps, 'IBSCBS', 'valores', 'trib', 'gIBSCBS', 'CST'),
                     $this->val($infDps, 'IBSCBS', 'valores', 'trib', 'gIBSCBS', 'cClassTrib'),
                 ),
-                'indicador_operacao' => $this->val($infDps, 'IBSCBS', 'cIndOp') ?: '-',
+                'indicador_operacao' => $this->joinedOrDash(
+                    $this->val($infDps, 'IBSCBS', 'cIndOp'),
+                    $incidenceCode,
+                    $this->val($ibsCbs, 'xLocalidadeIncid'),
+                    $this->ufForIbge($incidenceCode),
+                ),
+                // Public buildData() key retained for consumers of the data
+                // model; HTML uses the complete official indicator field.
                 'localidade_incidencia' => $this->val($ibsCbs, 'xLocalidadeIncid')
-                    ?: $this->val($ibsCbs, 'cLocalidadeIncid')
+                    ?: $incidenceCode
                     ?: '-',
-                'exclusoes_reducoes' => $this->sumCurrency(
-                    $this->val($infNfse, 'valores', 'vISSQN'),
+                // NT008 explicitly displays this sum of XML components. It
+                // does not authorize fresh IBS/CBS or ISS tax calculation.
+                'exclusoes_reducoes' => $ibsCbs === [] ? '-' : $this->sumCurrency(
+                    $this->val($dpsDiscounts, 'vDescIncond'),
+                    $this->val($ibsCbsValores, 'vCalcReeRepRes'),
+                    $this->val($authorizedValues, 'vISSQN'),
                     $this->val($tribFed, 'piscofins', 'vPis'),
                     $this->val($tribFed, 'piscofins', 'vCofins'),
                 ),
                 'base_calculo' => $this->currencyOrDash($this->val($ibsCbsValores, 'vBC')),
+                'reducao_aliquotas' => $this->joinedOrDash(
+                    $this->percentOrDash($this->val($ibsCbsValores, 'uf', 'pRedAliqUF')),
+                    $this->percentOrDash($this->val($ibsCbsValores, 'mun', 'pRedAliqMun')),
+                    $this->percentOrDash($this->val($ibsCbsValores, 'fed', 'pRedAliqCBS')),
+                ),
+                'aliquota_ibs' => $this->joinedOrDash(
+                    $this->percentOrDash($this->val($ibsCbsValores, 'uf', 'pIBSUF')),
+                    $this->percentOrDash($this->val($ibsCbsValores, 'mun', 'pIBSMun')),
+                ),
                 'aliquota_ibs_uf' => $this->percentOrDash($this->val($ibsCbsValores, 'uf', 'pIBSUF')),
                 'aliquota_ibs_municipal' => $this->percentOrDash($this->val($ibsCbsValores, 'mun', 'pIBSMun')),
+                'aliquota_efetiva_municipal' => $this->percentOrDash($this->val($ibsCbsValores, 'mun', 'pAliqEfetMun')),
+                'valor_ibs_municipal' => $this->currencyOrDash($this->val($ibsCbsTotais, 'gIBS', 'gIBSMunTot', 'vIBSMun')),
+                'aliquota_efetiva_estadual' => $this->percentOrDash($this->val($ibsCbsValores, 'uf', 'pAliqEfetUF')),
+                'valor_ibs_estadual' => $this->currencyOrDash($this->val($ibsCbsTotais, 'gIBS', 'gIBSUFTot', 'vIBSUF')),
                 'aliquota_cbs' => $this->percentOrDash($this->val($ibsCbsValores, 'fed', 'pCBS')),
-                'total_ibs' => $this->currencyOrDash($this->val($ibsCbsTotais, 'gIBS', 'vIBSTot')),
-                'total_cbs' => $this->currencyOrDash($this->val($ibsCbsTotais, 'gCBS', 'vCBS')),
-                'total_ibs_cbs' => $ibsCbs === [] ? '-' : $this->sumCurrency(
-                    $this->val($ibsCbsTotais, 'gIBS', 'vIBSTot'),
-                    $this->val($ibsCbsTotais, 'gCBS', 'vCBS'),
-                ),
+                'aliquota_efetiva_cbs' => $this->percentOrDash($this->val($ibsCbsValores, 'fed', 'pAliqEfetCBS')),
+                'total_ibs' => $this->currencyOrDash($ibsTotal),
+                'total_cbs' => $this->currencyOrDash($cbsTotal),
+                // An absent amount is not proof of zero. Two explicit amounts
+                // (including literal zero) are required for a displayed sum.
+                'total_ibs_cbs' => $ibsTotal !== '' && $cbsTotal !== ''
+                    ? $this->sumCurrency($ibsTotal, $cbsTotal)
+                    : '-',
                 'valor_total_nfse' => $this->currencyOrDash($this->val($ibsCbsTotais, 'vTotNF')),
             ],
 
             'informacoes_complementares' => $this->complementaryInformation(
-                $this->val($serv, 'infoCompl', 'xInfComp'),
-                $this->percentOrDash($this->val($totTrib, 'pTotTribFed')),
-                $this->percentOrDash($this->val($totTrib, 'pTotTribEst')),
-                $this->percentOrDash($this->val($totTrib, 'pTotTribMun')),
+                $this->authorizedComplementaryFields($infNfse, $infDps, $serv, $infoComplementares),
+                $approxValues[0],
+                $approxValues[1],
+                $approxValues[2],
+                $complementaryTextLimit,
             ),
         ];
     }
@@ -436,6 +555,23 @@ final class DanfseTemplate
             . ($country !== '' ? $country : '-');
     }
 
+    /**
+     * Derive the UF only from an explicitly authorized, recognized IBGE code.
+     */
+    private function ufForIbge(string $code): string
+    {
+        if (preg_match('/^\\d{7}$/D', $code) !== 1) {
+            return '-';
+        }
+
+        $name = Municipios::lookup($code);
+        if ($name === $code || !str_contains($name, ' - ')) {
+            return '-';
+        }
+
+        return substr($name, (int) strrpos($name, ' - ') + 3);
+    }
+
     private function formattedNbs(string $code): string
     {
         if (preg_match('/^\\d{9}$/D', $code) !== 1) {
@@ -472,6 +608,68 @@ final class DanfseTemplate
     private function city(string $cMun): string
     {
         return $cMun !== '' ? Municipios::lookup($cMun) : '-';
+    }
+
+    private function firstPresent(string ...$values): string
+    {
+        foreach ($values as $value) {
+            if ($value !== '') {
+                return $value;
+            }
+        }
+
+        return '';
+    }
+
+    private function hasAnyPresent(string ...$values): bool
+    {
+        foreach ($values as $value) {
+            if ($value !== '') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function immunityLabel(string $value): string
+    {
+        $label = match ($value) {
+            // XSD 1.01 explicitly assigns 0 to a legacy, unspecified type.
+            // Display the actual fiscal meaning instead of confusing it with
+            // a missing XML tag, even though NT008's table lists 1–5.
+            '0' => 'Imunidade (tipo não informado)',
+            '1' => 'Patrimônio, renda ou serviços de entes públicos',
+            '2' => 'Entidades religiosas e templos de qualquer culto',
+            '3' => 'Partidos, sindicatos, educação e assistência social',
+            '4' => 'Livros, jornais, periódicos e o papel destinado à impressão',
+            '5' => 'Fonogramas e videofonogramas musicais brasileiros',
+            default => '',
+        };
+
+        return $label !== '' ? $this->formatter->limit($label, 37) : '-';
+    }
+
+    private function suspensionLabel(string $value): string
+    {
+        $label = match ($value) {
+            '1' => 'Exigibilidade Suspensa por Decisão Judicial',
+            '2' => 'Exigibilidade Suspensa por Processo Administrativo',
+            default => '',
+        };
+
+        return $label !== '' ? $this->formatter->limit($label, 37) : '-';
+    }
+
+    private function municipalBenefitLabel(string $value): string
+    {
+        return match ($value) {
+            '1' => 'Isenção',
+            '2' => 'Redução da BC em percentual',
+            '3' => 'Redução da BC em reais',
+            '4' => 'Alíquota Diferenciada',
+            default => '-',
+        };
     }
 
     private function currencyOrDash(string $value): string
@@ -560,12 +758,83 @@ final class DanfseTemplate
         return implode(' / ', array_map(static fn (string $value): string => $value !== '' ? $value : '-', $values));
     }
 
+    /**
+     * NT008 table 2.4.5 prescribes a stable order and pipe separators.
+     * The values below exist exclusively in the authorized NFS-e XML.
+     *
+     * @param array<string,mixed> $infNfse
+     * @param array<string,mixed> $infDps
+     * @param array<string,mixed> $service
+     * @param array<string,mixed> $info
+     */
+    private function authorizedComplementaryFields(
+        array $infNfse,
+        array $infDps,
+        array $service,
+        array $info,
+    ): string {
+        $parts = [];
+        $fieldSources = [
+            ['Inf. Cont.:', $this->val($info, 'xInfComp')],
+            ['NFS-e Subst.:', $this->val($infDps, 'subst', 'chSubstda')],
+            ['Doc. Ref.:', $this->val($info, 'docRef')],
+            ['Cod. Obra:', $this->val($service, 'obra', 'cObra')],
+            ['Insc. Imob.:', $this->val($service, 'obra', 'inscImobFisc')
+                ?: $this->val($infDps, 'IBSCBS', 'imovel', 'inscImobFisc')],
+            ['Cod. Evt.:', $this->val($service, 'atvEvento', 'idAtvEvt')],
+            ['Doc. Tec.:', $this->val($info, 'idDocTec')],
+            ['Núm. Ped.:', $this->val($info, 'xPed')],
+            ['Item Ped.:', $this->listItemNumbers($this->node($info, 'gItemPed'))],
+            ['Inf. A. T. Mun.:', $this->val($infNfse, 'xOutInf')],
+        ];
+
+        foreach ($fieldSources as [$prefix, $content]) {
+            if ($content !== '') {
+                $parts[] = $prefix . ' ' . $content;
+            }
+        }
+
+        return implode(' | ', $parts);
+    }
+
+    /**
+     * Preserve all repeated xItemPed occurrences from XML without dropping
+     * the first items (up to 99 in the active XSD).
+     *
+     * @param array<string,mixed> $group
+     */
+    private function listItemNumbers(array $group): string
+    {
+        $items = $group['xItemPed'] ?? null;
+        if (is_scalar($items)) {
+            return trim((string) $items);
+        }
+
+        if (!is_array($items)) {
+            return '';
+        }
+
+        $clean = [];
+        foreach ($items as $item) {
+            if (is_scalar($item) && trim((string) $item) !== '') {
+                $clean[] = trim((string) $item);
+            }
+        }
+
+        return implode(', ', $clean);
+    }
+
     private function complementaryInformation(
         string $existing,
         string $federal,
         string $state,
         string $municipal,
+        ?int $freeTextLimit = null,
     ): string {
+        if ($freeTextLimit !== null) {
+            $existing = $this->formatter->limit(trim($existing), $freeTextLimit);
+        }
+
         $taxes = sprintf(
             'Totais aproximados dos Tributos cfe. Lei n° 12.741/2012: Federais: %s; Estaduais: %s; Municipais: %s;',
             $federal,
@@ -573,7 +842,7 @@ final class DanfseTemplate
             $municipal,
         );
 
-        return trim($existing) === '' ? $taxes : trim($existing) . "\n" . $taxes;
+        return $existing === '' ? $taxes : $existing . " | " . $taxes;
     }
 
     private function generateQrCode(string $chaveAcesso, Ambiente $ambiente): string
