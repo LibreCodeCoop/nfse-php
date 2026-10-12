@@ -162,6 +162,102 @@ class DanfseTemplateTest extends TestCase
         self::assertSame('3550308 / 04578-000', $data['tomador']['ibge_cep']);
     }
 
+    public function testRecipientIsIndependentOfIntermediaryAndUsesAuthorizedDps(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        $dps = & $nfse['infNFSe']['DPS']['infDPS'];
+        unset($dps['interm']);
+        $dps['IBSCBS']['dest'] = [
+            'NIF' => 'PT-TEST-998877',
+            'xNome' => 'DESTINATARIO SINTETICO',
+            'end' => [
+                'endExt' => [
+                    'cPais' => 'PT',
+                    'cEndPost' => '0000-001',
+                    'xCidade' => 'Cidade Ficticia',
+                    'xEstProvReg' => 'Distrito Ficticio',
+                ],
+                'xLgr' => 'Rua Exemplo',
+                'nro' => '1',
+                'xBairro' => 'Bairro Modelo',
+            ],
+            'email' => 'recipient@example.org',
+        ];
+
+        $template = new DanfseTemplate();
+        $data = $template->buildData($nfse);
+        self::assertNull($data['intermediario']);
+        self::assertSame('PT-TEST-998877', $data['destinatario']['cnpj_cpf']);
+        self::assertSame('Cidade Ficticia - Distrito Ficticio', $data['destinatario']['municipio']);
+        self::assertSame('- / 0000-001', $data['destinatario']['ibge_cep']);
+        self::assertFalse($data['destinatario']['mesmo_tomador']);
+
+        $html = $template->render($nfse, new DanfseConfig());
+        self::assertStringContainsString('DESTINATÁRIO DA OPERAÇÃO', $html);
+        self::assertStringContainsString('recipient@example.org', $html);
+        self::assertStringContainsString('INTERMEDIÁRIO DA OPERAÇÃO NÃO IDENTIFICADO', $html);
+        self::assertStringNotContainsString('DESTINATÁRIO DA OPERAÇÃO NÃO IDENTIFICADO', $html);
+    }
+
+    public function testSameRecipientAndTakerUseOfficialConciseMessage(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        $dps = & $nfse['infNFSe']['DPS']['infDPS'];
+        $dps['IBSCBS']['dest'] = [
+            'CNPJ' => $dps['toma']['CNPJ'],
+            'xNome' => 'DESTINATARIO SINTETICO',
+        ];
+
+        $template = new DanfseTemplate();
+        self::assertTrue($template->buildData($nfse)['destinatario']['mesmo_tomador']);
+        $html = $template->render($nfse, new DanfseConfig());
+        self::assertStringContainsString('O DESTINATÁRIO É O PRÓPRIO TOMADOR/ADQUIRENTE DA OPERAÇÃO', $html);
+        self::assertStringNotContainsString('class="bordered-section party-destinatario"', $html);
+    }
+
+    public function testMissingTakerAndRecipientHaveSeparateCondensedBlocks(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        unset($nfse['infNFSe']['DPS']['infDPS']['toma']);
+        $template = new DanfseTemplate();
+        self::assertNull($template->buildData($nfse)['tomador']);
+        self::assertNull($template->buildData($nfse)['destinatario']);
+        $html = $template->render($nfse, new DanfseConfig());
+        self::assertStringContainsString('TOMADOR/ADQUIRENTE DA OPERAÇÃO NÃO IDENTIFICADO NA NFS-e', $html);
+        self::assertStringContainsString('DESTINATÁRIO DA OPERAÇÃO NÃO IDENTIFICADO NA NFS-e', $html);
+        self::assertStringContainsString('class="bordered-section party-intermediario"', $html);
+    }
+
+    public function testProviderPrefersAuthorizedDpsAddressAndPreservesLeadingZeroCep(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        $provider = & $nfse['infNFSe']['DPS']['infDPS']['prest'];
+        $provider['xNome'] = 'FORNECEDOR SINTETICO DA DPS';
+        $provider['end'] = [
+            'endNac' => ['cMun' => '3550308', 'CEP' => '01001000'],
+            'xLgr' => 'Rua da Amostra',
+            'nro' => '10',
+            'xBairro' => 'Centro',
+        ];
+
+        $data = (new DanfseTemplate())->buildData($nfse);
+        self::assertSame('FORNECEDOR SINTETICO DA DPS', $data['emitente']['nome']);
+        self::assertSame('São Paulo - SP', $data['emitente']['municipio']);
+        self::assertSame('3550308 / 01001-000', $data['emitente']['ibge_cep']);
+        self::assertStringContainsString('Rua da Amostra', $data['emitente']['endereco']);
+    }
+
+    public function testIntermediaryKeepsIbgeAndCepInSameCell(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        $template = new DanfseTemplate();
+        $data = $template->buildData($nfse);
+        self::assertSame('3518800 / 07095-130', $data['intermediario']['ibge_cep']);
+        $html = $template->render($nfse, new DanfseConfig());
+        self::assertStringContainsString('class="bordered-section party-intermediario"', $html);
+        self::assertStringContainsString('3518800 / 07095-130', $html);
+    }
+
     public function testIntermediarioIsNullWhenAbsent(): void
     {
         $nfseData = $this->fixtureNfseData();
