@@ -104,6 +104,7 @@ final class DanfseTemplate
         $tipoBeneficio = $this->val($authorizedValues, 'tpBM');
         $calculoBeneficio = $this->firstPresent(
             $this->val($authorizedValues, 'vCalcBM'),
+            $this->val($tribMun, 'BM', 'vCalcBM'),
             $this->val($tribMun, 'BM', 'vRedBCBM'),
         );
         // The official display table chooses the explicit DPS vDR, or the
