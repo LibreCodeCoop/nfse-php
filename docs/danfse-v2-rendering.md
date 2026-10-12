@@ -12,6 +12,7 @@ uses synthetic/public-schema data rather than copyrighted screenshots.
 The stable contract covered by tests is:
 
 - authorized NFS-e identity, access key and QR-code presence;
+- header municipality and UF only from `infNFSe/xLocEmi` and `emit/enderNac/UF`, suppressed for national taxation item 99; environment identification remains visible;
 - provider, taker and intermediary identity fields;
 - retained ISS labels from the DPS and municipal base/rate/assessed tax from the authorized `infNFSe/valores` (not the DPS `tribMun`);
 - municipal special regime codes `0` (Nenhum), `9` (Outros) and missing values retain distinct presentation; the two optional municipal rows are omitted only if every field of that row is absent, and a present numeric zero is displayed;
@@ -21,6 +22,7 @@ The stable contract covered by tests is:
 - IBS/CBS values displayed from authorized totals without recalculation;
 - legacy authorized XML without IBS/CBS remains renderable;
 - homologation documents have a visible environment marker;
+- cancelled and substituted documents may show the required 50pt diagonal status watermark when the consuming application supplies an **explicit, externally verified event state** through `DanfseConfig::fiscalState`; the original authorized XML alone does not establish that a subsequent cancel/substitution occurred and is not mutated;
 - local generation returns a valid PDF artifact;
 - line breaks in the authorized service description are preserved as escaped HTML line breaks;
 - optional contact complement and IBGE/CEP follow the authorized XML without inventing missing data;
