@@ -46,7 +46,9 @@
         .header-table td { padding: 2pt 3pt 3pt; vertical-align: middle; }
         .logo-cell { width: 32%; text-align: left; }
         .title-cell { width: 42%; text-align: center; }
-        .municipality-cell { width: 26%; font-size: 5.7pt; text-align: left; }
+        .municipality-cell { width: 26%; font-family: "Microsoft Sans Serif", Arial, sans-serif; text-align: left; }
+        .municipality-name { font-size: 8pt; font-weight: normal; }
+        .municipality-environment { font-size: 6pt; font-weight: normal; }
         .qr-container { text-align: center; }
         .qr-notice { font-size: 5.6pt; line-height: 1.15; margin-top: 2pt; text-align: left; }
         .access-key { white-space: nowrap; font-size: 6.6pt; }
@@ -97,9 +99,11 @@
                 <?php if ($municipality && $municipality->logoDataUri): ?>
                     <img style="height: 22pt; width: auto" src="<?= htmlspecialchars($municipality->logoDataUri) ?>" alt="Prefeitura" /><br>
                 <?php endif; ?>
-                Município: <?= $data['municipio_emissao'] ?><br>
-                Ambiente Gerador: <?= $data['ambiente_gerador'] ?><br>
-                Tipo de Ambiente: <?= $data['ambiente'] ?>
+                <?php if ($data['municipio_emissao'] !== ''): ?>
+                <div class="municipality-name">Município: <?= $data['municipio_emissao'] ?></div>
+                <?php endif; ?>
+                <div class="municipality-environment">Ambiente Gerador: <?= $data['ambiente_gerador'] ?></div>
+                <div class="municipality-environment">Tipo de Ambiente: <?= $data['ambiente'] ?></div>
             </td>
         </tr>
     </table>
