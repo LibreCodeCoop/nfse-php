@@ -169,6 +169,51 @@ class DanfseTemplateTest extends TestCase
         self::assertFalse($template->buildData($nfse)['tributacao_federal']['mostrar_linha_2026']);
     }
 
+    public function testAuthorizedApproximateTaxValuesAreCopiedWithoutZeroFillingOrIssFallback(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        $nfse['infNFSe']['valores']['pAliqAplic'] = '2.00';
+        $nfse['infNFSe']['valores']['vISSQN'] = '630.00';
+        $totals = & $nfse['infNFSe']['DPS']['infDPS']['valores']['trib']['totTrib'];
+
+        $totals = ['indTotTrib' => '0'];
+        $unknown = (new DanfseTemplate())->buildData($nfse);
+
+        self::assertSame('2.00%', $unknown['tributacao_municipal']['aliquota']);
+        self::assertSame('R$ 630,00', $unknown['tributacao_municipal']['issqn_apurado']);
+        self::assertSame(
+            ['federais' => '-', 'estaduais' => '-', 'municipais' => '-'],
+            $unknown['totais_tributos'],
+        );
+        self::assertStringContainsString(
+            'Federais: -; Estaduais: -; Municipais: -;',
+            $unknown['informacoes_complementares'],
+        );
+
+        // These are explicit source declarations, not the assessed ISS rate.
+        $totals = [
+            'pTotTrib' => [
+                'pTotTribFed' => '0.00',
+                'pTotTribEst' => '0.00',
+                'pTotTribMun' => '0.00',
+            ],
+        ];
+        $documentedZero = (new DanfseTemplate())->buildData($nfse);
+        self::assertSame('0.00%', $documentedZero['totais_tributos']['municipais']);
+        self::assertStringContainsString(
+            'Federais: 0.00%; Estaduais: 0.00%; Municipais: 0.00%;',
+            $documentedZero['informacoes_complementares'],
+        );
+
+        $totals['pTotTrib']['pTotTribFed'] = '7.45';
+        $totals['pTotTrib']['pTotTribMun'] = '4.10';
+        $sourced = (new DanfseTemplate())->buildData($nfse);
+        self::assertSame('7.45%', $sourced['totais_tributos']['federais']);
+        self::assertSame('4.10%', $sourced['totais_tributos']['municipais']);
+        self::assertSame('2.00%', $sourced['tributacao_municipal']['aliquota']);
+        self::assertSame('R$ 630,00', $sourced['tributacao_municipal']['issqn_apurado']);
+    }
+
     public function testDescriptionPreservesNewlinesWithoutRenderingMarkup(): void
     {
         $nfse = $this->fixtureNfseData();

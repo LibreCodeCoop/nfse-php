@@ -548,11 +548,34 @@ class XmlBuilder
     private function buildTotTrib(\DOMDocument $doc, DpsData $dps): \DOMElement
     {
         $totTrib = $doc->createElement('totTrib');
+        $values = [
+            'pTotTribFed' => $dps->totalTributosPercentualFederal,
+            'pTotTribEst' => $dps->totalTributosPercentualEstadual,
+            'pTotTribMun' => $dps->totalTributosPercentualMunicipal,
+        ];
+        $informed = count(array_filter($values, static fn (string $value): bool => $value !== ''));
+
+        // TCTribTotal is an XSD choice. indTotTrib=0 is the official
+        // alternative when no approximate totals are declared. In the
+        // pTotTrib branch all three percentages are required by the schema.
+        if ($informed === 0) {
+            $totTrib->appendChild($doc->createElement('indTotTrib', '0'));
+
+            return $totTrib;
+        }
+
+        if ($informed !== count($values)) {
+            throw new \InvalidArgumentException(
+                'Partial approximate-tax percentages: all three values are required for pTotTrib. '
+                . 'Missing is not a confirmed zero.',
+            );
+        }
+
         $percentuais = $doc->createElement('pTotTrib');
 
-        $percentuais->appendChild($doc->createElement('pTotTribFed', $dps->totalTributosPercentualFederal !== '' ? $dps->totalTributosPercentualFederal : '0.00'));
-        $percentuais->appendChild($doc->createElement('pTotTribEst', $dps->totalTributosPercentualEstadual !== '' ? $dps->totalTributosPercentualEstadual : '0.00'));
-        $percentuais->appendChild($doc->createElement('pTotTribMun', $dps->totalTributosPercentualMunicipal !== '' ? $dps->totalTributosPercentualMunicipal : '0.00'));
+        foreach ($values as $tag => $value) {
+            $percentuais->appendChild($doc->createElement($tag, $value));
+        }
 
         $totTrib->appendChild($percentuais);
 
