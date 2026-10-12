@@ -55,12 +55,12 @@ final class XmlToArray
         $nsChildren = $node->children(self::NFSE_NS);
         if ($nsChildren !== null && $nsChildren->count() > 0) {
             foreach ($nsChildren as $name => $child) {
-                $this->appendNamedChild($result, (string) $name, $this->nodeToArray($child));
+                $this->appendNamedChild($result, $name, $this->nodeToArray($child));
             }
         } else {
             // Fallback for XMLs that omit the namespace on children.
             foreach ($node->children() ?? [] as $name => $child) {
-                $this->appendNamedChild($result, (string) $name, $this->nodeToArray($child));
+                $this->appendNamedChild($result, $name, $this->nodeToArray($child));
             }
         }
 
