@@ -57,6 +57,20 @@ class XmlToArrayTest extends TestCase
         (new XmlToArray())->convert($xml);
     }
 
+    public function testPreservesRepeatedOrderItems(): void
+    {
+        $withItems = str_replace(
+            '</infoCompl>',
+            '<gItemPed><xItemPed>01</xItemPed><xItemPed>02</xItemPed><xItemPed>03</xItemPed></gItemPed></infoCompl>',
+            $this->fixture(),
+        );
+        $value = (new XmlToArray())->convert($withItems);
+        self::assertSame(
+            ['01', '02', '03'],
+            $value['infNFSe']['DPS']['infDPS']['serv']['infoCompl']['gItemPed']['xItemPed'],
+        );
+    }
+
     public function testIgnoresDigitalSignature(): void
     {
         $signed = str_replace(

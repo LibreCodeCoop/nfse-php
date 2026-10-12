@@ -229,6 +229,205 @@ class DanfseTemplateTest extends TestCase
         self::assertSame('R$ 630,00', $sourced['tributacao_municipal']['issqn_apurado']);
     }
 
+    public function testFederalRetainedPisCofinsFollowsNt008PresentationWithoutRecomputingTax(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        $federal = & $nfse['infNFSe']['DPS']['infDPS']['valores']['trib']['tribFed'];
+        $federal['vRetCSLL'] = '3.00';
+        $federal['piscofins'] = [
+            'vPis' => '2.25',
+            'vCofins' => '4.50',
+            'tpRetPisCofins' => '1',
+        ];
+
+        $template = new DanfseTemplate();
+        $data = $template->buildData($nfse);
+        self::assertSame('R$ 9,75', $data['tributacao_federal']['contribuicoes_sociais']);
+        self::assertSame('R$ 0,00', $data['tributacao_federal']['pis']);
+        self::assertSame('R$ 0,00', $data['tributacao_federal']['cofins']);
+        self::assertSame('R$ 3,00', $data['tributacao_federal']['csll']);
+
+        $federal['piscofins']['tpRetPisCofins'] = '4';
+        $data = $template->buildData($nfse);
+        self::assertSame('R$ 3,00', $data['tributacao_federal']['contribuicoes_sociais']);
+        self::assertSame('R$ 2,25', $data['tributacao_federal']['pis']);
+        self::assertSame('R$ 4,50', $data['tributacao_federal']['cofins']);
+
+        unset($federal['vRetCSLL']);
+        $data = $template->buildData($nfse);
+        self::assertSame('-', $data['tributacao_federal']['contribuicoes_sociais']);
+    }
+
+    public function testImmunityExportationAndNonIncidenceUseNoIssBlock(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        $template = new DanfseTemplate();
+        $municipal = & $nfse['infNFSe']['DPS']['infDPS']['valores']['trib']['tribMun'];
+
+        foreach (['2', '3', '4'] as $code) {
+            $municipal['tribISSQN'] = $code;
+            self::assertTrue($template->buildData($nfse)['tributacao_municipal']['nao_sujeito_issqn']);
+            $html = $template->render($nfse, new DanfseConfig());
+            self::assertStringContainsString('OPERAÇÃO NÃO SUJEITA AO ISSQN', $html);
+            self::assertStringNotContainsString('class="municipal-conditional-regime"', $html);
+        }
+
+        $municipal['tribISSQN'] = '1';
+        self::assertFalse($template->buildData($nfse)['tributacao_municipal']['nao_sujeito_issqn']);
+        self::assertStringContainsString('class="municipal-conditional-regime"', $template->render($nfse, new DanfseConfig()));
+    }
+
+    public function testIbsCbsFullGridUsesOnlyAuthorizedAmountsAndRates(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        $authorized = & $nfse['infNFSe'];
+        $dps = & $authorized['DPS']['infDPS'];
+        $dps['valores']['vDescCondIncond'] = ['vDescIncond' => '10.00', 'vDescCond' => '5.00'];
+        $authorized['valores']['vISSQN'] = '7.00';
+        $authorized['valores']['vTotalRet'] = '123.45';
+        $authorized['IBSCBS'] = [
+            'cLocalidadeIncid' => '3303302',
+            'xLocalidadeIncid' => 'Niterói',
+            'valores' => [
+                'vBC' => '1450.00',
+                'vCalcReeRepRes' => '20.00',
+                'uf' => ['pRedAliqUF' => '0.00', 'pIBSUF' => '0.10', 'pAliqEfetUF' => '0.10'],
+                'mun' => ['pRedAliqMun' => '0.00', 'pIBSMun' => '0.05', 'pAliqEfetMun' => '0.05'],
+                'fed' => ['pRedAliqCBS' => '0.00', 'pCBS' => '0.90', 'pAliqEfetCBS' => '0.90'],
+            ],
+            'totCIBS' => [
+                'vTotNF' => '1515.75',
+                'gIBS' => [
+                    'vIBSTot' => '2.25',
+                    'gIBSMunTot' => ['vIBSMun' => '0.75'],
+                    'gIBSUFTot' => ['vIBSUF' => '1.50'],
+                ],
+                'gCBS' => ['vCBS' => '13.50'],
+            ],
+        ];
+        $dps['IBSCBS']['cIndOp'] = '010101';
+
+        $template = new DanfseTemplate();
+        $data = $template->buildData($nfse);
+        self::assertSame('010101 / 3303302 / Niterói / RJ', $data['ibs_cbs']['indicador_operacao']);
+        self::assertSame('R$ 91,75', $data['ibs_cbs']['exclusoes_reducoes']);
+        self::assertSame('0.00% / 0.00% / 0.00%', $data['ibs_cbs']['reducao_aliquotas']);
+        self::assertSame('0.10% / 0.05%', $data['ibs_cbs']['aliquota_ibs']);
+        self::assertSame('0.05%', $data['ibs_cbs']['aliquota_efetiva_municipal']);
+        self::assertSame('R$ 0,75', $data['ibs_cbs']['valor_ibs_municipal']);
+        self::assertSame('0.10%', $data['ibs_cbs']['aliquota_efetiva_estadual']);
+        self::assertSame('R$ 1,50', $data['ibs_cbs']['valor_ibs_estadual']);
+        self::assertSame('0.90%', $data['ibs_cbs']['aliquota_efetiva_cbs']);
+        self::assertSame('R$ 15,75', $data['ibs_cbs']['total_ibs_cbs']);
+        self::assertSame('R$ 123,45', $data['totais']['total_retencoes']);
+        self::assertSame('R$ 10,00', $data['totais']['desconto_incondicionado']);
+        self::assertSame('R$ 5,00', $data['totais']['desconto_condicionado']);
+
+        $html = $template->render($nfse, new DanfseConfig());
+        self::assertStringContainsString('Valor Apurado Municipal - IBS', $html);
+        self::assertStringContainsString('Valor Apurado Estadual - IBS', $html);
+        self::assertStringContainsString('Alíquota Efetiva - CBS', $html);
+        self::assertStringContainsString('Total das Retenções (ISSQN / Federais)', $html);
+    }
+
+    public function testAbsentIbsOrCbsAmountIsNotTreatedAsRealZero(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        $nfse['infNFSe']['IBSCBS']['totCIBS']['gIBS']['vIBSTot'] = '0.00';
+        $template = new DanfseTemplate();
+        self::assertSame('-', $template->buildData($nfse)['ibs_cbs']['total_ibs_cbs']);
+
+        $nfse['infNFSe']['IBSCBS']['totCIBS']['gCBS']['vCBS'] = '0.00';
+        self::assertSame('R$ 0,00', $template->buildData($nfse)['ibs_cbs']['total_ibs_cbs']);
+    }
+
+    public function testLegacyXmlWithoutIbsCbsDoesNotInventIbsExclusions(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        unset($nfse['infNFSe']['IBSCBS']);
+        // The old DPS can still contain PIS/COFINS amounts. Without any
+        // authorized IBS/CBS block they are not a new IBS base reduction.
+        $nfse['infNFSe']['DPS']['infDPS']['valores']['trib']['tribFed']['piscofins']['vPis'] = '12.25';
+
+        $model = (new DanfseTemplate())->buildData($nfse);
+        self::assertSame('-', $model['ibs_cbs']['exclusoes_reducoes']);
+        self::assertSame('-', $model['ibs_cbs']['base_calculo']);
+    }
+
+    public function testAuthorizedTotalRetentionNeverComesFromPartialDpsSum(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        $dps = & $nfse['infNFSe']['DPS']['infDPS'];
+        $dps['valores']['trib']['tribFed']['vRetIRRF'] = '99.99';
+
+        $template = new DanfseTemplate();
+        self::assertSame('-', $template->buildData($nfse)['totais']['total_retencoes']);
+
+        $nfse['infNFSe']['valores']['vTotalRet'] = '0.00';
+        self::assertSame('R$ 0,00', $template->buildData($nfse)['totais']['total_retencoes']);
+
+        $nfse['infNFSe']['valores']['vTotalRet'] = '78.90';
+        self::assertSame('R$ 78,90', $template->buildData($nfse)['totais']['total_retencoes']);
+    }
+
+    public function testComplementaryInformationFollowsOfficialOrderWithoutInventingTaxZeros(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        $dps = & $nfse['infNFSe']['DPS']['infDPS'];
+        $dps['subst'] = ['chSubstda' => str_repeat('3', 50)];
+        $dps['serv']['obra'] = [
+            'cObra' => 'OBRA-FICTICIA-001',
+            'inscImobFisc' => 'IMOB-TESTE-0002',
+        ];
+        $dps['serv']['atvEvento'] = ['idAtvEvt' => 'EVENTO-TESTE-123'];
+        $dps['serv']['infoCompl'] = [
+            'xInfComp' => 'Observacao sintetica',
+            'docRef' => 'DOC-REF-123',
+            'idDocTec' => 'DOC-TEC-456',
+            'xPed' => 'PED-456',
+            'gItemPed' => ['xItemPed' => ['01', '02']],
+        ];
+        $nfse['infNFSe']['xOutInf'] = 'Mensagem municipal sintetica';
+        $dps['valores']['trib']['totTrib'] = [
+            'vTotTrib' => [
+                'vTotTribFed' => '0.00',
+                'vTotTribEst' => '15.50',
+                'vTotTribMun' => '3.25',
+            ],
+        ];
+
+        $data = (new DanfseTemplate())->buildData($nfse);
+        $actual = $data['informacoes_complementares'];
+        foreach (['Inf. Cont.:', 'NFS-e Subst.:', 'Doc. Ref.:', 'Cod. Obra:',
+            'Insc. Imob.:', 'Cod. Evt.:', 'Doc. Tec.:', 'Núm. Ped.:',
+            'Item Ped.:', 'Inf. A. T. Mun.:', 'Totais aproximados dos Tributos'] as $part) {
+            self::assertStringContainsString($part, $actual);
+        }
+        self::assertSame('R$ 0,00', $data['totais_tributos']['federais']);
+        self::assertSame('R$ 15,50', $data['totais_tributos']['estaduais']);
+        self::assertSame('R$ 3,25', $data['totais_tributos']['municipais']);
+        self::assertStringContainsString('Item Ped.: 01, 02', $actual);
+        self::assertStringContainsString('Federais: R$ 0,00; Estaduais: R$ 15,50; Municipais: R$ 3,25', $actual);
+        self::assertLessThan(strpos($actual, 'Doc. Ref.:'), strpos($actual, 'NFS-e Subst.:'));
+        self::assertLessThan(strpos($actual, 'Totais aproximados'), strpos($actual, 'Inf. A. T. Mun.:'));
+    }
+
+    public function testAllAbsentApproximateTaxesStayAbsentAndRealZeroIsDistinct(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        unset($nfse['infNFSe']['DPS']['infDPS']['valores']['trib']['totTrib']);
+
+        $template = new DanfseTemplate();
+        $data = $template->buildData($nfse);
+        self::assertSame('-', $data['totais_tributos']['municipais']);
+        self::assertStringContainsString('Municipais: -;', $data['informacoes_complementares']);
+
+        $nfse['infNFSe']['DPS']['infDPS']['valores']['trib']['totTrib']['pTotTrib']['pTotTribMun'] = '0.00';
+        $data = $template->buildData($nfse);
+        self::assertSame('0.00%', $data['totais_tributos']['municipais']);
+        self::assertStringContainsString('Municipais: 0.00%', $data['informacoes_complementares']);
+    }
+
     public function testDescriptionPreservesNewlinesWithoutRenderingMarkup(): void
     {
         $nfse = $this->fixtureNfseData();
@@ -384,6 +583,122 @@ class DanfseTemplateTest extends TestCase
         $html = $template->render($nfse, new DanfseConfig());
         self::assertStringContainsString('class="bordered-section party-intermediario"', $html);
         self::assertStringContainsString('3518800 / 07095-130', $html);
+    }
+
+
+    public function testMunicipalRegimeZeroIsPresentButMissingCodeIsNot(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        $regTrib = & $nfse['infNFSe']['DPS']['infDPS']['prest']['regTrib'];
+        $regTrib['regEspTrib'] = '0';
+        $template = new DanfseTemplate();
+        $data = $template->buildData($nfse);
+
+        self::assertSame('Nenhum', $data['tributacao_municipal']['regime_especial']);
+        self::assertTrue($data['tributacao_municipal']['mostrar_linha_regime']);
+        self::assertStringContainsString('class="municipal-conditional-regime"', $template->render($nfse, new DanfseConfig()));
+
+        unset($regTrib['regEspTrib']);
+        $data = $template->buildData($nfse);
+        self::assertSame('-', $data['tributacao_municipal']['regime_especial']);
+        self::assertFalse($data['tributacao_municipal']['mostrar_linha_regime']);
+        self::assertStringNotContainsString('class="municipal-conditional-regime"', $template->render($nfse, new DanfseConfig()));
+    }
+
+    public function testMunicipalRegimeOtherIsRenderedWithoutChangingFiscalEligibility(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        $nfse['infNFSe']['DPS']['infDPS']['prest']['regTrib']['regEspTrib'] = '9';
+        $data = (new DanfseTemplate())->buildData($nfse);
+
+        self::assertSame('Outros', $data['tributacao_municipal']['regime_especial']);
+        self::assertTrue($data['tributacao_municipal']['mostrar_linha_regime']);
+        self::assertStringContainsString('>Outros</span>', (new DanfseTemplate())->render($nfse, new DanfseConfig()));
+    }
+
+    public function testMunicipalConditionalRegimeRowRemainsWhenSiblingHasData(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        $trib = & $nfse['infNFSe']['DPS']['infDPS']['valores']['trib']['tribMun'];
+        unset($nfse['infNFSe']['DPS']['infDPS']['prest']['regTrib']['regEspTrib']);
+        $trib['tpImunidade'] = '4';
+        $trib['exigSusp'] = ['tpSusp' => '1', 'nProcesso' => 'PROCESSO-SINTETICO-123'];
+
+        $template = new DanfseTemplate();
+        $data = $template->buildData($nfse);
+        self::assertTrue($data['tributacao_municipal']['mostrar_linha_regime']);
+        self::assertSame('PROCESSO-SINTETICO-123', $data['tributacao_municipal']['numero_processo']);
+        $html = $template->render($nfse, new DanfseConfig());
+        self::assertStringContainsString('Tipo de Imunidade do ISSQN', $html);
+        self::assertStringContainsString('PROCESSO-SINTETICO-123', $html);
+        self::assertSame(1, substr_count($html, 'class="municipal-conditional-regime"'));
+    }
+
+    public function testMunicipalImmunityCodeZeroIsNotDisplayedAsAbsent(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        unset($nfse['infNFSe']['DPS']['infDPS']['prest']['regTrib']['regEspTrib']);
+        $nfse['infNFSe']['DPS']['infDPS']['valores']['trib']['tribMun']['tpImunidade'] = '0';
+
+        $template = new DanfseTemplate();
+        $data = $template->buildData($nfse);
+        self::assertSame('Imunidade (tipo não informado)', $data['tributacao_municipal']['tipo_imunidade']);
+        self::assertTrue($data['tributacao_municipal']['mostrar_linha_regime']);
+
+        $html = $template->render($nfse, new DanfseConfig());
+        self::assertStringContainsString('Imunidade (tipo não informado)', $html);
+        self::assertStringContainsString('class="municipal-conditional-regime"', $html);
+    }
+
+    public function testMunicipalDeductionsUseOfficialAuthorizedSourcesAndPreserveExplicitZero(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        $values = & $nfse['infNFSe']['valores'];
+        $dpsValues = & $nfse['infNFSe']['DPS']['infDPS']['valores'];
+
+        unset($dpsValues['vDedRed'], $values['vCalcDR'], $nfse['infNFSe']['IBSCBS']);
+        $template = new DanfseTemplate();
+        self::assertSame('-', $template->buildData($nfse)['tributacao_municipal']['total_deducoes']);
+
+        $values['vCalcDR'] = '10.50';
+        $nfse['infNFSe']['IBSCBS']['valores']['vCalcReeRepRes'] = '3.25';
+        $data = $template->buildData($nfse);
+        self::assertSame('R$ 13,75', $data['tributacao_municipal']['total_deducoes']);
+        self::assertTrue($data['tributacao_municipal']['mostrar_linha_beneficio']);
+
+        $dpsValues['vDedRed']['vDR'] = '7.00';
+        self::assertSame('R$ 7,00', $template->buildData($nfse)['tributacao_municipal']['total_deducoes']);
+
+        $dpsValues['vDedRed']['vDR'] = '0.00';
+        self::assertSame('R$ 0,00', $template->buildData($nfse)['tributacao_municipal']['total_deducoes']);
+    }
+
+    public function testMunicipalBenefitZeroIsNotSuppressedAndAbsenceIsDifferent(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        $template = new DanfseTemplate();
+        self::assertFalse($template->buildData($nfse)['tributacao_municipal']['mostrar_linha_beneficio']);
+
+        $nfse['infNFSe']['valores']['vCalcBM'] = '0.00';
+        $data = $template->buildData($nfse);
+        self::assertTrue($data['tributacao_municipal']['mostrar_linha_beneficio']);
+        self::assertSame('R$ 0,00', $data['tributacao_municipal']['calculo_bm']);
+        self::assertStringContainsString('class="municipal-conditional-benefit"', $template->render($nfse, new DanfseConfig()));
+
+        unset($nfse['infNFSe']['valores']['vCalcBM']);
+        $nfse['infNFSe']['valores']['tpBM'] = '1';
+        self::assertSame('Isenção', $template->buildData($nfse)['tributacao_municipal']['beneficio_municipal']);
+    }
+
+    public function testExplicitNonIncidenceUsesConciseMunicipalMessage(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        $nfse['infNFSe']['DPS']['infDPS']['valores']['trib']['tribMun']['tribISSQN'] = '4';
+
+        $html = (new DanfseTemplate())->render($nfse, new DanfseConfig());
+        self::assertStringContainsString('TRIBUTAÇÃO MUNICIPAL (ISSQN) - OPERAÇÃO NÃO SUJEITA AO ISSQN', $html);
+        self::assertStringNotContainsString('class="municipal-conditional-regime"', $html);
+        self::assertStringContainsString('TRIBUTAÇÃO FEDERAL (EXCETO CBS)', $html);
     }
 
     public function testIntermediarioIsNullWhenAbsent(): void
