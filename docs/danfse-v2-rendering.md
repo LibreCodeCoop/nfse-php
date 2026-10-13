@@ -18,7 +18,7 @@ The stable contract covered by tests is:
 - municipal special regime codes `0` (Nenhum), `9` (Outros) and missing values retain distinct presentation; the two optional municipal rows are omitted only if every field of that row is absent, and a present numeric zero is displayed;
 - foreign taker NIF without inventing a Brazilian CPF/CNPJ;
 - 60-character taxation-description content with an ellipsis suffix when truncated;
-- IBS/CBS block rendered only when the authorized XML contains it;
+- IBS/CBS section remains visible for legacy authorized XML without IBS/CBS; absent values remain dashes rather than invented amounts;
 - IBS/CBS values displayed from authorized totals without recalculation;
 - legacy authorized XML without IBS/CBS remains renderable;
 - homologation documents have a visible environment marker;
