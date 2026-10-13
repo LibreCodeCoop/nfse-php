@@ -66,7 +66,8 @@
         .municipality-cell { width: 26%; font-family: "Microsoft Sans Serif", Arial, sans-serif; text-align: left; }
         .municipality-name { font-size: 8pt; font-weight: normal; }
         .municipality-environment { font-size: 6pt; font-weight: normal; }
-        .qr-container { text-align: center; }
+        .qr-container { text-align: center; padding-top: 8.7pt; }
+        .qr-container img { position: relative; left: -1.4pt; }
         .qr-notice { font-size: 6pt; line-height: 1.15; margin-top: 2pt; text-align: left; }
         .access-key { white-space: nowrap; font-size: 7pt; }
         .no-party { text-align: center; font-size: 6pt; padding: 2pt; border-bottom: 0.5pt solid #000; }
