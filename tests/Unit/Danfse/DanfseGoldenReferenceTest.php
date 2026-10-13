@@ -32,11 +32,16 @@ final class DanfseGoldenReferenceTest extends TestCase
         self::assertStringContainsString('background: #f2f2f2', $html);
         self::assertStringContainsString('border: 1pt solid #000', $html);
         self::assertStringContainsString('border-bottom: 0.5pt solid #000', $html);
-        self::assertStringContainsString('@page { margin: 5pt; }', $html);
+        self::assertStringContainsString('@page { margin: 0; }', $html);
+        self::assertStringContainsString('margin: 5pt;', $html);
         self::assertStringContainsString('class="page-border"', $html);
+        self::assertStringContainsString('left: 5pt;', $html);
+        self::assertStringContainsString('right: 5pt;', $html);
+        self::assertStringContainsString('top: 5pt;', $html);
         self::assertStringContainsString('.first-section .label { font-size: 7pt; text-transform: uppercase; }', $html);
         self::assertStringContainsString('position: fixed;', $html);
-        self::assertStringContainsString('bottom: 0;', $html);
+        self::assertStringContainsString('bottom: 5pt;', $html);
+        self::assertStringContainsString('bottom: 7pt;', $html);
         self::assertStringContainsString('PRESTADOR / FORNECEDOR', $html);
         self::assertStringContainsString('TOMADOR / ADQUIRENTE', $html);
         self::assertStringContainsString('TRIBUTAÇÃO MUNICIPAL (ISSQN)', $html);

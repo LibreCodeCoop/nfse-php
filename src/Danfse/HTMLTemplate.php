@@ -19,24 +19,24 @@
     <style>
         <?= $fontFaces ?>
         /* NT008 2.2: 0.15–0.20 cm margins, 1pt perimeter, 0.5pt sections. */
-        @page { margin: 5pt; }
+        @page { margin: 0; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: Arial, "Liberation Sans", Helvetica, sans-serif;
             font-size: 7pt;
             line-height: 1.14;
             color: #000;
-            margin: 0;
+            margin: 5pt;
             padding: 1pt 1pt 65pt;
         }
-        /* Fixed page border includes footer and uses the full A4 frame.
-           This is not a text container border that ends after its content. */
+        /* Dompdf fixes positioned elements to the physical page. Inset both
+           the perimeter and content to keep the required printable margins. */
         .page-border {
             position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
+            top: 5pt;
+            left: 5pt;
+            right: 5pt;
+            bottom: 5pt;
             border: 1pt solid #000;
             z-index: -2;
         }
@@ -66,8 +66,8 @@
         .municipality-cell { width: 26%; font-family: "Microsoft Sans Serif", Arial, sans-serif; text-align: left; }
         .municipality-name { font-size: 8pt; font-weight: normal; }
         .municipality-environment { font-size: 6pt; font-weight: normal; }
-        .qr-container { text-align: center; padding-top: 8.7pt; }
-        .qr-container img { position: relative; left: -1.4pt; }
+        .qr-container { text-align: center; padding-top: 3.7pt; }
+        .qr-container img { position: relative; left: 2.4pt; }
         .qr-notice { font-size: 6pt; line-height: 1.15; margin-top: 2pt; text-align: left; }
         .access-key { white-space: nowrap; font-size: 7pt; }
         .no-party { text-align: center; font-size: 6pt; padding: 2pt; border-bottom: 0.5pt solid #000; }
@@ -75,7 +75,7 @@
         .value-highlight { font-weight: bold; }
         .total-emphasis { background: #f2f2f2; }
         .emitter-cell { background: #f2f2f2; }
-        .footer-container { position: fixed; bottom: 2pt; left: 1pt; right: 1pt; }
+        .footer-container { position: fixed; bottom: 7pt; left: 6pt; right: 6pt; }
         .footer-table { width: 100%; background: #fff; }
         .footer-table td { border: 0.5pt solid #000; padding: 2pt 3pt; }
         .footer-table .label { font-size: 6pt; }
