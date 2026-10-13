@@ -86,4 +86,36 @@ final class DanfsePdfEvidenceTest extends TestCase
         self::assertContains('Unrecognized pdffonts row', $errors);
         self::assertContains('No fonts reported by pdffonts', $errors);
     }
+
+    public function testPhysicalMarginRasterRejectsFullBleedAndAcceptsFivePointInset(): void
+    {
+        self::assertSame([], DanfsePdfEvidence::checkPageMargins(self::pageRaster(10)));
+        $errors = DanfsePdfEvidence::checkPageMargins(self::pageRaster(0));
+        self::assertCount(4, $errors);
+        self::assertStringContainsString('Physical left margin', $errors[0]);
+    }
+
+    public function testPhysicalMarginRasterRejectsInvalidData(): void
+    {
+        self::assertSame(['Invalid grayscale PGM evidence'], DanfsePdfEvidence::checkPageMargins('invalid'));
+    }
+
+    private static function pageRaster(int $inset): string
+    {
+        $width = 1191;
+        $height = 1684;
+        $pgm = "P5\n{$width} {$height}\n255\n";
+        $pixels = str_repeat("\xFF", $width * $height);
+        foreach ([
+            [$inset, intdiv($height, 2)],
+            [$width - 1 - $inset, intdiv($height, 2)],
+            [intdiv($width, 2), $inset],
+            [intdiv($width, 2), $height - 1 - $inset],
+        ] as [$x, $y]) {
+            $pixels[$y * $width + $x] = "\x00";
+        }
+
+        return $pgm . $pixels;
+    }
+
 }

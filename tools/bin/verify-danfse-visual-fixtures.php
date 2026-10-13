@@ -27,7 +27,12 @@ foreach (DanfsePdfEvidence::REQUIRED_FILES as $filename) {
     }
 
     $outputs = [];
-    foreach ([['pdfinfo', $path], ['pdffonts', $path], ['pdftotext', '-layout', $path, '-']] as $command) {
+    foreach ([
+        ['pdfinfo', $path],
+        ['pdffonts', $path],
+        ['pdftotext', '-layout', $path, '-'],
+        ['pdftoppm', '-gray', '-r', '144', '-f', '1', '-l', '1', '-singlefile', $path],
+    ] as $command) {
         // argv-array form prevents shell interpretation of filenames.
         $pipes = [];
         $process = proc_open($command, [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
@@ -49,7 +54,10 @@ foreach (DanfsePdfEvidence::REQUIRED_FILES as $filename) {
         $outputs[] = $stdout;
     }
 
-    $errors = DanfsePdfEvidence::check($filename, $outputs[0], $outputs[1], $outputs[2]);
+    $errors = array_merge(
+        DanfsePdfEvidence::check($filename, $outputs[0], $outputs[1], $outputs[2]),
+        DanfsePdfEvidence::checkPageMargins($outputs[3]),
+    );
     if ($errors !== []) {
         $failed = true;
         foreach ($errors as $error) {

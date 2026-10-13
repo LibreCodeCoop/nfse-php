@@ -108,4 +108,57 @@ final class DanfsePdfEvidence
         }
         return $errors;
     }
+
+    /**
+     * Check physical sheet margins in the 144-dpi grayscale PGM generated
+     * by pdftoppm, rather than trusting a CSS page-margin declaration.
+     *
+     * @return list<string>
+     */
+    public static function checkPageMargins(string $pgm): array
+    {
+        if (preg_match('/\AP5\r?\n(\d+) (\d+)\r?\n255\r?\n/', $pgm, $match) !== 1) {
+            return ['Invalid grayscale PGM evidence'];
+        }
+
+        $width = (int) $match[1];
+        $height = (int) $match[2];
+        $dataOffset = strlen($match[0]);
+        if ($width < 500 || $height < 700 || strlen($pgm) - $dataOffset !== $width * $height) {
+            return ['Invalid PGM dimensions or pixel data'];
+        }
+
+        $errors = [];
+        foreach (['left', 'right', 'top', 'bottom'] as $side) {
+            $horizontal = $side === 'left' || $side === 'right';
+            $pixelsPerPoint = $horizontal ? $width / 595.28 : $height / 841.89;
+            $minimum = (int) floor(72 * 0.15 / 2.54 * $pixelsPerPoint) - 1;
+            $maximum = (int) ceil(72 * 0.20 / 2.54 * $pixelsPerPoint) + 1;
+            $inset = null;
+            for ($distance = 0; $distance <= $maximum + 4; ++$distance) {
+                [$x, $y] = match ($side) {
+                    'left' => [$distance, intdiv($height, 2)],
+                    'right' => [$width - 1 - $distance, intdiv($height, 2)],
+                    'top' => [intdiv($width, 2), $distance],
+                    'bottom' => [intdiv($width, 2), $height - 1 - $distance],
+                };
+
+                if (ord($pgm[$dataOffset + $y * $width + $x]) < 128) {
+                    $inset = $distance;
+                    break;
+                }
+            }
+
+            if ($inset === null || $inset < $minimum || $inset > $maximum) {
+                $errors[] = sprintf(
+                    'Physical %s margin must be 0.15-0.20 cm (found %s px at 144 dpi)',
+                    $side,
+                    $inset === null ? 'none' : (string) $inset,
+                );
+            }
+        }
+
+        return $errors;
+    }
+
 }
