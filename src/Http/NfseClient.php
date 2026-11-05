@@ -199,7 +199,7 @@ class NfseClient implements NfseClientInterface, CancellationClientInterface, De
             );
         }
 
-        return $this->parseEventResponse($body);
+        return $this->parseEventResponse($body, $chaveAcesso, $tipoEvento, $numSeqEvento);
     }
 
     #[\Override]
@@ -467,18 +467,52 @@ class NfseClient implements NfseClientInterface, CancellationClientInterface, De
     /**
      * @param array<string, mixed> $response
      */
-    private function parseEventResponse(array $response): EventReceiptData
-    {
+    private function parseEventResponse(
+        array $response,
+        string $accessKey,
+        int $eventType,
+        int $sequence,
+    ): EventReceiptData {
         $encodedXml = $response['eventoXmlGZipB64'] ?? null;
 
-        if (!is_string($encodedXml) || $encodedXml === '') {
-            throw new NetworkException(
-                'SEFIN gateway returned an event response without eventoXmlGZipB64.',
-                NfseErrorCode::InvalidResponse,
-            );
-        }
+        if (is_string($encodedXml) && $encodedXml !== '') {
+            // Preserve the previously supported flat gateway response.
+            $rawXml = GzipBase64::decode($encodedXml, 'SEFIN event XML response');
+        } else {
+            // The official SEFIN query response contains one event inside
+            // "eventos". "arquivoXml" is Base64(Base64(GZip(XML))).
+            $events = $response['eventos'] ?? null;
+            if (!is_array($events) || !array_is_list($events)
+                || count($events) !== 1 || !is_array($events[0])) {
+                throw new NetworkException(
+                    'SEFIN gateway returned an invalid event list.',
+                    NfseErrorCode::InvalidResponse,
+                );
+            }
 
-        $rawXml = GzipBase64::decode($encodedXml, 'SEFIN event XML response');
+            $event = $events[0];
+            $outer = $event['arquivoXml'] ?? null;
+            if (($event['chaveAcesso'] ?? null) !== $accessKey
+                || ($event['tipoEvento'] ?? null) !== $eventType
+                || (int) ($response['tipoAmbiente'] ?? 0) !== ($this->environment->sandboxMode ? 2 : 1)
+                || !is_string($outer) || $outer === '' || strlen($outer) > 2_000_000) {
+                throw new NetworkException(
+                    'SEFIN gateway returned event data outside the requested scope.',
+                    NfseErrorCode::InvalidResponse,
+                );
+            }
+
+            $inner = base64_decode($outer, true);
+            if (!is_string($inner) || $inner === '') {
+                throw new NetworkException(
+                    'SEFIN gateway returned invalid encoded event XML.',
+                    NfseErrorCode::InvalidResponse,
+                );
+            }
+
+            $rawXml = GzipBase64::decode($inner, 'SEFIN event XML response', 2_000_000);
+            $this->assertQueriedEventXml($rawXml, $accessKey, $eventType, $sequence);
+        }
 
         if (trim($rawXml) === '') {
             throw new NetworkException(
@@ -493,6 +527,45 @@ class NfseClient implements NfseClientInterface, CancellationClientInterface, De
             dataHoraProcessamento: (string) ($response['dataHoraProcessamento'] ?? ''),
             rawXml: $rawXml,
         );
+    }
+
+    /** Verify the nested official event belongs to the requested key, type and sequence. */
+    private function assertQueriedEventXml(
+        string $xml,
+        string $accessKey,
+        int $eventType,
+        int $sequence,
+    ): void {
+        $document = new \DOMDocument();
+        $previous = libxml_use_internal_errors(true);
+        libxml_clear_errors();
+        try {
+            if (!$document->loadXML($xml, LIBXML_NONET)
+                || $document->doctype !== null
+                || $document->documentElement?->localName !== 'evento') {
+                throw new NetworkException(
+                    'SEFIN gateway returned an invalid event XML.',
+                    NfseErrorCode::InvalidResponse,
+                );
+            }
+
+            $xpath = new \DOMXPath($document);
+            $key = $xpath->query('//*[local-name()="chNFSe"]')->item(0);
+            $eventSequence = $xpath->query('//*[local-name()="nSeqEvento"]')->item(0);
+            $event = $xpath->query('//*[local-name()="e' . $eventType . '"]')->item(0);
+            if (!$key instanceof \DOMElement || trim($key->textContent) !== $accessKey
+                || !$eventSequence instanceof \DOMElement
+                || trim($eventSequence->textContent) !== (string) $sequence
+                || !$event instanceof \DOMElement) {
+                throw new NetworkException(
+                    'SEFIN gateway returned an event XML for another request.',
+                    NfseErrorCode::InvalidResponse,
+                );
+            }
+        } finally {
+            libxml_clear_errors();
+            libxml_use_internal_errors($previous);
+        }
     }
 
     /**
