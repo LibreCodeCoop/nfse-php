@@ -332,6 +332,90 @@ class NfseClientTest extends TestCase
         self::assertSame('GET', $request->getRequestMethod());
     }
 
+    public function testQueryEventReadsOfficialNestedDoubleEncodedCancellationXml(): void
+    {
+        $xml = $this->syntheticCancellationEventXml();
+        self::$server->setResponseOfPath(
+            '/SefinNacional/nfse/ACCESS-KEY/eventos/101101/1',
+            new Response($this->officialNestedEventPayload($xml), ['Content-Type' => 'application/json'], 200),
+        );
+
+        $event = $this->makeClient($this->signer, true)->queryEvent('ACCESS-KEY', 101101, 1);
+
+        self::assertSame(2, $event->tipoAmbiente);
+        self::assertSame('Sefin_1.0', $event->versaoAplicativo);
+        self::assertSame($xml, $event->rawXml);
+    }
+
+    public function testQueryEventRejectsOfficialNestedEventForAnotherAccessKey(): void
+    {
+        self::$server->setResponseOfPath(
+            '/SefinNacional/nfse/ACCESS-KEY/eventos/101101/1',
+            new Response(
+                $this->officialNestedEventPayload(
+                    $this->syntheticCancellationEventXml(),
+                    ['chaveAcesso' => 'ANOTHER-KEY'],
+                ),
+                ['Content-Type' => 'application/json'],
+                200,
+            ),
+        );
+
+        $this->expectException(\LibreCodeCoop\NfsePHP\Exception\NetworkException::class);
+        $this->makeClient($this->signer, true)->queryEvent('ACCESS-KEY', 101101, 1);
+    }
+
+    public function testQueryEventRejectsOfficialNestedXmlForAnotherSequence(): void
+    {
+        self::$server->setResponseOfPath(
+            '/SefinNacional/nfse/ACCESS-KEY/eventos/101101/1',
+            new Response(
+                $this->officialNestedEventPayload(str_replace(
+                    '<nSeqEvento>1</nSeqEvento>',
+                    '<nSeqEvento>2</nSeqEvento>',
+                    $this->syntheticCancellationEventXml(),
+                )),
+                ['Content-Type' => 'application/json'],
+                200,
+            ),
+        );
+
+        $this->expectException(\LibreCodeCoop\NfsePHP\Exception\NetworkException::class);
+        $this->makeClient($this->signer, true)->queryEvent('ACCESS-KEY', 101101, 1);
+    }
+
+    public function testQueryEventRejectsMalformedOfficialNestedXmlEncoding(): void
+    {
+        self::$server->setResponseOfPath(
+            '/SefinNacional/nfse/ACCESS-KEY/eventos/101101/1',
+            new Response(
+                $this->officialNestedEventPayload(
+                    $this->syntheticCancellationEventXml(),
+                    ['arquivoXml' => base64_encode('not-a-gzip-base64-payload')],
+                ),
+                ['Content-Type' => 'application/json'],
+                200,
+            ),
+        );
+
+        $this->expectException(\LibreCodeCoop\NfsePHP\Exception\NetworkException::class);
+        $this->makeClient($this->signer, true)->queryEvent('ACCESS-KEY', 101101, 1);
+    }
+
+    public function testQueryEventRejectsAmbiguousOfficialNestedEventList(): void
+    {
+        $payload = json_decode($this->officialNestedEventPayload($this->syntheticCancellationEventXml()), true);
+        self::assertIsArray($payload);
+        $payload['eventos'][] = $payload['eventos'][0];
+        self::$server->setResponseOfPath(
+            '/SefinNacional/nfse/ACCESS-KEY/eventos/101101/1',
+            new Response(json_encode($payload, JSON_THROW_ON_ERROR), ['Content-Type' => 'application/json'], 200),
+        );
+
+        $this->expectException(\LibreCodeCoop\NfsePHP\Exception\NetworkException::class);
+        $this->makeClient($this->signer, true)->queryEvent('ACCESS-KEY', 101101, 1);
+    }
+
     public function testQueryEventRejectsInvalidEventTypeBeforeRequest(): void
     {
         $client = $this->makeClient($this->signer);
@@ -711,10 +795,36 @@ class NfseClientTest extends TestCase
 
     // -------------------------------------------------------------------------
 
-    private function makeClient(?XmlSignerInterface $signer = null): NfseClient
+    private function syntheticCancellationEventXml(): string
+    {
+        return '<evento versao="1.01"><infEvento><nSeqEvento>1</nSeqEvento>'
+            . '<pedRegEvento><infPedReg><chNFSe>ACCESS-KEY</chNFSe>'
+            . '<e101101><xDesc>Cancelamento de NFS-e</xDesc></e101101>'
+            . '</infPedReg></pedRegEvento></infEvento></evento>';
+    }
+
+    /** @param array<string,mixed> $eventOverrides */
+    private function officialNestedEventPayload(string $xml, array $eventOverrides = []): string
+    {
+        return json_encode([
+            'tipoAmbiente' => 2,
+            'versaoAplicativo' => 'Sefin_1.0',
+            'dataHoraProcessamento' => '2026-10-10T21:00:00-03:00',
+            'eventos' => [array_replace([
+                'chaveAcesso' => 'ACCESS-KEY',
+                'tipoEvento' => 101101,
+                'numeroPedidoRegistroEvento' => 1,
+                'dataHoraRecebimento' => '2026-10-10T21:00:00-03:00',
+                'arquivoXml' => base64_encode(base64_encode(gzencode($xml))),
+            ], $eventOverrides)],
+        ], JSON_THROW_ON_ERROR);
+    }
+
+    private function makeClient(?XmlSignerInterface $signer = null, bool $sandbox = false): NfseClient
     {
         return new NfseClient(
             environment: new EnvironmentConfig(
+                sandboxMode: $sandbox,
                 baseUrl: self::$server->getServerRoot() . '/SefinNacional',
             ),
             cert:        new CertConfig(

@@ -12,7 +12,7 @@ use LibreCodeCoop\NfsePHP\Exception\NfseErrorCode;
 
 final class GzipBase64
 {
-    public static function decode(string $encoded, string $label = 'compressed payload'): string
+    public static function decode(string $encoded, string $label = 'compressed payload', int $maxDecodedBytes = 0): string
     {
         $compressed = base64_decode($encoded, true);
 
@@ -23,7 +23,7 @@ final class GzipBase64
             );
         }
 
-        $decoded = @gzdecode($compressed);
+        $decoded = @gzdecode($compressed, $maxDecodedBytes);
 
         if ($decoded === false) {
             throw new NetworkException(
