@@ -7,6 +7,7 @@ declare(strict_types=1);
 
 namespace LibreCodeCoop\NfsePHP\Xml;
 
+use LibreCodeCoop\NfsePHP\Config\EnvironmentConfig;
 use LibreCodeCoop\NfsePHP\Dto\DecisionIssuerAddressData;
 use LibreCodeCoop\NfsePHP\Dto\DecisionNfseData;
 
@@ -17,12 +18,14 @@ final class DecisionNfseBuilder
 {
     private const NS = 'http://www.sped.fazenda.gov.br/nfse';
 
-    public function build(DecisionNfseData $data): string
-    {
+    public function build(
+        DecisionNfseData $data,
+        string $schemaRelease = EnvironmentConfig::SCHEMA_RELEASE_PRODUCTION_20260209,
+    ): string {
         $this->validate($data);
 
         $dpsDocument = new \DOMDocument();
-        if (!$dpsDocument->loadXML((new XmlBuilder())->buildDps($data->dps), LIBXML_NONET)) {
+        if (!$dpsDocument->loadXML((new XmlBuilder())->buildDps($data->dps, $schemaRelease), LIBXML_NONET)) {
             throw new \RuntimeException('Unable to parse generated DPS.');
         }
 

@@ -7,6 +7,8 @@ declare(strict_types=1);
 
 namespace LibreCodeCoop\NfsePHP\Xml;
 
+use LibreCodeCoop\NfsePHP\Config\EnvironmentConfig;
+
 /**
  * Validates DPS XML against the vendored official Sistema Nacional NFS-e schema.
  *
@@ -25,7 +27,14 @@ final class DpsSchemaValidator
     public function __construct(
         private readonly ?string $schemaPath = null,
         private readonly string $schemaVersion = self::SCHEMA_VERSION,
+        private readonly string $schemaRelease = EnvironmentConfig::SCHEMA_RELEASE_PRODUCTION_20260209,
     ) {
+        if (!in_array($this->schemaRelease, [
+            EnvironmentConfig::SCHEMA_RELEASE_PRODUCTION_20260209,
+            EnvironmentConfig::SCHEMA_RELEASE_RESTRICTED_20261020,
+        ], true)) {
+            throw new \InvalidArgumentException('Unsupported NFS-e schema release.');
+        }
         if (!in_array($this->schemaVersion, self::SUPPORTED_SCHEMA_VERSIONS, true)) {
             throw new \InvalidArgumentException(
                 'Unsupported NFS-e schema version: ' . $this->schemaVersion
@@ -73,6 +82,9 @@ final class DpsSchemaValidator
             ?? dirname(__DIR__, 2)
                 . '/references/schemas/nfse/'
                 . $this->schemaVersion
+                . ($this->schemaRelease === EnvironmentConfig::SCHEMA_RELEASE_RESTRICTED_20261020
+                    ? '-20261020'
+                    : '')
                 . '/DPS_v'
                 . $this->schemaVersion
                 . '.xsd';

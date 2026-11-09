@@ -18,20 +18,35 @@ namespace LibreCodeCoop\NfsePHP\Config;
  */
 final readonly class EnvironmentConfig
 {
+    public const SCHEMA_RELEASE_PRODUCTION_20260209 = '20260209';
+    public const SCHEMA_RELEASE_RESTRICTED_20261020 = '20261020';
+
     private const BASE_URL_PROD    = 'https://sefin.nfse.gov.br/SefinNacional';
     private const BASE_URL_SANDBOX = 'https://sefin.producaorestrita.nfse.gov.br/SefinNacional';
 
     public string $baseUrl;
+    public string $dpsSchemaRelease;
 
     public function __construct(
         public bool $sandboxMode = false,
         ?string $baseUrl = null,
         public int $requestTimeoutSeconds = 30,
+        ?string $dpsSchemaRelease = null,
     ) {
         if ($requestTimeoutSeconds < 1) {
             throw new \InvalidArgumentException('SEFIN request timeout must be at least 1 second.');
         }
 
+        $release = $dpsSchemaRelease ?? ($sandboxMode
+            ? self::SCHEMA_RELEASE_RESTRICTED_20261020
+            : self::SCHEMA_RELEASE_PRODUCTION_20260209);
+        if (!in_array($release, [
+            self::SCHEMA_RELEASE_PRODUCTION_20260209,
+            self::SCHEMA_RELEASE_RESTRICTED_20261020,
+        ], true)) {
+            throw new \InvalidArgumentException('Unsupported SEFIN DPS schema release.');
+        }
+        $this->dpsSchemaRelease = $release;
         $this->baseUrl = rtrim($baseUrl ?? ($sandboxMode
             ? self::BASE_URL_SANDBOX
             : self::BASE_URL_PROD), '/');

@@ -66,7 +66,7 @@ class NfseClient implements NfseClientInterface, CancellationClientInterface, De
 
     public function emit(DpsData $dps): ReceiptData
     {
-        $xml    = (new XmlBuilder())->buildDps($dps);
+        $xml    = (new XmlBuilder())->buildDps($dps, $this->environment->dpsSchemaRelease);
         $signed = $this->signer->sign($xml, $dps->cnpjPrestador);
 
         [$httpStatus, $body] = $this->post('/nfse', $signed);
@@ -86,7 +86,7 @@ class NfseClient implements NfseClientInterface, CancellationClientInterface, De
     #[\Override]
     public function emitDecision(DecisionNfseData $nfse): ReceiptData
     {
-        $xml = (new DecisionNfseBuilder())->build($nfse);
+        $xml = (new DecisionNfseBuilder())->build($nfse, $this->environment->dpsSchemaRelease);
         $signed = $this->signer->sign($xml, $nfse->dps->cnpjPrestador);
 
         [$httpStatus, $body] = $this->postCompressedXml(

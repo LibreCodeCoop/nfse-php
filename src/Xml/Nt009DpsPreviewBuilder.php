@@ -15,8 +15,8 @@ use LibreCodeCoop\NfsePHP\Dto\Nt009DpsPreviewData;
 /**
  * Structural preview from official NT009 Annex VI, NOT a validated emitter.
  *
- * This is kept separate from buildDps() until the correct environment XSD and
- * deployment/effective date are established by the Sistema Nacional NFS-e.
+ * This exploratory preview contains fields beyond the officially activated
+ * October 2026 restricted release. Use the release-aware buildDps() for emission.
  */
 final class Nt009DpsPreviewBuilder
 {
