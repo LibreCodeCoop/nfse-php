@@ -48,6 +48,10 @@ final class ProtocolContractFixtureTest extends TestCase
         );
 
         $receipt = $client->emit(new DpsData(
+            // Synthetic approximate-tax disclosure for isolated XML contract tests.
+            totalTributosPercentualFederal: '0.00',
+            totalTributosPercentualEstadual: '0.00',
+            totalTributosPercentualMunicipal: '0.00',
             cnpjPrestador: '11222333000181',
             municipioIbge: '3303302',
             itemListaServico: '0107',

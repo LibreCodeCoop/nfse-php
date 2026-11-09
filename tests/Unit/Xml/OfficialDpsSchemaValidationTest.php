@@ -187,6 +187,10 @@ final class OfficialDpsSchemaValidationTest extends TestCase
     public function testForeignServiceTakerDpsMatchesOfficialSchema(): void
     {
         $xml = $this->builder->buildDps(new DpsData(
+            // Synthetic approximate-tax disclosure for isolated XML contract tests.
+            totalTributosPercentualFederal: '0.00',
+            totalTributosPercentualEstadual: '0.00',
+            totalTributosPercentualMunicipal: '0.00',
             cnpjPrestador: '11222333000181',
             municipioIbge: '3303302',
             itemListaServico: '001',
@@ -277,6 +281,10 @@ final class OfficialDpsSchemaValidationTest extends TestCase
         ?MunicipalBenefitData $beneficioMunicipal = null,
     ): DpsData {
         return new DpsData(
+            // Synthetic approximate-tax disclosure for isolated XML contract tests.
+            totalTributosPercentualFederal: '0.00',
+            totalTributosPercentualEstadual: '0.00',
+            totalTributosPercentualMunicipal: '0.00',
             cnpjPrestador: $cnpjPrestador,
             municipioIbge: '3303302',
             itemListaServico: '001',

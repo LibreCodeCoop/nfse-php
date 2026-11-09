@@ -77,6 +77,9 @@ class XmlBuilderTest extends TestCase
                 opcaoSimplesNacional: 3,
                 regimeApuracaoSimplesNacional: $apuration,
                 regimeEspecialTributacao: 0,
+                totalTributosPercentualFederal: '0.00',
+                totalTributosPercentualEstadual: '0.00',
+                totalTributosPercentualMunicipal: '0.00',
             ));
 
             self::assertStringContainsString('<opSimpNac>3</opSimpNac>', $xml);
@@ -587,27 +590,63 @@ class XmlBuilderTest extends TestCase
 
     // -------------------------------------------------------------------------
 
-    public function testNonSimplesnacionalMustNotIncludeIndtottribAndPaliq(): void
+    public function testNonSimplesWithoutApproximateTaxEvidenceFailsBeforeInvalidE0713Xml(): void
     {
-        // opSimpNac=1 = "não optante" (per SEFIN error messages)
-        $dpsNaoOptante = $this->makeDps(
-            cnpjPrestador: '11222333000181',
-            municipioIbge: '3303302',
-            itemListaServico: '0107',
-            valorServico: '1000.00',
-            aliquota: '5.00',
-            opcaoSimplesNacional: 1, // não optante
-        );
-        $xml = $this->builder->buildDps($dpsNaoOptante);
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('E0713');
 
-        // For "não optante" (opSimpNac = 1), pAliq must NOT be present.
+        $this->builder->buildDps($this->makeDps(
+            opcaoSimplesNacional: 1,
+            totalTributosPercentualFederal: '',
+            totalTributosPercentualEstadual: '',
+            totalTributosPercentualMunicipal: '',
+        ));
+    }
+
+    public function testNonSimplesWithDocumentedPercentagesUsesAllowedTotTribChoice(): void
+    {
+        $xml = $this->builder->buildDps($this->makeDps(
+            opcaoSimplesNacional: 1,
+            indicadorTributacao: 2,
+            totalTributosPercentualFederal: '12.34',
+            totalTributosPercentualEstadual: '0.00',
+            totalTributosPercentualMunicipal: '2.00',
+        ));
+
+        self::assertStringContainsString('<opSimpNac>1</opSimpNac>', $xml);
         self::assertStringNotContainsString('<pAliq>', $xml);
-        self::assertStringContainsString('<tribFed/>', str_replace(["\n", '  '], '', $xml));
-        self::assertStringContainsString('<totTrib><indTotTrib>0</indTotTrib></totTrib>', str_replace(["\n", '  '], '', $xml));
-        self::assertStringNotContainsString('<pTotTrib>', $xml);
+        self::assertStringNotContainsString('<indTotTrib>', $xml);
+        self::assertStringNotContainsString('<pTotTribSN>', $xml);
+        self::assertStringContainsString('<pTotTribFed>12.34</pTotTribFed>', $xml);
+        self::assertStringContainsString('<pTotTribMun>2.00</pTotTribMun>', $xml);
+    }
 
-        self::assertStringContainsString('<tribMun>', $xml);
-        self::assertStringContainsString('<tribISSQN>', $xml);
+    public function testMeEppWithoutApproximateTaxEvidenceFailsBeforeInvalidE0712Xml(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('E0712');
+
+        $this->builder->buildDps($this->makeDps(
+            opcaoSimplesNacional: 3,
+            regimeApuracaoSimplesNacional: 1,
+            totalTributosPercentualFederal: '',
+            totalTributosPercentualEstadual: '',
+            totalTributosPercentualMunicipal: '',
+        ));
+    }
+
+    public function testMeEppWithDocumentedPercentagesOmitsForbiddenIndicator(): void
+    {
+        $xml = $this->builder->buildDps($this->makeDps(
+            opcaoSimplesNacional: 3,
+            regimeApuracaoSimplesNacional: 1,
+            totalTributosPercentualFederal: '1.23',
+            totalTributosPercentualEstadual: '0.00',
+            totalTributosPercentualMunicipal: '2.00',
+        ));
+
+        self::assertStringNotContainsString('<indTotTrib>', $xml);
+        self::assertStringContainsString('<pTotTribFed>1.23</pTotTribFed>', $xml);
     }
 
     public function testOptiontSimplesnacionalIncludesIndtottribAndPaliq(): void
@@ -619,7 +658,10 @@ class XmlBuilderTest extends TestCase
             itemListaServico: '0107',
             valorServico: '1000.00',
             aliquota: '5.00',
-            opcaoSimplesNacional: 2, // optante
+            opcaoSimplesNacional: 2, // MEI: indTotTrib allowed
+            totalTributosPercentualFederal: '',
+            totalTributosPercentualEstadual: '',
+            totalTributosPercentualMunicipal: '',
         );
         $xml = $this->builder->buildDps($dpsOptante);
 
@@ -635,6 +677,10 @@ class XmlBuilderTest extends TestCase
         $xml = $this->builder->buildDps($this->makeDps(
             indicadorTributacao: 0,
             aliquota: '2.00',
+            opcaoSimplesNacional: 2,
+            totalTributosPercentualFederal: '',
+            totalTributosPercentualEstadual: '',
+            totalTributosPercentualMunicipal: '',
         ));
 
         self::assertStringContainsString('<indTotTrib>0</indTotTrib>', $xml);
@@ -762,6 +808,9 @@ class XmlBuilderTest extends TestCase
             valorServico: '1000.00',
             aliquota: '5.00',
             discriminacao: 'Consultoria internacional',
+            totalTributosPercentualFederal: '0.00',
+            totalTributosPercentualEstadual: '0.00',
+            totalTributosPercentualMunicipal: '0.00',
             tomadorNif: 'US-TAX-12345',
             nomeTomador: 'Foreign Customer LLC',
             tomadorPaisCodigo: 'us',
@@ -796,6 +845,9 @@ class XmlBuilderTest extends TestCase
             valorServico: '1000.00',
             aliquota: '5.00',
             discriminacao: 'Consultoria internacional',
+            totalTributosPercentualFederal: '0.00',
+            totalTributosPercentualEstadual: '0.00',
+            totalTributosPercentualMunicipal: '0.00',
             tomadorCodigoNaoNif: 2,
             nomeTomador: 'Foreign Customer Without NIF',
         ));
@@ -1125,9 +1177,9 @@ class XmlBuilderTest extends TestCase
         ?int $regimeApuracaoSimplesNacional = null,
         int $tipoAmbiente = 2,
         int $indicadorTributacao = 0,
-        string $totalTributosPercentualFederal = '',
-        string $totalTributosPercentualEstadual = '',
-        string $totalTributosPercentualMunicipal = '',
+        string $totalTributosPercentualFederal = '0.00',
+        string $totalTributosPercentualEstadual = '0.00',
+        string $totalTributosPercentualMunicipal = '0.00',
         string $federalPiscofinsSituacaoTributaria = '',
         string $federalPiscofinsTipoRetencao = '',
         string $federalPiscofinsBaseCalculo = '',
