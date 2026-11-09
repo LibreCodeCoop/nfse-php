@@ -592,6 +592,17 @@ class XmlBuilder
         // alternative when no approximate totals are declared. In the
         // pTotTrib branch all three percentages are required by the schema.
         if ($informed === 0) {
+            // The SEFIN XSD requires totTrib, but the official E0713/E0712
+            // rules prohibit its indTotTrib choice for non-Simples and ME/EPP.
+            // No estimate is not evidence for declaring tax percentages as zero.
+            if (in_array($dps->opcaoSimplesNacional, [1, 3], true)) {
+                $rule = $dps->opcaoSimplesNacional === 1 ? 'E0713' : 'E0712';
+                throw new \InvalidArgumentException(
+                    $rule . ': documented approximate tax totals are required for this regime; '
+                    . 'indTotTrib is forbidden and missing values must not be fabricated.',
+                );
+            }
+
             $totTrib->appendChild($doc->createElement('indTotTrib', '0'));
 
             return $totTrib;
