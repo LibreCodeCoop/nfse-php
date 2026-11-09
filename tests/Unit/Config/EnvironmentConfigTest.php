@@ -36,6 +36,37 @@ class EnvironmentConfigTest extends TestCase
         ];
     }
 
+    public function testDefaultDpsSchemaReleaseFollowsSelectedSefinEnvironment(): void
+    {
+        self::assertSame(
+            EnvironmentConfig::SCHEMA_RELEASE_RESTRICTED_20261020,
+            (new EnvironmentConfig(sandboxMode: true))->dpsSchemaRelease,
+        );
+        self::assertSame(
+            EnvironmentConfig::SCHEMA_RELEASE_PRODUCTION_20260209,
+            (new EnvironmentConfig(sandboxMode: false))->dpsSchemaRelease,
+        );
+    }
+
+    public function testExplicitSchemaReleaseOverrideAllowsControlledRollout(): void
+    {
+        $environment = new EnvironmentConfig(
+            sandboxMode: true,
+            dpsSchemaRelease: EnvironmentConfig::SCHEMA_RELEASE_PRODUCTION_20260209,
+        );
+        self::assertSame(
+            EnvironmentConfig::SCHEMA_RELEASE_PRODUCTION_20260209,
+            $environment->dpsSchemaRelease,
+        );
+    }
+
+    public function testUnsupportedSchemaReleaseFailsClosed(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Unsupported SEFIN DPS schema release');
+        new EnvironmentConfig(sandboxMode: true, dpsSchemaRelease: 'unknown');
+    }
+
     public function testCustomBaseUrlOverridesMode(): void
     {
         $custom = 'http://localhost:8080/SefinNacional';

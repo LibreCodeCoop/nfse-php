@@ -7,6 +7,7 @@ declare(strict_types=1);
 
 namespace LibreCodeCoop\NfsePHP\Xml;
 
+use LibreCodeCoop\NfsePHP\Config\EnvironmentConfig;
 use LibreCodeCoop\NfsePHP\Domain\OfficialDomainCatalog;
 use LibreCodeCoop\NfsePHP\Dto\DpsData;
 use LibreCodeCoop\NfsePHP\Support\DpsIdentifier;
@@ -33,8 +34,28 @@ class XmlBuilder
         return (new Nt009DpsPreviewBuilder($this))->build($dps, $preview);
     }
 
-    public function buildDps(DpsData $dps): string
-    {
+    public function buildDps(
+        DpsData $dps,
+        string $schemaRelease = EnvironmentConfig::SCHEMA_RELEASE_PRODUCTION_20260209,
+    ): string {
+        $restricted = match ($schemaRelease) {
+            EnvironmentConfig::SCHEMA_RELEASE_PRODUCTION_20260209 => false,
+            EnvironmentConfig::SCHEMA_RELEASE_RESTRICTED_20261020 => true,
+            default => throw new \InvalidArgumentException('Unsupported DPS schema release.'),
+        };
+
+        if ($restricted && $dps->ibsCbsFinalidade !== null && $dps->ibsCbsFinalidade !== 0) {
+            throw new \InvalidArgumentException(
+                'NT009 20261020 only supports regular NFS-e (finNFSe=0).',
+            );
+        }
+
+        if ($restricted && $dps->deducaoReducao !== null) {
+            throw new \InvalidArgumentException(
+                'Legacy vDedRed cannot be transmitted with the NT009 20261020 vAjusteBC layout.',
+            );
+        }
+
         $doc = new \DOMDocument('1.0', 'UTF-8');
         $doc->preserveWhiteSpace = false;
         $doc->formatOutput       = true;
@@ -59,6 +80,10 @@ class XmlBuilder
         $infDps->appendChild($doc->createElement('nDPS', $dps->numeroDps));
         $infDps->appendChild($doc->createElement('dCompet', $competenceDate));
         $infDps->appendChild($doc->createElement('tpEmit', (string) $dps->tipoEmissao));
+        // The 2026-10-20 production-restricted XSD requires finNFSe here.
+        if ($restricted) {
+            $infDps->appendChild($doc->createElement('finNFSe', '0'));
+        }
         $infDps->appendChild($doc->createElement('cLocEmi', $dps->municipioIbge));
 
         if ($dps->substituicao !== null) {
@@ -91,11 +116,11 @@ class XmlBuilder
             $infDps->appendChild($this->buildToma($doc, $dps));
         }
 
-        $infDps->appendChild($this->buildServico($doc, $dps));
+        $infDps->appendChild($this->buildServico($doc, $dps, $restricted));
         $infDps->appendChild($this->buildValores($doc, $dps));
 
         if ($this->hasIbsCbsConfiguration($dps)) {
-            $infDps->appendChild($this->buildIbsCbs($doc, $dps));
+            $infDps->appendChild($this->buildIbsCbs($doc, $dps, $restricted));
         }
 
         return $doc->saveXML() ?: '';
@@ -125,7 +150,7 @@ class XmlBuilder
         return $subst;
     }
 
-    private function buildIbsCbs(\DOMDocument $doc, DpsData $dps): \DOMElement
+    private function buildIbsCbs(\DOMDocument $doc, DpsData $dps, bool $restricted): \DOMElement
     {
         $missing = [];
 
@@ -160,7 +185,9 @@ class XmlBuilder
         }
 
         $ibsCbs = $doc->createElement('IBSCBS');
-        $ibsCbs->appendChild($doc->createElement('finNFSe', (string) $dps->ibsCbsFinalidade));
+        if (!$restricted) {
+            $ibsCbs->appendChild($doc->createElement('finNFSe', (string) $dps->ibsCbsFinalidade));
+        }
 
         if ($dps->ibsCbsIndFinal !== null) {
             $ibsCbs->appendChild($doc->createElement('indFinal', (string) $dps->ibsCbsIndFinal));
@@ -171,10 +198,16 @@ class XmlBuilder
 
         $valores = $doc->createElement('valores');
         $trib = $doc->createElement('trib');
-        $gIbsCbs = $doc->createElement('gIBSCBS');
-        $gIbsCbs->appendChild($doc->createElement('CST', $dps->ibsCbsCst));
-        $gIbsCbs->appendChild($doc->createElement('cClassTrib', $dps->ibsCbsClassificacaoTributaria));
-        $trib->appendChild($gIbsCbs);
+        if ($restricted) {
+            // NT009 Release 1 moves CST/cClassTrib to trib; gIBSCBS is optional.
+            $trib->appendChild($doc->createElement('CST', $dps->ibsCbsCst));
+            $trib->appendChild($doc->createElement('cClassTrib', $dps->ibsCbsClassificacaoTributaria));
+        } else {
+            $gIbsCbs = $doc->createElement('gIBSCBS');
+            $gIbsCbs->appendChild($doc->createElement('CST', $dps->ibsCbsCst));
+            $gIbsCbs->appendChild($doc->createElement('cClassTrib', $dps->ibsCbsClassificacaoTributaria));
+            $trib->appendChild($gIbsCbs);
+        }
         $valores->appendChild($trib);
         $ibsCbs->appendChild($valores);
 
@@ -582,7 +615,7 @@ class XmlBuilder
         return $totTrib;
     }
 
-    private function buildServico(\DOMDocument $doc, DpsData $dps): \DOMElement
+    private function buildServico(\DOMDocument $doc, DpsData $dps, bool $restricted): \DOMElement
     {
         $serv = $doc->createElement('serv');
 
@@ -599,18 +632,29 @@ class XmlBuilder
             $cServ->appendChild($doc->createElement('cTribMun', $municipalTaxCode));
         }
 
+        if ($restricted) {
+            $this->appendNbs($doc, $cServ, $dps);
+        }
         $cServ->appendChild($doc->createElement('xDescServ', htmlspecialchars($dps->discriminacao, ENT_XML1)));
-        if ($dps->codigoNbs !== '') {
-            if (preg_match('/^\d{9}$/D', $dps->codigoNbs) !== 1
-                || !(new OfficialDomainCatalog())->hasNbs($dps->codigoNbs)) {
-                throw new \InvalidArgumentException('Invalid cNBS: expected a nine-digit code from the official NBS 2.0 catalog.');
-            }
-
-            $cServ->appendChild($doc->createElement('cNBS', $dps->codigoNbs));
+        if (!$restricted) {
+            $this->appendNbs($doc, $cServ, $dps);
         }
         $serv->appendChild($cServ);
 
         return $serv;
+    }
+
+    private function appendNbs(\DOMDocument $doc, \DOMElement $service, DpsData $dps): void
+    {
+        if ($dps->codigoNbs === '') {
+            return;
+        }
+        if (preg_match('/^\d{9}$/D', $dps->codigoNbs) !== 1
+            || !(new OfficialDomainCatalog())->hasNbs($dps->codigoNbs)) {
+            throw new \InvalidArgumentException('Invalid cNBS: expected a nine-digit code from the official NBS 2.0 catalog.');
+        }
+
+        $service->appendChild($doc->createElement('cNBS', $dps->codigoNbs));
     }
 
     private function buildRegTrib(\DOMDocument $doc, DpsData $dps): \DOMElement
