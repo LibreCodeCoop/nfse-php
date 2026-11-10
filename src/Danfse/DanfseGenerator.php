@@ -69,37 +69,37 @@ final class DanfseGenerator
 
         $html = $template->render($data, $this->config);
 
-            try {
-                $options = new Options();
-                $options->set('isHtml5ParserEnabled', true);
-                $options->set('isRemoteEnabled', false);
-                $options->set('defaultFont', $fonts->labelFamily());
-                // Resolve both default and caller-supplied fonts from local
-                // files. Font directories are restricted by Dompdf chroot.
-                $options->setChroot(array_values(array_unique(array_merge(
-                    $options->getChroot(),
-                    $fonts->directories(),
-                ))));
-                // Dompdf 3 can cache font lookups between documents in one
-                // PHP process; isolate metrics and family names per font set.
-                $options->setFontDir($fonts->fontCacheDirectory);
-                $options->setFontCache($fonts->fontCacheDirectory);
+        try {
+            $options = new Options();
+            $options->set('isHtml5ParserEnabled', true);
+            $options->set('isRemoteEnabled', false);
+            $options->set('defaultFont', $fonts->labelFamily());
+            // Resolve both default and caller-supplied fonts from local
+            // files. Font directories are restricted by Dompdf chroot.
+            $options->setChroot(array_values(array_unique(array_merge(
+                $options->getChroot(),
+                $fonts->directories(),
+            ))));
+            // Dompdf 3 can cache font lookups between documents in one
+            // PHP process; isolate metrics and family names per font set.
+            $options->setFontDir($fonts->fontCacheDirectory);
+            $options->setFontCache($fonts->fontCacheDirectory);
 
-                $dompdf = new Dompdf($options);
-                $dompdf->loadHtml($html, 'UTF-8');
-                $dompdf->setPaper('A4', 'portrait');
-                $dompdf->render();
-            } catch (\Throwable $e) {
-                throw new ArtifactException(
-                    'Failed to render DANFSe PDF: ' . $e->getMessage(),
-                    NfseErrorCode::ArtifactRetrievalFailed,
-                    previous: $e,
-                );
-            }
+            $dompdf = new Dompdf($options);
+            $dompdf->loadHtml($html, 'UTF-8');
+            $dompdf->setPaper('A4', 'portrait');
+            $dompdf->render();
+        } catch (\Throwable $e) {
+            throw new ArtifactException(
+                'Failed to render DANFSe PDF: ' . $e->getMessage(),
+                NfseErrorCode::ArtifactRetrievalFailed,
+                previous: $e,
+            );
+        }
 
-            if ($dompdf->getCanvas()->get_page_count() === 1) {
-                return [$html, (string) $dompdf->output()];
-            }
+        if ($dompdf->getCanvas()->get_page_count() === 1) {
+            return [$html, (string) $dompdf->output()];
+        }
 
         throw new ArtifactException(
             'DANFSe does not fit on one A4 page without truncating authorized XML content.',

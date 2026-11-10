@@ -58,8 +58,13 @@ final class DanfsePdfEvidence
                 $errors[] = 'Missing mandatory visible text: ' . $required;
             }
         }
-        if ($filename === 'danfse-long-description.pdf' && !str_contains($text, '...')) {
-            $errors[] = 'Long service description must be visibly abbreviated';
+        if ($filename === 'danfse-long-description.pdf') {
+            if (substr_count($text, 'Etapa técnica, relatório e acompanhamento.') !== 3) {
+                $errors[] = 'Synthetic service description must remain complete';
+            }
+            if (str_contains($text, '...')) {
+                $errors[] = 'Unexpected service description truncation';
+            }
         }
 
         $fontRows = [];
