@@ -130,7 +130,15 @@ class DanfseTemplateTest extends TestCase
         self::assertStringContainsString('Local da Prestação / Sigla UF / País', $html);
         self::assertStringContainsString('Município / Sigla UF / País de Incidência do ISSQN', $html);
         self::assertStringNotContainsString('colspan="4" class="section-header"', $html);
-        self::assertSame(1, substr_count($html, 'class="value value-highlight"'));
+        // NT008 gives the entire cell a gray background, not a bold amount.
+        self::assertStringContainsString(
+            '<span class="label">VALOR LÍQUIDO DA NFS-e + IBS/CBS</span><span class="value">',
+            $html,
+        );
+        self::assertStringNotContainsString('value-highlight', $html);
+        // The complementary-information block continues into the blank page
+        // until the fixed footer: no horizontal rule after its text.
+        self::assertStringContainsString('<div class="complementary-information">', $html);
     }
 
     public function testAuthorizedMunicipalTotalsUseNfseValuesNotDpsTaxFlags(): void
