@@ -47,9 +47,10 @@ final class DanfseGoldenReferenceTest extends TestCase
         self::assertStringContainsString('TRIBUTAÇÃO MUNICIPAL (ISSQN)', $html);
         self::assertStringContainsString('BC ISSQN', $html);
         self::assertStringContainsString('VALOR LÍQUIDO DA NFS-e', $html);
-        // A Brazilian municipality authorizes deriving BR for display only;
-        // cPaisPrestacao remains absent from the issued domestic DPS XML.
-        self::assertStringContainsString('Niterói / RJ / BR', $html);
+        // National DANFSe leaves country unfilled when no country tag exists.
+        // Never infer the fiscal country from a Brazilian municipality code.
+        self::assertStringContainsString('Niterói / RJ / -', $html);
+        self::assertStringContainsString('Indicador Municipal (Inscrição)', $html);
         self::assertStringContainsString('Nº NFS-e / CHAVE NFS-e', $html);
     }
 
@@ -182,7 +183,7 @@ final class DanfseGoldenReferenceTest extends TestCase
         );
         self::assertStringContainsString('Contribuições Sociais - Retidas', $html);
         self::assertStringContainsString('R$ 1.149,75', $html);
-        self::assertStringContainsString('Tipo de retenção PIS/COFINS/CSLL', $html);
+        self::assertStringContainsString('Descrição Contrib. Sociais - Retidas', $html);
     }
 
     public function testNonRetainedSocialContributionsDoNotDisplayAnInventedAmount(): void

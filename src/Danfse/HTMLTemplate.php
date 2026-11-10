@@ -217,7 +217,7 @@
                     <span class="value"><?= $data['emitente']['cnpj_cpf'] ?></span>
                 </td>
                 <td style="width: 25%;">
-                    <span class="label">Inscrição Municipal</span>
+                    <span class="label">Indicador Municipal (Inscrição)</span>
                     <span class="value"><?= $data['emitente']['im'] ?></span>
                 </td>
                 <td style="width: 25%;">
@@ -262,7 +262,7 @@
                     <span class="value"><?= $data['tomador']['cnpj_cpf'] ?></span>
                 </td>
                 <td style="width: 25%;">
-                    <span class="label">Inscrição Municipal</span>
+                    <span class="label">Indicador Municipal (Inscrição)</span>
                     <span class="value"><?= $data['tomador']['im'] ?></span>
                 </td>
                 <td style="width: 25%;">
@@ -326,7 +326,7 @@
                     <span class="value"><?= $data['intermediario']['cnpj_cpf'] ?></span>
                 </td>
                 <td style="width: 25%;">
-                    <span class="label">Inscrição Municipal</span>
+                    <span class="label">Indicador Municipal (Inscrição)</span>
                     <span class="value"><?= $data['intermediario']['im'] ?></span>
                 </td>
                 <td style="width: 25%;">
@@ -418,7 +418,7 @@
             <tr class="federal-competence-2026">
                 <td><span class="label">PIS - Débito Apuração Própria</span><span class="value"><?= $data['tributacao_federal']['pis'] ?></span></td>
                 <td><span class="label">COFINS - Débito Apuração Própria</span><span class="value"><?= $data['tributacao_federal']['cofins'] ?></span></td>
-                <td colspan="2"><span class="label">Tipo de retenção PIS/COFINS/CSLL</span><span class="value"><?= $data['tributacao_federal']['descricao_retencao'] ?></span></td>
+                <td colspan="2"><span class="label">Descrição Contrib. Sociais - Retidas</span><span class="value"><?= $data['tributacao_federal']['descricao_retencao'] ?></span></td>
             </tr>
             <?php endif; ?>
         </table>
