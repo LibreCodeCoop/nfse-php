@@ -61,7 +61,7 @@ class DanfseTemplateTest extends TestCase
         self::assertSame('Operação Tributável', $data['tributacao_municipal']['tributacao_issqn']);
         self::assertSame('Retido pelo Tomador', $data['tributacao_municipal']['retencao_issqn']);
         self::assertSame('Sociedade de Profissionais', $data['tributacao_municipal']['regime_especial']);
-        self::assertSame('Niterói / RJ / BR', $data['tributacao_municipal']['municipio_incidencia']);
+        self::assertSame('Niterói / RJ / -', $data['tributacao_municipal']['municipio_incidencia']);
 
         // Totais
         self::assertSame('R$ 1.500,00', $data['totais']['valor_servico']);
@@ -89,8 +89,8 @@ class DanfseTemplateTest extends TestCase
         self::assertSame('12345678', $data['emitente']['im']);
         self::assertSame('(00) 90000-0000', $data['emitente']['telefone']);
         self::assertSame('fiscal@example.org', $data['emitente']['email']);
-        self::assertSame('Curitiba / PR / BR', $data['servico']['local_prestacao']);
-        self::assertSame('Curitiba / PR / BR', $data['tributacao_municipal']['municipio_incidencia']);
+        self::assertSame('Curitiba / PR / -', $data['servico']['local_prestacao']);
+        self::assertSame('Curitiba / PR / -', $data['tributacao_municipal']['municipio_incidencia']);
         self::assertSame('0.0000.00.00', $data['servico']['codigo_nbs']);
     }
 

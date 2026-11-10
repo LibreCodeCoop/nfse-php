@@ -528,11 +528,9 @@ final class DanfseTemplate
     }
 
     /**
-     * Display ISO country BR for a recognized Brazilian IBGE municipality.
-     * The NT 008/2026 v1.02 DANFSe table explicitly uses BR as an example;
-     * this is a presentation inference from the authorized IBGE municipality,
-     * NOT a cPaisPrestacao XML value (which E0304 forbids for BR).
-     * For foreign operations, preserve the explicit XML country instead.
+     * Display the country only when it is explicitly provided in authorized XML.
+     * The Brazilian municipality code determines UF but does not supply
+     * cPaisPrestacao (which is omitted for domestic services).
      */
     private function locationWithUfAndCountry(string $city, string $ibge, string $country): string
     {
@@ -546,10 +544,6 @@ final class DanfseTemplate
         }
 
         $country = strtoupper(trim($country));
-        if ($country === '' && $uf !== '') {
-            $country = 'BR';
-        }
-
         return ($city !== '' ? $city : '-') . ' / ' . ($uf !== '' ? $uf : '-') . ' / '
             . ($country !== '' ? $country : '-');
     }
