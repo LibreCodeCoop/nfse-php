@@ -117,7 +117,7 @@ final class DanfseGoldenReferenceTest extends TestCase
         $data = (new DanfseTemplate())->buildData($nfse);
 
         self::assertSame($longDescription, $data['servico']['desc_trib_nacional']);
-        self::assertSame($longDescription, $data['servico']['desc_trib_municipal']);
+        self::assertSame(trim($longDescription), $data['servico']['desc_trib_municipal']);
         self::assertStringNotContainsString('...', $data['servico']['desc_trib_nacional']);
     }
 

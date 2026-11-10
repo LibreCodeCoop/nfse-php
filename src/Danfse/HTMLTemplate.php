@@ -24,7 +24,7 @@
         body {
             font-family: Arial, "Liberation Sans", Helvetica, sans-serif;
             font-size: 7pt;
-            line-height: 1.10;
+            line-height: 1.06;
             color: #000;
             margin: 5pt;
             padding: 1pt 1pt 65pt;
@@ -42,13 +42,13 @@
         }
         table { width: 100%; border-collapse: collapse; table-layout: fixed; margin: 0; }
         tr { page-break-inside: avoid; }
-        td { padding: 0.8pt 3pt 0.9pt; vertical-align: top; word-wrap: break-word; }
+        td { padding: 0.4pt 3pt 0.5pt; vertical-align: top; word-wrap: break-word; }
         .bordered-section { border-bottom: 0.5pt solid #000; margin: 0; }
         .first-section td { padding-bottom: 1pt; }
         /* NT008 2.4.2: identification labels require 7pt. */
         .first-section .label { font-size: 7pt; text-transform: uppercase; }
-        .label { display: block; font-family: Arial, "Liberation Sans", Helvetica, sans-serif; font-size: 6pt; font-weight: bold; margin-bottom: 1pt; }
-        .value { font-family: "Microsoft Sans Serif", "Liberation Sans", Arial, sans-serif; font-size: 7pt; line-height: 1.10; font-weight: normal; }
+        .label { display: block; font-family: Arial, "Liberation Sans", Helvetica, sans-serif; font-size: 6pt; font-weight: bold; margin-bottom: 0.5pt; }
+        .value { font-family: "Microsoft Sans Serif", "Liberation Sans", Arial, sans-serif; font-size: 7pt; line-height: 1.06; font-weight: normal; }
         .section-header {
             width: 25%;
             font-size: 7.1pt;
@@ -60,7 +60,7 @@
         }
         .section-title { font-size: 7.1pt; font-weight: bold; }
         .header-table { background: #f2f2f2; border-bottom: 0.5pt solid #000; margin-bottom: 2pt; }
-        .header-table td { padding: 2pt 3pt 3pt; vertical-align: middle; }
+        .header-table td { padding: 1.2pt 3pt 1.5pt; vertical-align: middle; }
         .logo-cell { width: 32%; text-align: left; }
         .title-cell { width: 42%; text-align: center; }
         .municipality-cell { width: 26%; font-family: "Microsoft Sans Serif", Arial, sans-serif; text-align: left; }
