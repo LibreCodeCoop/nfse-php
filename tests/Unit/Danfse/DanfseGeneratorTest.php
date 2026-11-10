@@ -190,7 +190,7 @@ class DanfseGeneratorTest extends TestCase
         self::assertStringContainsString('class="fiscal-state-watermark">SUBSTITUÍDA</div>', $html);
     }
 
-    public function testLongSyntheticServiceKeepsExplicitEllipsisAndOnePageHtml(): void
+    public function testLongSyntheticServiceFailsRatherThanTruncatingText(): void
     {
         $longDescription = str_repeat('DESCRICAO SINTETICA DE SERVICO E ETAPAS. ', 140);
         $xml = preg_replace(
@@ -200,12 +200,9 @@ class DanfseGeneratorTest extends TestCase
         );
         self::assertIsString($xml);
 
-        $generator = new DanfseGenerator();
-        $html = $generator->generateHtml($xml);
-        self::assertStringContainsString('DESCRICAO SINTETICA DE SERVICO', $html);
-        self::assertStringContainsString('...', $html);
-        self::assertStringContainsString('Totais aproximados dos Tributos', $html);
-        self::assertStringStartsWith('%PDF-', $generator->generateFromXml($xml));
+        $this->expectException(ArtifactException::class);
+        $this->expectExceptionMessage('without truncating authorized XML content');
+        (new DanfseGenerator())->generateFromXml($xml);
     }
 
     public function testLongSyntheticComplementaryInformationPreservesTaxDisclosure(): void
@@ -218,11 +215,9 @@ class DanfseGeneratorTest extends TestCase
         );
         self::assertIsString($xml);
 
-        $html = (new DanfseGenerator())->generateHtml($xml);
-        self::assertStringContainsString('OBSERVACAO SINTETICA DO SERVICO', $html);
-        self::assertStringContainsString('...', $html);
-        self::assertStringContainsString('Totais aproximados dos Tributos', $html);
-        self::assertStringContainsString('Federais: 4.50%', $html);
+        $this->expectException(ArtifactException::class);
+        $this->expectExceptionMessage('without truncating authorized XML content');
+        (new DanfseGenerator())->generateFromXml($xml);
     }
 
     public function testGenerateHtmlContainsHomologacaoWatermark(): void

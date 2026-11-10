@@ -54,7 +54,7 @@ final class DanfsePdfEvidenceTest extends TestCase
         self::assertContains('Missing mandatory visible text: Totais aproximados dos Tributos', $errors);
     }
 
-    public function testMultipageAndLongTextWithoutEllipsisAreRejected(): void
+    public function testMultipageAndIncompleteLongTextAreRejected(): void
     {
         $errors = DanfsePdfEvidence::check(
             'danfse-long-description.pdf',
@@ -63,7 +63,7 @@ final class DanfsePdfEvidenceTest extends TestCase
             self::TEXT,
         );
         self::assertContains('Expected exactly one PDF page', $errors);
-        self::assertContains('Long service description must be visibly abbreviated', $errors);
+        self::assertContains('Synthetic service description must remain complete', $errors);
     }
 
     public function testCustomFontsPreserveExternalRegistrationCompatibility(): void

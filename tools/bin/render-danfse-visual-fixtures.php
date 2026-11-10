@@ -37,7 +37,7 @@ if ($descriptions === false || $descriptions->length === 0) {
 }
 $descriptions->item(0)->nodeValue = str_repeat(
     "DESCRIÇÃO EXTENSA - serviço contratado\nEtapa técnica, relatório e acompanhamento.\n",
-    45,
+    3,
 );
 $longXml = $doc->saveXML();
 if (!is_string($longXml)) {

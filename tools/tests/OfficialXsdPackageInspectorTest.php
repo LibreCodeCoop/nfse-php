@@ -75,7 +75,7 @@ final class OfficialXsdPackageInspectorTest extends TestCase
                     ['id' => 'xsd-production-20260209', 'type' => 'zip',
                         'url' => 'https://www.gov.br/nfse/p.zip',
                         'observed_sha256' => hash('sha256', $production)],
-                    ['id' => 'xsd-restricted-20260727', 'type' => 'zip',
+                    ['id' => 'xsd-restricted-20261020', 'type' => 'zip',
                         'url' => 'https://www.gov.br/nfse/r.zip',
                         'observed_sha256' => hash('sha256', $restricted)],
                 ],

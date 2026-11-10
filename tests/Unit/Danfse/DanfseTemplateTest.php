@@ -586,7 +586,7 @@ class DanfseTemplateTest extends TestCase
     }
 
 
-    public function testMunicipalRegimeZeroIsPresentButMissingCodeIsNot(): void
+    public function testMunicipalRegimeNoneDoesNotConsumeAnExtraRow(): void
     {
         $nfse = $this->fixtureNfseData();
         $regTrib = & $nfse['infNFSe']['DPS']['infDPS']['prest']['regTrib'];
@@ -595,8 +595,8 @@ class DanfseTemplateTest extends TestCase
         $data = $template->buildData($nfse);
 
         self::assertSame('Nenhum', $data['tributacao_municipal']['regime_especial']);
-        self::assertTrue($data['tributacao_municipal']['mostrar_linha_regime']);
-        self::assertStringContainsString('class="municipal-conditional-regime"', $template->render($nfse, new DanfseConfig()));
+        self::assertFalse($data['tributacao_municipal']['mostrar_linha_regime']);
+        self::assertStringNotContainsString('class="municipal-conditional-regime"', $template->render($nfse, new DanfseConfig()));
 
         unset($regTrib['regEspTrib']);
         $data = $template->buildData($nfse);
@@ -671,6 +671,22 @@ class DanfseTemplateTest extends TestCase
 
         $dpsValues['vDedRed']['vDR'] = '0.00';
         self::assertSame('R$ 0,00', $template->buildData($nfse)['tributacao_municipal']['total_deducoes']);
+    }
+
+    public function testZeroReimbursementAloneDoesNotAddEmptyMunicipalRow(): void
+    {
+        $nfse = $this->fixtureNfseData();
+        unset($nfse['infNFSe']['DPS']['infDPS']['prest']['regTrib']['regEspTrib']);
+        $nfse['infNFSe']['IBSCBS']['valores']['vCalcReeRepRes'] = '0.00';
+
+        $template = new DanfseTemplate();
+        $data = $template->buildData($nfse);
+        self::assertSame('-', $data['tributacao_municipal']['total_deducoes']);
+        self::assertFalse($data['tributacao_municipal']['mostrar_linha_beneficio']);
+        self::assertStringNotContainsString('class="municipal-conditional-benefit"', $template->render($nfse, new DanfseConfig()));
+
+        $nfse['infNFSe']['IBSCBS']['valores']['vCalcReeRepRes'] = '1.00';
+        self::assertTrue($template->buildData($nfse)['tributacao_municipal']['mostrar_linha_beneficio']);
     }
 
     public function testMunicipalBenefitZeroIsNotSuppressedAndAbsenceIsDifferent(): void

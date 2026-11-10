@@ -149,9 +149,8 @@ final class DanfseTemplate
         $provider['simples_nacional'] = OptanteSimplesNacional::labelFor($this->val($regTrib, 'opSimpNac'));
         $provider['regime_sn'] = RegimeApuracaoTributariaSN::labelFor($this->val($regTrib, 'regApTribSN'));
 
-        // NT 008 note 5: each optional municipal row is suppressed only
-        // when all four of its source fields are absent. A literal '0' is
-        // supplied data and must not be treated as absent.
+        // The municipal row is optional. Code 0 means no special tax regime:
+        // showing an entire row of dashes for it hides useful service text.
         $regimeEspecial = $this->val($regTrib, 'regEspTrib');
         $tipoImunidade = $this->val($tribMun, 'tpImunidade');
         $tipoSuspensao = $this->val($tribMun, 'exigSusp', 'tpSusp');
@@ -167,11 +166,15 @@ final class DanfseTemplate
         // calculated deduction and reimbursement amounts supplied in the
         // authorized NFS-e. It does not re-derive these from service prices.
         $explicitDeductions = $this->val($valores, 'vDedRed', 'vDR');
+        $calculatedDeduction = $this->val($authorizedValues, 'vCalcDR');
+        $reimbursement = $this->val($ibsCbsValores, 'vCalcReeRepRes');
         $totalDeducoes = $explicitDeductions !== ''
             ? $this->currencyOrDash($explicitDeductions)
-            : $this->sumCurrency(
-                $this->val($authorizedValues, 'vCalcDR'),
-                $this->val($ibsCbsValores, 'vCalcReeRepRes'),
+            : (
+                $calculatedDeduction === ''
+                && ($reimbursement === '' || preg_match('/^0+(?:\\.0+)?$/D', $reimbursement) === 1)
+                    ? '-'
+                    : $this->sumCurrency($calculatedDeduction, $reimbursement)
             );
         $descontoIncondicionado = $this->val($valores, 'vDescCondIncond', 'vDescIncond');
 
@@ -191,7 +194,7 @@ final class DanfseTemplate
             'competencia'  => $this->formatter->date($this->val($infDps, 'dCompet')),
             'emissao_nfse' => $this->formatter->dateTime($this->val($infNfse, 'dhProc')),
             'numero_dps'   => $this->val($infDps, 'nDPS') ?: '-',
-            'serie_dps'    => $this->val($infDps, 'serie') ?: '-',
+            'serie_dps'    => ltrim($this->val($infDps, 'serie'), '0') ?: '-',
             'emissao_dps'  => $this->formatter->dateTime($this->val($infDps, 'dhEmi')),
             'ambiente'      => Ambiente::fromValue($this->val($infDps, 'tpAmb'))->value,
             'ambiente_gerador' => $this->val($infNfse, 'ambGer') ?: '-',
@@ -224,16 +227,10 @@ final class DanfseTemplate
 
             'servico' => [
                 'codigo_trib_nacional'  => $this->formatter->codTribNacional($this->val($cServ, 'cTribNac')),
-                // NT008 2.4.5 prefers an authorized municipal description
-                // over the national one. The length is suggested, not a new
-                // tax-code validation or data mutation.
-                'desc_trib_nacional'    => $this->formatter->limit(
-                    $this->val($infNfse, 'xTribMun') ?: $this->val($infNfse, 'xTribNac'),
-                    167,
-                ),
+                'desc_trib_nacional'    => $this->val($infNfse, 'xTribMun') ?: $this->val($infNfse, 'xTribNac'),
                 'codigo_trib_municipal' => $this->val($cServ, 'cTribMun') ?: '-',
                 'codigo_nbs'           => $this->formattedNbs($this->val($cServ, 'cNBS')),
-                'desc_trib_municipal'   => $this->formatter->limit(trim($this->val($infNfse, 'xTribMun')), 60),
+                'desc_trib_municipal'   => trim($this->val($infNfse, 'xTribMun')),
                 'local_prestacao'       => $this->locationWithUfAndCountry(
                     $this->val($infNfse, 'xLocPrestacao'),
                     $this->val($serv, 'locPrest', 'cLocPrestacao'),
@@ -254,7 +251,7 @@ final class DanfseTemplate
                 'tipo_imunidade'       => $this->immunityLabel($tipoImunidade),
                 'suspensao_issqn'      => $this->suspensionLabel($tipoSuspensao),
                 'numero_processo'      => $numeroProcesso !== '' ? $numeroProcesso : '-',
-                'mostrar_linha_regime' => $this->hasAnyPresent($regimeEspecial, $tipoImunidade, $tipoSuspensao, $numeroProcesso),
+                'mostrar_linha_regime' => $this->hasAnyPresent($regimeEspecial === '0' ? '' : $regimeEspecial, $tipoImunidade, $tipoSuspensao, $numeroProcesso),
                 'beneficio_municipal'  => $this->municipalBenefitLabel($tipoBeneficio),
                 'calculo_bm'           => $this->currencyOrDash($calculoBeneficio),
                 'total_deducoes'       => $totalDeducoes,
