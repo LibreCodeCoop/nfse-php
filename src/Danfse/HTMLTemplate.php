@@ -24,7 +24,7 @@
         body {
             font-family: Arial, "Liberation Sans", Helvetica, sans-serif;
             font-size: 7pt;
-            line-height: 1.14;
+            line-height: 1.10;
             color: #000;
             margin: 5pt;
             padding: 1pt 1pt 65pt;
@@ -42,13 +42,13 @@
         }
         table { width: 100%; border-collapse: collapse; table-layout: fixed; margin: 0; }
         tr { page-break-inside: avoid; }
-        td { padding: 1.4pt 3pt 1.6pt; vertical-align: top; word-wrap: break-word; }
+        td { padding: 0.8pt 3pt 0.9pt; vertical-align: top; word-wrap: break-word; }
         .bordered-section { border-bottom: 0.5pt solid #000; margin: 0; }
         .first-section td { padding-bottom: 1pt; }
         /* NT008 2.4.2: identification labels require 7pt. */
         .first-section .label { font-size: 7pt; text-transform: uppercase; }
         .label { display: block; font-family: Arial, "Liberation Sans", Helvetica, sans-serif; font-size: 6pt; font-weight: bold; margin-bottom: 1pt; }
-        .value { font-family: "Microsoft Sans Serif", "Liberation Sans", Arial, sans-serif; font-size: 7pt; line-height: 1.18; font-weight: normal; }
+        .value { font-family: "Microsoft Sans Serif", "Liberation Sans", Arial, sans-serif; font-size: 7pt; line-height: 1.10; font-weight: normal; }
         .section-header {
             width: 25%;
             font-size: 7.1pt;
