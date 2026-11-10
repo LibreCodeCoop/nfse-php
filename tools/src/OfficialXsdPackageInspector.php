@@ -99,7 +99,7 @@ final class OfficialXsdPackageInspector
             throw new \UnexpectedValueException('Malformed official source manifest');
         }
 
-        $ids = ['xsd-production-20260209', 'xsd-restricted-20260727'];
+        $ids = ['xsd-production-20260209', 'xsd-restricted-20261020'];
         $found = [];
         foreach ($manifest['sources'] as $entry) {
             if (!is_array($entry) || !in_array($entry['id'] ?? null, $ids, true)) {
