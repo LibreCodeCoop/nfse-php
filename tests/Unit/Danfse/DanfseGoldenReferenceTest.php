@@ -107,7 +107,7 @@ final class DanfseGoldenReferenceTest extends TestCase
         self::assertSame('EU-PT-998877', $data['tomador']['cnpj_cpf']);
     }
 
-    public function testLongOfficialDescriptionsUseStableSixtyCharacterSummary(): void
+    public function testOfficialDescriptionsAreNotTruncated(): void
     {
         $nfse = $this->fixtureData();
         $longDescription = str_repeat('Descrição fiscal extensa ', 8);
@@ -116,11 +116,9 @@ final class DanfseGoldenReferenceTest extends TestCase
 
         $data = (new DanfseTemplate())->buildData($nfse);
 
-        self::assertSame(170, mb_strlen($data['servico']['desc_trib_nacional']));
-        self::assertSame(63, mb_strlen($data['servico']['desc_trib_municipal']));
-        self::assertStringEndsWith('...', $data['servico']['desc_trib_nacional']);
-        self::assertStringEndsWith('...', $data['servico']['desc_trib_municipal']);
-        self::assertNotSame($longDescription, $data['servico']['desc_trib_nacional']);
+        self::assertSame($longDescription, $data['servico']['desc_trib_nacional']);
+        self::assertSame($longDescription, $data['servico']['desc_trib_municipal']);
+        self::assertStringNotContainsString('...', $data['servico']['desc_trib_nacional']);
     }
 
     public function testIbsCbsReferenceRendersOnlyAuthorizedTotals(): void

@@ -46,11 +46,8 @@ final class DanfseGenerator
     }
 
     /**
-     * Progressive, visible ellipsis is allowed by NT 008, item 2.1. Ordinary
-     * invoices keep their full description. When a layout exceeds one page,
-     * trim only free-text descriptions, never keys, fields or fiscal totals.
-     * If even the minimum readable text does not fit, fail rather than
-     * silently returning a second page or hiding required fiscal fields.
+     * Preserve all content from the authorized XML. If it cannot fit on one
+     * A4 page at the prescribed font sizes, fail instead of hiding information.
      *
      * @return array{string, string} HTML and PDF bytes of the same rendering
      */
@@ -70,19 +67,7 @@ final class DanfseGenerator
         $fonts = $this->config->fonts ?? BundledDanfseFonts::get();
         $template = new DanfseTemplate();
 
-        // [service-description limit, additional free-text limit].
-        // These are adaptive budgets, NOT new fiscal-field constraints.
-        foreach ([
-            [null, null],
-            [1300, 1900],
-            [850, 1100],
-            [600, 800],
-            [400, 500],
-            [250, 300],
-            [150, 150],
-            [60, 60],
-        ] as [$serviceLimit, $complementaryLimit]) {
-            $html = $template->render($data, $this->config, $serviceLimit, $complementaryLimit);
+        $html = $template->render($data, $this->config);
 
             try {
                 $options = new Options();
@@ -115,10 +100,9 @@ final class DanfseGenerator
             if ($dompdf->getCanvas()->get_page_count() === 1) {
                 return [$html, (string) $dompdf->output()];
             }
-        }
 
         throw new ArtifactException(
-            'DANFSe does not fit on one A4 page without suppressing mandatory information.',
+            'DANFSe does not fit on one A4 page without truncating authorized XML content.',
             NfseErrorCode::ArtifactRetrievalFailed,
         );
     }

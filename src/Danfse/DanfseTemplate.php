@@ -191,7 +191,7 @@ final class DanfseTemplate
             'competencia'  => $this->formatter->date($this->val($infDps, 'dCompet')),
             'emissao_nfse' => $this->formatter->dateTime($this->val($infNfse, 'dhProc')),
             'numero_dps'   => $this->val($infDps, 'nDPS') ?: '-',
-            'serie_dps'    => $this->val($infDps, 'serie') ?: '-',
+            'serie_dps'    => ltrim($this->val($infDps, 'serie'), '0') ?: '-',
             'emissao_dps'  => $this->formatter->dateTime($this->val($infDps, 'dhEmi')),
             'ambiente'      => Ambiente::fromValue($this->val($infDps, 'tpAmb'))->value,
             'ambiente_gerador' => $this->val($infNfse, 'ambGer') ?: '-',
@@ -224,16 +224,10 @@ final class DanfseTemplate
 
             'servico' => [
                 'codigo_trib_nacional'  => $this->formatter->codTribNacional($this->val($cServ, 'cTribNac')),
-                // NT008 2.4.5 prefers an authorized municipal description
-                // over the national one. The length is suggested, not a new
-                // tax-code validation or data mutation.
-                'desc_trib_nacional'    => $this->formatter->limit(
-                    $this->val($infNfse, 'xTribMun') ?: $this->val($infNfse, 'xTribNac'),
-                    167,
-                ),
+                'desc_trib_nacional'    => $this->val($infNfse, 'xTribMun') ?: $this->val($infNfse, 'xTribNac'),
                 'codigo_trib_municipal' => $this->val($cServ, 'cTribMun') ?: '-',
                 'codigo_nbs'           => $this->formattedNbs($this->val($cServ, 'cNBS')),
-                'desc_trib_municipal'   => $this->formatter->limit(trim($this->val($infNfse, 'xTribMun')), 60),
+                'desc_trib_municipal'   => trim($this->val($infNfse, 'xTribMun')),
                 'local_prestacao'       => $this->locationWithUfAndCountry(
                     $this->val($infNfse, 'xLocPrestacao'),
                     $this->val($serv, 'locPrest', 'cLocPrestacao'),
