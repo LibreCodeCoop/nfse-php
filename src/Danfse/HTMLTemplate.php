@@ -72,7 +72,6 @@
         .access-key { white-space: nowrap; font-size: 7pt; }
         .no-party { text-align: center; font-size: 6pt; padding: 2pt; border-bottom: 0.5pt solid #000; }
         .no-party div { border-top: 0.5pt solid #222; margin-top: 2pt; padding-top: 2pt; }
-        .value-highlight { font-weight: bold; }
         .total-emphasis { background: #f2f2f2; }
         .emitter-cell { background: #f2f2f2; }
         .footer-container { position: fixed; bottom: 7pt; left: 6pt; right: 6pt; }
@@ -466,13 +465,13 @@
                 <td><span class="label">Total das Retenções (ISSQN / Federais)</span><span class="value"><?= $data['totais']['total_retencoes'] ?></span></td>
                 <td><span class="label">VALOR LÍQUIDO DA NFS-e</span><span class="value"><?= $data['totais']['valor_liquido'] ?></span></td>
                 <td><span class="label">Total do IBS/CBS</span><span class="value"><?= $data['ibs_cbs']['total_ibs_cbs'] ?></span></td>
-                <td class="total-emphasis"><span class="label">VALOR LÍQUIDO DA NFS-e + IBS/CBS</span><span class="value value-highlight"><?= $data['ibs_cbs']['valor_total_nfse'] ?></span></td>
+                <td class="total-emphasis"><span class="label">VALOR LÍQUIDO DA NFS-e + IBS/CBS</span><span class="value"><?= $data['ibs_cbs']['valor_total_nfse'] ?></span></td>
             </tr>
         </table>
     </div>
 
-    <!-- Informações Complementares -->
-    <div class="bordered-section">
+    <!-- Keep this block open until the page border, as in the national DANFSe. -->
+    <div class="complementary-information">
         <table>
             <tr>
                 <td class="section-header">
